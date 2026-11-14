@@ -69,4 +69,4 @@ jobs:
             echo "No artifacts"
             exit 1
           fi
-          gh release upload "$TAG" "${files[@]}" --clobber
+          gh release upload "$TAG" "${files[@]}" --repo "${GITHUB_REPOSITORY}" --clobber
