@@ -295,7 +295,13 @@ public class LinkService extends Service {
                         if (!device.isEmpty()) editor.putString("deviceId", device);
                         String macs = prefs.getString("macs", "[]");
                         editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp));
-                        editor.remove("pendingFp").remove("pin").apply();
+                        editor.remove("pendingFp").remove("pin").commit();
+                        if (prefs.getString("token", "").length() < 16) {
+                            paired = false;
+                            linkState.failFatal(Prefs.WARNING);
+                            publish(Prefs.WARNING, null);
+                            return;
+                        }
                     }
                     publish("Paired with the Mac", "Mac accepted the phone");
                     main.removeCallbacks(heartbeat);
