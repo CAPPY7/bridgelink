@@ -55,6 +55,15 @@ public final class IncomingFile {
         self.size = size
     }
 
+    public func seed(_ prefix: Data) {
+        if failed || prefix.count > size {
+            failed = true
+            return
+        }
+        digest.update(data: prefix)
+        written = prefix.count
+    }
+
     public func accept(offset: Int, base64: String) -> Data? {
         if failed || offset != written { return nil }
         guard let raw = Data(base64Encoded: base64) else {

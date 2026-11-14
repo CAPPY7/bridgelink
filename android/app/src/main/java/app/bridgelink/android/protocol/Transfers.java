@@ -79,6 +79,17 @@ public final class Transfers {
             return written;
         }
 
+        /** Hash bytes already on disk so a later chunk can continue this file. */
+        public void seed(byte[] prefix) {
+            if (failed || prefix == null) return;
+            if (prefix.length > size) {
+                failed = true;
+                return;
+            }
+            digest.update(prefix);
+            written = prefix.length;
+        }
+
         public boolean failed() {
             return failed;
         }

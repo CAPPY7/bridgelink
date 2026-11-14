@@ -9,8 +9,12 @@ final class MacFiles {
     private var handles: [String: FileHandle] = [:]
     private var partials: [String: URL] = [:]
 
-    func begin(id: String, name: String, size: Int, done: @escaping (String) -> Void) {
-        queue.async { done(self.beginNow(id: id, name: name, size: size)) }
+    func begin(id: String, name: String, size: Int, from: Int, done: @escaping (String, Int) -> Void) {
+        queue.async {
+            _ = from
+            let result = self.beginNow(id: id, name: name, size: size)
+            done(result.status, result.have)
+        }
     }
 
     func chunk(id: String, offset: Int, base64: String, done: @escaping (String?) -> Void) {
@@ -38,7 +42,7 @@ final class MacFiles {
         queue.async { self.cancelNow(id) }
     }
 
-    func send(url: URL, emit: @escaping (String, [String: String]) -> Void, done: @escaping (String) -> Void) {
+    func send(url: URL, emit: @escaping (String, [String: String]) -> Void, wait: @escaping (String, Int) -> Int, done: @escaping (String) -> Void) {
         queue.async {
             do {
                 let size = (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
@@ -46,19 +50,27 @@ final class MacFiles {
                     done("That file is over 100 MB.")
                     return
                 }
-                let id = UUID().uuidString
                 let name = Transfers.sanitizeName(url.lastPathComponent)
-                self.hop(emit, "file_begin", ["id": id, "name": name, "size": String(size)])
+                let id = String(Transfers.sha256Hex(Data("\(url.path)\n\(size)".utf8)).prefix(32))
+                self.hop(emit, "file_begin", ["id": id, "name": name, "size": String(size), "from": "0"])
+                let remote = wait(id, 0)
+                let start = remote >= 0 && remote <= size ? remote : 0
                 let handle = try FileHandle(forReadingFrom: url)
                 defer { try? handle.close() }
-                var offset = 0
                 var hasher = SHA256()
+                var offset = 0
+                while offset < start {
+                    let want = min(Transfers.chunk, start - offset)
+                    let chunk = try handle.read(upToCount: want) ?? Data()
+                    if chunk.isEmpty { done("The file changed while it was sending."); return }
+                    hasher.update(data: chunk)
+                    offset += chunk.count
+                }
                 while true {
                     let chunk = try handle.read(upToCount: Transfers.chunk) ?? Data()
                     if chunk.isEmpty { break }
                     hasher.update(data: chunk)
-                    let encoded = chunk.base64EncodedString()
-                    self.hop(emit, "file_chunk", ["id": id, "offset": String(offset), "data": encoded])
+                    self.hop(emit, "file_chunk", ["id": id, "offset": String(offset), "data": chunk.base64EncodedString()])
                     offset += chunk.count
                 }
                 if offset != size {
@@ -83,23 +95,49 @@ final class MacFiles {
         gate.wait()
     }
 
-    private func beginNow(id: String, name: String, size: Int) -> String {
+    private func beginNow(id: String, name: String, size: Int) -> (status: String, have: Int) {
         guard safe(id), let file = IncomingFile(id: id, name: name, size: size) else {
-            return "Refused that file."
+            return ("Refused that file.", 0)
         }
-        cancelNow(id)
+        closeHandle(id)
         do {
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-incoming", isDirectory: true)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let url = folder.appendingPathComponent(id)
-            FileManager.default.createFile(atPath: url.path, contents: nil)
-            handles[id] = try FileHandle(forWritingTo: url)
+            var have = 0
+            let existingSize = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            if FileManager.default.fileExists(atPath: url.path) && existingSize > 0 && existingSize <= size {
+                let reader = try FileHandle(forReadingFrom: url)
+                while have < existingSize {
+                    let chunk = try reader.read(upToCount: min(Transfers.chunk, existingSize - have)) ?? Data()
+                    if chunk.isEmpty { break }
+                    file.seed(chunk)
+                    have += chunk.count
+                }
+                try? reader.close()
+            } else if existingSize > size {
+                try? FileManager.default.removeItem(at: url)
+            }
+            if !FileManager.default.fileExists(atPath: url.path) {
+                FileManager.default.createFile(atPath: url.path, contents: nil)
+                have = 0
+            }
+            let handle = try FileHandle(forWritingTo: url)
+            if have > 0 { try handle.seekToEnd() }
+            handles[id] = handle
             partials[id] = url
             incoming[id] = file
-            return size == 0 ? "Receiving \(file.name)" : "Receiving \(file.name)"
+            return ("Receiving \(file.name)", have)
         } catch {
-            return "Could not store the file."
+            return ("Could not store the file.", 0)
         }
+    }
+
+    private func closeHandle(_ id: String) {
+        try? handles[id]?.close()
+        handles[id] = nil
+        incoming[id] = nil
+        partials[id] = nil
     }
 
     private func finishNow(id: String, sha256: String) -> String {

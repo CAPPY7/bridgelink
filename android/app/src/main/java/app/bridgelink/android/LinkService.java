@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.hardware.camera2.CameraManager;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -32,6 +33,7 @@ import com.google.gson.JsonObject;
 import app.bridgelink.android.protocol.Backoff;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Frame;
+import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.Outbox;
 
 import app.bridgelink.android.protocol.Envelope;
@@ -48,6 +50,7 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -63,6 +66,7 @@ public class LinkService extends Service {
     public static final String ACTION_STOP_RING = "app.bridgelink.android.STOP_RING";
     public static final String ACTION_CONFIRM = "app.bridgelink.android.CONFIRM";
     public static final String ACTION_FORGET = "app.bridgelink.android.FORGET";
+    public static final String ACTION_FIND_MAC = "app.bridgelink.android.FIND_MAC";
     public static final String EVENT = "app.bridgelink.android.EVENT";
     public static final String EXTRA_HOST = "host";
     public static final String EXTRA_PORT = "port";
@@ -83,6 +87,7 @@ public class LinkService extends Service {
     private final AtomicInteger generation = new AtomicInteger();
     private final AtomicInteger alertIds = new AtomicInteger(100);
     private final Dedup seen = new Dedup(500);
+    private final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private SSLSocket socket;
@@ -98,6 +103,7 @@ public class LinkService extends Service {
     private volatile long lastRx;
     private volatile String sessionFp = "";
     private volatile String matchCode = "";
+    private volatile String lastEcho = "";
     private volatile String sasPhoneNonce = "";
     private volatile String macCommit = "";
     private final Runnable heartbeat = new Runnable() {
@@ -113,6 +119,9 @@ public class LinkService extends Service {
         }
     };
     private Runnable ringStop;
+    private Runnable flashBlink;
+    private boolean torchOn;
+    private String torchId = "";
 
     public class LocalBinder extends Binder {
         public LinkService getService() {
@@ -159,6 +168,8 @@ public class LinkService extends Service {
             // The read loop blocks the single io thread. Forgetting on that
             // thread would wait for the read it is supposed to cancel.
             new Thread(this::forgetMac, "bridgelink-forget").start();
+        } else if (ACTION_FIND_MAC.equals(action)) {
+            send("find_mac", "");
         }
         return START_STICKY;
     }
@@ -376,13 +387,24 @@ public class LinkService extends Service {
                 }
                 case "ring" -> {
                     publish("Mac is ringing this phone", null);
-                    startRing();
+                    startRing("1".equals(message.text("flash")), !"0".equals(message.text("vibrate")));
+                }
+                case "find_stop" -> {
+                    stopRing();
+                    publish("Ring stopped", null);
                 }
                 case "link" -> openLink(message.text("url"));
                 case "file_begin" -> {
-                    String status = files.begin(message.text("id"), message.text("name"), longText(message, "size"));
+                    String id = message.text("id");
+                    long from = longText(message, "from");
+                    String status = files.begin(id, message.text("name"), longText(message, "size"), Math.max(0, from));
+                    JsonObject reply = new JsonObject();
+                    reply.addProperty("id", id);
+                    reply.addProperty("offset", Long.toString(files.offered(id)));
+                    writeEnvelope(Envelope.make("file_have", "android", reply));
                     if (status != null) publish(status, null);
                 }
+                case "file_have" -> fileHave.put(message.text("id"), longText(message, "offset"));
                 case "file_chunk" -> {
                     String status = files.chunk(message.text("id"), longText(message, "offset"), message.text("data"));
                     if (status != null) publish(status, null);
@@ -446,7 +468,12 @@ public class LinkService extends Service {
             }
             try {
                 JsonObject payload = new JsonObject();
-                payload.addProperty("body", body == null ? "" : body);
+                String text = body == null ? "" : body;
+                if ("clipboard".equals(kind) && Features.isEcho(lastEcho, text)) {
+                    publish("Skipped a clipboard echo", null);
+                    return;
+                }
+                payload.addProperty("body", text);
                 writeEnvelope(Envelope.make(kind == null ? "text" : kind, "android", payload));
                 if (!"ping".equals(kind)) {
                     publish("Sent", body == null || body.isEmpty() ? kind : "Sent");
@@ -464,12 +491,38 @@ public class LinkService extends Service {
                 return;
             }
             try {
-                files.send(source, (type, payload) -> writeEnvelope(Envelope.make(type, "android", payload)));
+                files.send(source, new FileBridge.Out() {
+                    @Override
+                    public void frame(String type, JsonObject payload) throws Exception {
+                        writeEnvelope(Envelope.make(type, "android", payload));
+                    }
+
+                    @Override
+                    public long have(String id) {
+                        return waitHave(id);
+                    }
+                });
                 publish("Sent the file", null);
             } catch (Exception error) {
                 publish(error.getMessage() == null ? "Could not send the file" : error.getMessage(), null);
             }
         }, "bridgelink-file").start();
+    }
+
+    private long waitHave(String id) {
+        long end = System.currentTimeMillis() + 800;
+        while (System.currentTimeMillis() < end) {
+            Long value = fileHave.remove(id);
+            if (value != null) return Math.max(0, value);
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        Long value = fileHave.remove(id);
+        return value == null ? 0 : Math.max(0, value);
     }
 
     private void sendLink(String raw) {
@@ -538,13 +591,14 @@ public class LinkService extends Service {
     }
 
     private void copy(String text) {
+        lastEcho = Features.echoKey(text == null ? "" : text);
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         if (clipboard != null) {
             clipboard.setPrimaryClip(ClipData.newPlainText("BridgeLink", text));
         }
     }
 
-    private void startRing() {
+    private void startRing(boolean flash, boolean vibrate) {
         stopRing();
         AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
         if (audio != null) {
@@ -564,11 +618,13 @@ public class LinkService extends Service {
             next.start();
             player = next;
         } catch (Exception ignored) {
-            Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            if (vibrator != null) {
-                vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 500, 400}, 0));
-            }
+            vibrate = true;
         }
+        if (vibrate) {
+            Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            if (vibrator != null) vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 500, 400}, 0));
+        }
+        if (flash) blinkTorch();
         Intent stop = new Intent(this, LinkService.class);
         stop.setAction(ACTION_STOP_RING);
         PendingIntent pending = PendingIntent.getService(this, 2, stop, PendingIntent.FLAG_IMMUTABLE);
@@ -604,6 +660,37 @@ public class LinkService extends Service {
         Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         if (vibrator != null) vibrator.cancel();
         manager().cancel(RING_ID);
+        if (flashBlink != null) main.removeCallbacks(flashBlink);
+        flashBlink = null;
+        setTorch(false);
+    }
+
+    private void blinkTorch() {
+        flashBlink = new Runnable() {
+            @Override
+            public void run() {
+                torchOn = !torchOn;
+                setTorch(torchOn);
+                main.postDelayed(this, 400);
+            }
+        };
+        main.post(flashBlink);
+    }
+
+    private void setTorch(boolean on) {
+        try {
+            CameraManager cameras = (CameraManager) getSystemService(CAMERA_SERVICE);
+            if (cameras == null) return;
+            if (torchId.isEmpty()) {
+                String[] ids = cameras.getCameraIdList();
+                if (ids.length == 0) return;
+                torchId = ids[0];
+            }
+            cameras.setTorchMode(torchId, on);
+            torchOn = on;
+        } catch (Exception ignored) {
+            torchOn = false;
+        }
     }
 
     private void alert(String title, String body) {

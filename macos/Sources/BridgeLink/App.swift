@@ -36,6 +36,11 @@ final class LinkModel: ObservableObject {
     @Published var pendingClipboard = ""
     @Published var pendingLink = ""
     @Published var linkDraft = ""
+    @Published var phoneBattery = ""
+    private var haves: [String: Int] = [:]
+    private var haveWaiters: [String: (Int) -> Void] = [:]
+    private var lastEcho = ""
+    private var macFinder: DispatchSourceTimer?
 
     private let files = MacFiles()
 
@@ -202,20 +207,60 @@ final class LinkModel: ObservableObject {
         }
         files.send(url: url, emit: { [weak self] type, payload in
             Task { @MainActor in self?.send(type: type, payload: payload, on: self?.live) }
+        }, wait: { [weak self] id, fallback in
+            let gate = DispatchSemaphore(value: 0)
+            var value = fallback
+            DispatchQueue.main.async {
+                self?.waitHave(id: id, fallback: fallback) { got in
+                    value = got
+                    gate.signal()
+                }
+            }
+            gate.wait()
+            return value
         }, done: { [weak self] line in
             Task { @MainActor in self?.note(line) }
         })
     }
 
+    func waitHave(id: String, fallback: Int, done: @escaping (Int) -> Void) {
+        if let known = haves.removeValue(forKey: id) {
+            done(known)
+            return
+        }
+        haveWaiters[id] = done
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            guard let self, let waiter = self.haveWaiters.removeValue(forKey: id) else { return }
+            waiter(self.haves.removeValue(forKey: id) ?? fallback)
+        }
+    }
+
+    private func noteHave(id: String, offset: Int) {
+        if let waiter = haveWaiters.removeValue(forKey: id) {
+            waiter(offset)
+        } else {
+            haves[id] = offset
+        }
+    }
+
     func sendClipboard() {
         let text = NSPasteboard.general.string(forType: .string) ?? ""
+        if Features.isEcho(lastEcho, text) {
+            note("Skipped a clipboard echo")
+            return
+        }
         send(type: "clipboard", payload: ["body": text], on: live)
         note(text.isEmpty ? "Clipboard was empty" : "Sent clipboard")
     }
 
     func ring() {
-        send(type: "ring", payload: [:], on: live)
+        send(type: "ring", payload: ["flash": "0", "vibrate": "1"], on: live)
         note("Ringing the phone")
+    }
+
+    func stopRing() {
+        send(type: "find_stop", payload: [:], on: live)
+        note("Asked the phone to stop")
     }
 
     private func start() {
@@ -523,8 +568,13 @@ final class LinkModel: ObservableObject {
                 note("Refused a link that is not http or https")
             }
         case "file_begin":
-            files.begin(id: envelope.text("id"), name: envelope.text("name"), size: Int(envelope.text("size")) ?? -1) { [weak self] line in
-                Task { @MainActor in self?.note(line) }
+            let fileId = envelope.text("id")
+            let from = Int(envelope.text("from")) ?? 0
+            files.begin(id: fileId, name: envelope.text("name"), size: Int(envelope.text("size")) ?? -1, from: from) { [weak self] line, have in
+                Task { @MainActor in
+                    self?.send(type: "file_have", payload: ["id": fileId, "offset": String(have)], on: self?.live)
+                    self?.note(line)
+                }
             }
         case "file_chunk":
             files.chunk(id: envelope.text("id"), offset: Int(envelope.text("offset")) ?? -1, base64: envelope.text("data")) { [weak self] line in
@@ -540,6 +590,13 @@ final class LinkModel: ObservableObject {
         case "file_cancel":
             files.cancel(id: envelope.text("id"))
             note("File cancelled")
+        case "file_have":
+            noteHave(id: envelope.text("id"), offset: Int(envelope.text("offset")) ?? 0)
+        case "find_mac":
+            startFindMac()
+        case "find_stop":
+            stopFindMac()
+            note("Find stopped")
         case "forget":
             let device = envelope.text("deviceId")
             if !device.isEmpty {
@@ -631,6 +688,7 @@ final class LinkModel: ObservableObject {
         let board = NSPasteboard.general
         board.clearContents()
         board.setString(text, forType: .string)
+        lastEcho = Features.echoKey(text)
         note("Clipboard updated")
         notify("Clipboard from the phone", "Clipboard updated")
     }
@@ -643,6 +701,22 @@ final class LinkModel: ObservableObject {
     private func note(_ line: String) {
         lines.insert(line, at: 0)
         if lines.count > 200 { lines.removeLast(lines.count - 200) }
+    }
+
+    private func startFindMac() {
+        stopFindMac()
+        note("The phone is ringing this Mac")
+        let clock = DispatchSource.makeTimerSource(queue: .main)
+        clock.schedule(deadline: .now(), repeating: .seconds(1))
+        clock.setEventHandler { NSSound.beep() }
+        clock.resume()
+        macFinder = clock
+        DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in self?.stopFindMac() }
+    }
+
+    private func stopFindMac() {
+        macFinder?.cancel()
+        macFinder = nil
     }
 
     private func notify(_ title: String, _ body: String) {
@@ -748,6 +822,7 @@ struct DeskView: View {
                 Button("Send") { model.sendDraft() }
                 Button("Send clipboard") { model.sendClipboard() }
                 Button("Ring phone") { model.ring() }
+                Button("Stop ring") { model.stopRing() }
             }
             Button("Send file") { model.pickFile() }
             TextField("Link for the phone", text: $model.linkDraft).textFieldStyle(.roundedBorder)
@@ -824,14 +899,13 @@ struct DeskView: View {
 
 @main
 struct BridgeLinkApp: App {
-    @StateObject private var model = LinkModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     var body: some Scene {
-        MenuBarExtra {
-            DeskView().environmentObject(model)
-        } label: {
-            Image(systemName: "link")
+        Settings {
+            Text("Use the menu-bar icon. Drop a file on it, or press Command-Shift-D.")
+                .padding()
+                .frame(width: 320)
         }
-        .menuBarExtraStyle(.window)
     }
 }

@@ -28,6 +28,11 @@ import app.bridgelink.android.protocol.Transfers;
 public final class FileBridge {
     public interface Out {
         void frame(String type, JsonObject payload) throws Exception;
+
+        /** How many bytes the other side already has. 0 if it does not answer. */
+        default long have(String id) {
+            return 0;
+        }
     }
 
     private final Context context;
@@ -38,10 +43,14 @@ public final class FileBridge {
     }
 
     public String begin(String id, String name, long size) {
+        return begin(id, name, size, 0);
+    }
+
+    public String begin(String id, String name, long size, long from) {
         if (!safeId(id)) return "Refused that file.";
         Transfers.Incoming transfer = Transfers.Incoming.begin(id, name, size);
         if (transfer == null) return "That file is too big.";
-        cancel(id);
+        closeSlot(id);
         try {
             File dir = new File(context.getCacheDir(), "incoming");
             if (!dir.isDirectory() && !dir.mkdirs()) return "Could not store the file.";
@@ -49,12 +58,36 @@ public final class FileBridge {
             Slot slot = new Slot();
             slot.transfer = transfer;
             slot.file = partial;
-            slot.out = new FileOutputStream(partial);
+            long have = partial.isFile() ? partial.length() : 0;
+            if (from > size) from = 0;
+            if (have > size) have = 0;
+            if (have > 0) {
+                try (InputStream prior = new FileInputStream(partial)) {
+                    byte[] buf = new byte[Transfers.CHUNK];
+                    long left = have;
+                    while (left > 0) {
+                        int n = prior.read(buf, 0, (int) Math.min(buf.length, left));
+                        if (n <= 0) break;
+                        transfer.seed(java.util.Arrays.copyOf(buf, n));
+                        left -= n;
+                    }
+                }
+                slot.out = new FileOutputStream(partial, true);
+            } else {
+                if (partial.exists() && !partial.delete()) return "Could not store the file.";
+                slot.out = new FileOutputStream(partial);
+            }
             incoming.put(id, slot);
-            return size == 0 ? null : "Receiving " + transfer.name;
+            return "Receiving " + transfer.name;
         } catch (Exception error) {
             return "Could not store the file.";
         }
+    }
+
+    public long offered(String id) {
+        Slot slot = incoming.get(id);
+        if (slot == null) return 0;
+        return slot.transfer.written();
     }
 
     public String chunk(String id, long offset, String data) {
@@ -112,16 +145,27 @@ public final class FileBridge {
             opened.close();
             throw new IllegalArgumentException("That file is over 100 MB.");
         }
-        String id = UUID.randomUUID().toString();
+        String id = stableId(source, opened.size);
         try (InputStream in = opened.stream) {
             JsonObject begin = new JsonObject();
             begin.addProperty("id", id);
             begin.addProperty("name", opened.name);
             begin.addProperty("size", Long.toString(opened.size));
+            begin.addProperty("from", "0");
             out.frame("file_begin", begin);
+            long skip = out.have(id);
+            if (skip < 0 || skip > opened.size) skip = 0;
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] buffer = new byte[Transfers.CHUNK];
             long offset = 0;
+            while (offset < skip) {
+                int want = (int) Math.min(buffer.length, skip - offset);
+                int count = in.read(buffer, 0, want);
+                if (count < 0) throw new IllegalArgumentException("The file changed while it was sending.");
+                if (count == 0) continue;
+                digest.update(buffer, 0, count);
+                offset += count;
+            }
             int count;
             while ((count = in.read(buffer)) >= 0) {
                 if (count == 0) continue;
@@ -234,6 +278,21 @@ public final class FileBridge {
             }
         }
         return "Saved " + name;
+    }
+
+    private static String stableId(String source, long size) {
+        String raw = source + "\n" + size;
+        String hex = Transfers.sha256Hex(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return hex.substring(0, 32);
+    }
+
+    private void closeSlot(String id) {
+        Slot slot = incoming.remove(id);
+        if (slot == null) return;
+        try {
+            slot.out.close();
+        } catch (Exception ignored) {
+        }
     }
 
     private static boolean safeId(String id) {

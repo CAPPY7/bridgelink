@@ -196,6 +196,15 @@
             android:text="@string/send_clipboard" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/findMac"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/find_mac_sound" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/stopRing"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"

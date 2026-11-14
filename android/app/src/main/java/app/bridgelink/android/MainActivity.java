@@ -117,6 +117,11 @@ public class MainActivity extends AppCompatActivity {
             stop.setAction(LinkService.ACTION_STOP_RING);
             ContextCompat.startForegroundService(this, stop);
         });
+        findViewById(R.id.findMac).setOnClickListener(v -> {
+            Intent find = new Intent(this, LinkService.class);
+            find.setAction(LinkService.ACTION_FIND_MAC);
+            ContextCompat.startForegroundService(this, find);
+        });
         findViewById(R.id.forget).setOnClickListener(v -> {
             Intent forget = new Intent(this, LinkService.class);
             forget.setAction(LinkService.ACTION_FORGET);

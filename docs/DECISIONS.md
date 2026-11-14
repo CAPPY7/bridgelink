@@ -18,7 +18,7 @@ SetTextI18n and UnusedAttribute stay disabled. Status lines are built in Java. H
 
 ## v0.6.0 files and links
 
-Files use the existing JSON frames. Each chunk is at most 32 KB of base64 so neither app holds the whole file. The receiver writes to a temporary file and moves it only after the SHA-256 matches. Names are the last path segment. Links are http or https only. The Mac does not open a link until the user taps. A dropped socket does not resume the transfer.
+A dropped transfer keeps the same file id. The receiver answers `file_have` with the bytes already stored, and the sender continues from there. The menu-bar icon is an AppKit status item so it can accept a file drop. Command-Shift-D opens that panel. Flash during Find is off unless the ring message asks for it, because the camera permission is separate.
 
 The share sheet copies a shared file into the app cache first, because the temporary URI grant ends when the share activity closes. The Quick Settings tile only opens the app. It does not read the clipboard in the background.
 
