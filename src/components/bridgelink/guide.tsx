@@ -62,7 +62,7 @@ export function GuideDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             <section>
               <h3 className="text-lg font-medium tracking-tight">What this is</h3>
               <p className="mt-2 text-muted">
-                BridgeLink is the continuity desk for an Android phone and a Mac: pairing, a pinned key, and the features above, running on one screen so you can use them now. Installable Android and Mac builds are not part of this preview. There is no APK and no disk image to download from here.
+                This window is a simulation. Nothing here is connected to a phone or a Mac. The labels below describe the demo only, not the installable apps. Download those from the GitHub releases page.
               </p>
             </section>
             <section>

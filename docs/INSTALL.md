@@ -1,28 +1,29 @@
 # Install the apps
 
-v0.2.0 is the first installable pair. It is not the full 25-feature desk. The phone app and the Mac menu-bar app can pair on the same Wi-Fi, send notes, sync the clipboard, and ring the phone.
+0.3.0 is the first pair that uses TLS, a saved pairing, and a real QR link. It is still not the full 25-feature desk. Read the status table in the README before expecting a feature.
 
-They are not Play Store or Mac App Store builds. The APK is debug-signed. The Mac app is ad-hoc signed, with no Apple Developer account.
+These are not Play Store or Mac App Store builds. The Mac app is ad-hoc signed. The Android APK is signed with the project key when the GitHub secrets are set. If the release file is named `BridgeLink-android-debug.apk`, it will not update an older install. Uninstall first, then install it.
 
 ## Android
 
-1. On the phone, download `BridgeLink-android.apk` from the GitHub release.
-2. Allow install from this source if Android asks.
+1. On the phone, open the latest GitHub release and download the APK.
+2. Allow install from that source if Android asks.
 3. Open BridgeLink and allow notifications.
+4. Tap **Keep me connected** and turn off battery optimization for BridgeLink. On Xiaomi, Oppo, Vivo, Samsung, and Huawei you also need the vendor "autostart" setting. See `docs/TROUBLESHOOTING.md`.
 
 ## Mac
 
 1. Download `BridgeLink-mac.zip` and unzip it.
 2. Move `BridgeLink.app` to Applications.
-3. First launch: right-click the app, choose Open, then Open again. macOS blocks unsigned apps on the first double-click.
-4. A link icon appears in the menu bar. Click it. It shows the Mac's address and a 6-digit PIN, and listens on port 8787.
+3. First launch: right-click the app, choose Open, then Open again. macOS blocks an unsigned app on the first double-click.
+4. A link icon appears in the menu bar. Click it. Quit is in that window. Launch at login is the toggle in the same window.
 
 ## Pair
 
-1. Phone and Mac join the same Wi-Fi.
-2. On the phone, enter the address and PIN shown on the Mac, then Connect.
-3. The Mac menu should say it is paired. Send a note either way.
-4. Send clipboard copies the other device's clipboard when that app is allowed to read it. On Android 10 and later the phone only reads the clipboard while BridgeLink is open.
-5. Ring phone uses the alarm stream even if the ringer is silent. Stop it from the phone notification or the Stop ringing button.
+1. Phone and Mac join the same Wi-Fi. VPN clients often hide local addresses. Turn the VPN off for the first pair.
+2. On the Mac, read the QR with the phone's normal camera app and copy the link. Paste it into **pairing link** on the phone and tap **Use pairing link**, then **Connect**. The PIN expires in 2 minutes. Tap **New PIN** on the Mac if it does.
+3. Or tap **Find Mac on Wi-Fi**, type the 6-digit PIN, and tap **Connect**.
+4. After this, the phone reconnects with the saved token. You do not enter the PIN again unless you tap **Forget** or **New PIN**.
+5. Send a note either way. Send clipboard, or ring the phone. Ring uses the alarm volume at maximum for up to 2 minutes.
 
-If the Mac shows more than one address, try the 192.168 or 10. address. A wrong PIN is rejected and the Mac stays unpaired.
+If the Mac shows more than one address, the QR uses the first one. If connect fails, paste the other address into the host field.

@@ -1,30 +1,37 @@
 # Decisions
 
-## Installable apps, v0.2.0
+## v0.3.0 is the native foundation, not the full desk
 
-The release now has two real apps:
+The product is the Android app and the Mac menu-bar app. The page under `src/` is a labeled simulation for the browser preview. Its feature table is not the status of the installable apps. The README table is.
 
-- Android: a Java app, debug-signed APK, foreground service, port 8787.
-- Mac: a SwiftUI menu-bar app. It is compiled on a GitHub macOS runner because this environment is Linux and cannot produce a Mach-O Mac binary.
+## Java on Android, for now
 
-They speak newline-delimited JSON over the local network. Features in this pair: pair with a PIN, notes, clipboard, and ring. TLS pinning, file transfer, notification mirroring, and screen mirror stay in the browser desk. The Mac app is ad-hoc signed. There is no Apple Developer certificate and no Play Store listing.
+The phone app stays Java. A Kotlin and Jetpack Compose rewrite would throw away a working service, and this pass had to keep the GitHub build green. Compose is still the intended UI once the link itself is solid. Recorded here so it is a choice, not an accident.
 
-## One desk instead of two native installers
+## TLS is server authentication plus a pin, not mutual TLS
 
-The preview can run a web app. The browser desk is still the place the full feature list is demonstrated. See the feature guide inside the desk.
-
-## Protocol
-
-The desk uses JSON envelopes, message ids, chunked file reads, and AES-GCM for the relay path. See `src/lib/bridgelink/protocol.ts`. The installable apps use a smaller line protocol: `v`, `type`, `from`, `body`, plus `pin` and `name` on hello.
+The Mac generates a P-256 key and a self-signed certificate, stores the PKCS#12 blob in the login keychain, and speaks TLS on port 8787. The phone pins the SHA-256 of that certificate. The phone does not present its own certificate in 0.3.0. A changed Mac key fails the handshake with a visible error. Forget, then pair again, to trust a new key.
 
 ## Pairing
 
-The Mac shows a six-digit PIN. The phone must send that PIN. A wrong PIN is rejected.
+The Mac shows a real QR (Core Image) whose text is `bridgelink://pair?v=1&host&port&fp&pin`. The phone pastes that link. It can also discover `_bridgelink._tcp` and type the PIN. There is no in-app camera scanner yet, so scanning is "open the camera app, copy the link, paste it". The PIN is single-use, lasts 2 minutes, locks for 60 seconds after 5 failures, and is not saved on the phone. After pairing, a random token is saved. An unauthenticated connection does not replace the paired phone.
 
-## What stays partial
+## Secrets on the phone
 
-Screen mirror in the desk is a live view of the phone UI, not an H.264 hardware encode. The installable apps do not mirror the screen. The camera in the desk is a preview window, not a virtual camera. Shared folders can be browsed and copied, not mounted in Finder.
+The token and fingerprint go through EncryptedSharedPreferences, which uses the Android Keystore. If that fails to open, the app falls back to a normal private preferences file and still runs. The PIN is not stored.
+
+## History
+
+The phone and the Mac keep a short in-memory log. There is no Room or SQLite history yet. That is why clipboard history and the unified inbox are "Not started".
+
+## What 0.3.0 does not do
+
+No file transfer, notification mirroring, SMS, screen mirror, webcam, shared folder, relay, or FCM. Those stay "Not started" until the code exists. The Mac app is ad-hoc signed. Hardened runtime is not enabled: there is no Developer ID, and the keychain identity is more reliable without it. Release APKs are signed with a stable key only after the four GitHub secrets exist. Otherwise the release is clearly named `BridgeLink-android-debug.apk`.
+
+## Web demo stays
+
+The preview host requires the existing web shell, including its auth provider and platform branding. Unused template modules were left in place rather than ripped out, because the preview imports them. They are not part of the phone or the Mac.
 
 ## Not attempted
 
-iMessage, FaceTime, Apple AirDrop or Handoff, unlocking the Mac, silent system setting changes, running Android apps on the Mac, and phone-call audio.
+iMessage, FaceTime, AirDrop, Handoff, unlocking the Mac, silent system setting changes, running Android apps on the Mac, and phone-call audio.

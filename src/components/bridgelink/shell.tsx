@@ -10,7 +10,6 @@ export function Shell() {
   const hydrated = useBridge((s) => s.hydrated);
   const theme = useBridge((s) => s.theme);
   const setTheme = useBridge((s) => s.setTheme);
-  const status = useBridge((s) => s.status);
   const paired = useBridge((s) => s.paired);
   const tour = useBridge((s) => s.tourDismissed);
   const dismissTour = useBridge((s) => s.dismissTour);
@@ -67,8 +66,6 @@ export function Shell() {
     });
   }, [hydrated]);
 
-  const linkLabel = !paired ? "Not paired" : status === "connected" ? "Linked" : "Reconnecting";
-
   return (
     <main className="min-h-dvh bg-bg text-fg">
       <Toaster
@@ -85,8 +82,8 @@ export function Shell() {
       <header className="flex items-center gap-2 border-b border-line px-3 py-2 sm:px-4">
         <Mark className="size-6 shrink-0" />
         <div className="min-w-0">
-          <h1 className="truncate text-sm font-medium">BridgeLink</h1>
-          <p className="text-xs text-subtle">{linkLabel}</p>
+          <h1 className="truncate text-sm font-medium">BridgeLink interactive demo (simulated)</h1>
+          <p className="text-xs text-subtle">Simulated, not connected to real devices</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <Btn className="h-11 px-2.5" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle color theme">
