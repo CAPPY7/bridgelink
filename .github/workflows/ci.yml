@@ -42,4 +42,5 @@ jobs:
           node-version: "22"
       - run: npm install
       - run: npm run typecheck
-      - run: npm test
+      - name: Demo protocol tests
+        run: node --experimental-strip-types --test src/lib/bridgelink/protocol.test.ts

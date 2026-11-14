@@ -10,7 +10,7 @@ The phone app stays Java. A Kotlin and Jetpack Compose rewrite would throw away 
 
 ## TLS is server authentication plus a pin, not mutual TLS
 
-The Mac generates a P-256 key and a self-signed certificate, stores the PKCS#12 blob in the login keychain, and speaks TLS on port 8787. The phone pins the SHA-256 of that certificate. The phone does not present its own certificate in 0.3.0. A changed Mac key fails the handshake with a visible error. Forget, then pair again, to trust a new key.
+The Mac certificate is made with the system `openssl` and stored as a PKCS#12 blob in the login keychain. Swift's certificate package kept its DER helper internal, so the app does not depend on it. The phone pins the SHA-256 of that certificate. The phone does not present its own certificate in 0.3.0. A changed Mac key fails the handshake with a visible error. Forget, then pair again, to trust a new key.
 
 ## Pairing
 
@@ -30,7 +30,7 @@ No file transfer, notification mirroring, SMS, screen mirror, webcam, shared fol
 
 ## Web demo stays
 
-The preview host requires the existing web shell, including its auth provider and platform branding. Unused template modules were left in place rather than ripped out, because the preview imports them. They are not part of the phone or the Mac.
+The preview host requires the existing web shell, including its auth provider and platform branding. The public CI job typechecks that shell and runs the demo protocol test. It does not run the sandbox skill tests, because those read files that are not part of this repository.
 
 ## Not attempted
 

@@ -1,8 +1,6 @@
-import Crypto
+import CryptoKit
 import Foundation
 import Security
-import SwiftASN1
-import X509
 
 enum IdentityError: Error, CustomStringConvertible {
     case message(String)
@@ -26,54 +24,40 @@ enum MacIdentity {
     }
 
     private static func makeP12() throws -> (p12: Data, identity: SecIdentity, fingerprint: String) {
-        let signingKey = P256.Signing.PrivateKey()
-        let privateKey = Certificate.PrivateKey(signingKey)
-        let name = try DistinguishedName { CommonName("BridgeLink") }
-        let now = Date()
-        let extensions = try Certificate.Extensions {
-            Critical(BasicConstraints.notCertificateAuthority)
-            KeyUsage(digitalSignature: true)
-        }
-        let certificate = try Certificate(
-            version: .v3,
-            serialNumber: Certificate.SerialNumber(),
-            publicKey: privateKey.publicKey,
-            notValidBefore: now.addingTimeInterval(-60),
-            notValidAfter: now.addingTimeInterval(60 * 60 * 24 * 365 * 5),
-            issuer: name,
-            subject: name,
-            signatureAlgorithm: .ecdsaWithSHA256,
-            extensions: extensions,
-            issuerPrivateKey: privateKey
-        )
-        let der = try DER.Serializer.serialized(element: certificate)
-        let body = Data(der).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed])
-        let certPem = "-----BEGIN CERTIFICATE-----\n\(body)\n-----END CERTIFICATE-----\n"
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
-        let certURL = dir.appendingPathComponent("cert.pem")
         let keyURL = dir.appendingPathComponent("key.pem")
+        let certURL = dir.appendingPathComponent("cert.pem")
         let p12URL = dir.appendingPathComponent("id.p12")
-        try Data(certPem.utf8).write(to: certURL)
-        try Data(signingKey.pemRepresentation.utf8).write(to: keyURL, options: .atomic)
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/openssl")
-        process.arguments = [
+        try runOpenSSL([
+            "ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", keyURL.path,
+        ])
+        try runOpenSSL([
+            "req", "-new", "-x509", "-key", keyURL.path, "-out", certURL.path,
+            "-days", "1825", "-subj", "/CN=BridgeLink",
+        ])
+        try runOpenSSL([
             "pkcs12", "-export",
             "-inkey", keyURL.path,
             "-in", certURL.path,
             "-out", p12URL.path,
             "-passout", "pass:\(password)",
-        ]
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            throw IdentityError.message("Could not build the TLS identity (openssl \(process.terminationStatus))")
-        }
+        ])
         let p12 = try Data(contentsOf: p12URL)
         let imported = try importP12(p12)
         return (p12, imported.identity, imported.fingerprint)
+    }
+
+    private static func runOpenSSL(_ arguments: [String]) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/openssl")
+        process.arguments = arguments
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            throw IdentityError.message("openssl \(arguments.first ?? "") failed (\(process.terminationStatus))")
+        }
     }
 
     private static func importP12(_ data: Data) throws -> (identity: SecIdentity, fingerprint: String) {
