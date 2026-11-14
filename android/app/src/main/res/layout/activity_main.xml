@@ -36,6 +36,34 @@
             android:textSize="15sp" />
 
         <EditText
+            android:id="@+id/pair"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@color/panel"
+            android:hint="Paste the pairing link from the Mac QR"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:padding="14dp"
+            android:textColor="@color/text" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/applyLink"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Use pairing link" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/find"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Find Mac on Wi-Fi" />
+
+        <EditText
             android:id="@+id/host"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -115,6 +143,22 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Stop ringing" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/forget"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Forget this Mac" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/battery"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Keep me connected" />
 
         <TextView
             android:id="@+id/log"

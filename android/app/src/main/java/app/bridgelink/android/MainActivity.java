@@ -11,6 +11,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -18,14 +19,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import app.bridgelink.android.protocol.PairingLink;
+
 public class MainActivity extends AppCompatActivity {
-    private static final String PREFS = "bridgelink";
     private EditText host;
     private EditText port;
     private EditText pin;
+    private EditText pair;
     private EditText message;
     private TextView status;
     private TextView log;
+    private MacBrowser browser;
     private final StringBuilder history = new StringBuilder();
 
     private final BroadcastReceiver events = new BroadcastReceiver() {
@@ -45,14 +49,15 @@ public class MainActivity extends AppCompatActivity {
         host = findViewById(R.id.host);
         port = findViewById(R.id.port);
         pin = findViewById(R.id.pin);
+        pair = findViewById(R.id.pair);
         message = findViewById(R.id.message);
         status = findViewById(R.id.status);
         log = findViewById(R.id.log);
 
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        SharedPreferences prefs = Prefs.open(this);
         host.setText(prefs.getString("host", ""));
         port.setText(prefs.getString("port", "8787"));
-        pin.setText(prefs.getString("pin", ""));
+        pin.setText("");
 
         if (Build.VERSION.SDK_INT >= 33
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -60,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         findViewById(R.id.connect).setOnClickListener(v -> connect());
+        findViewById(R.id.applyLink).setOnClickListener(v -> applyLink());
+        findViewById(R.id.find).setOnClickListener(v -> findMac());
         findViewById(R.id.send).setOnClickListener(v -> {
             startLink(LinkService.ACTION_SEND, message.getText().toString());
             message.setText("");
@@ -69,6 +76,14 @@ public class MainActivity extends AppCompatActivity {
             Intent stop = new Intent(this, LinkService.class);
             stop.setAction(LinkService.ACTION_STOP_RING);
             ContextCompat.startForegroundService(this, stop);
+        });
+        findViewById(R.id.forget).setOnClickListener(v -> {
+            Prefs.open(this).edit().remove("token").remove("fp").remove("pendingFp").remove("pin").apply();
+            status.setText("Forgot this Mac. Paste a new link or enter a PIN.");
+        });
+        findViewById(R.id.battery).setOnClickListener(v -> {
+            Intent settings = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            startActivity(settings);
         });
     }
 
@@ -89,13 +104,56 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    @Override
+    protected void onDestroy() {
+        if (browser != null) browser.stop();
+        super.onDestroy();
+    }
+
     private void connect() {
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+        Prefs.open(this).edit()
                 .putString("host", host.getText().toString().trim())
                 .putString("port", port.getText().toString().trim())
-                .putString("pin", pin.getText().toString().trim())
+                .remove("pin")
                 .apply();
         startLink(LinkService.ACTION_CONNECT, null);
+    }
+
+    private void applyLink() {
+        PairingLink link = PairingLink.parse(pair.getText().toString());
+        if (link == null) {
+            status.setText("That is not a BridgeLink pairing link");
+            return;
+        }
+        host.setText(link.host);
+        port.setText(Integer.toString(link.port));
+        pin.setText(link.pin);
+        SharedPreferences.Editor editor = Prefs.open(this).edit()
+                .putString("host", link.host)
+                .putString("port", Integer.toString(link.port))
+                .remove("pin");
+        if (link.fingerprint != null && !link.fingerprint.isEmpty()) {
+            editor.putString("fp", link.fingerprint).remove("pendingFp");
+        }
+        editor.apply();
+        status.setText("Link saved. Tap Connect before the PIN expires.");
+    }
+
+    private void findMac() {
+        if (browser == null) {
+            browser = new MacBrowser(this, new MacBrowser.Callback() {
+                @Override
+                public void onHost(String found) {
+                    runOnUiThread(() -> host.setText(found));
+                }
+
+                @Override
+                public void onStatus(String text) {
+                    runOnUiThread(() -> status.setText(text));
+                }
+            });
+        }
+        browser.start();
     }
 
     private void startLink(String action, String body) {

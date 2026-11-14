@@ -1,0 +1,3 @@
+-keep class app.bridgelink.android.** { *; }
+-keep class org.json.** { *; }
+-keep class com.google.gson.** { *; }
