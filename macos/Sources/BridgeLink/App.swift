@@ -7,6 +7,7 @@ import Network
 import Security
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 import UserNotifications
 
 enum Phase: Equatable {
@@ -33,6 +34,10 @@ final class LinkModel: ObservableObject {
     @Published var launchAtLogin = SMAppService.mainApp.status == .enabled
     @Published var clipboardMode = UserDefaults.standard.string(forKey: "clipboardMode") ?? "auto"
     @Published var pendingClipboard = ""
+    @Published var pendingLink = ""
+    @Published var linkDraft = ""
+
+    private let files = MacFiles()
 
     private var listener: NWListener?
     private var listenerGen = 0
@@ -158,11 +163,48 @@ final class LinkModel: ObservableObject {
     }
 
     func sendDraft() {
-        let body = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty else { return }
-        send(type: "text", payload: ["body": body], on: live)
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         draft = ""
-        note("Sent to the phone")
+        guard !text.isEmpty else { return }
+        send(type: "text", payload: ["body": text], on: live)
+        note("Sent")
+    }
+
+    func sendLink() {
+        guard let url = Transfers.acceptUrl(linkDraft) else {
+            note("Only http and https links can be sent.")
+            return
+        }
+        linkDraft = ""
+        send(type: "link", payload: ["url": url], on: live)
+        note("Sent a link")
+    }
+
+    func openPendingLink() {
+        guard let url = URL(string: pendingLink) else { return }
+        pendingLink = ""
+        NSWorkspace.shared.open(url)
+    }
+
+    func pickFile() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        sendFile(url)
+    }
+
+    func sendFile(_ url: URL) {
+        guard case .paired = phase else {
+            note("Connect and pair before sending")
+            return
+        }
+        files.send(url: url, emit: { [weak self] type, payload in
+            Task { @MainActor in self?.send(type: type, payload: payload, on: self?.live) }
+        }, done: { [weak self] line in
+            Task { @MainActor in self?.note(line) }
+        })
     }
 
     func sendClipboard() {
@@ -472,6 +514,32 @@ final class LinkModel: ObservableObject {
             applyClipboard(text)
         case "ping":
             send(type: "pong", payload: [:], on: connection)
+        case "link":
+            if let url = Transfers.acceptUrl(envelope.text("url")) {
+                pendingLink = url
+                note("Link from the phone. Open it only if you trust it.")
+                notify("Link from the phone", "Open BridgeLink to open it")
+            } else {
+                note("Refused a link that is not http or https")
+            }
+        case "file_begin":
+            files.begin(id: envelope.text("id"), name: envelope.text("name"), size: Int(envelope.text("size")) ?? -1) { [weak self] line in
+                Task { @MainActor in self?.note(line) }
+            }
+        case "file_chunk":
+            files.chunk(id: envelope.text("id"), offset: Int(envelope.text("offset")) ?? -1, base64: envelope.text("data")) { [weak self] line in
+                if let line { Task { @MainActor in self?.note(line) } }
+            }
+        case "file_end":
+            files.finish(id: envelope.text("id"), sha256: envelope.text("sha256")) { [weak self] line in
+                Task { @MainActor in
+                    self?.note(line)
+                    self?.notify("File from the phone", line)
+                }
+            }
+        case "file_cancel":
+            files.cancel(id: envelope.text("id"))
+            note("File cancelled")
         case "forget":
             let device = envelope.text("deviceId")
             if !device.isEmpty {
@@ -681,6 +749,13 @@ struct DeskView: View {
                 Button("Send clipboard") { model.sendClipboard() }
                 Button("Ring phone") { model.ring() }
             }
+            Button("Send file") { model.pickFile() }
+            TextField("Link for the phone", text: $model.linkDraft).textFieldStyle(.roundedBorder)
+            Button("Open on phone") { model.sendLink() }
+            if !model.pendingLink.isEmpty {
+                Button("Open link from phone") { model.openPendingLink() }
+                Text(model.pendingLink).font(.caption).lineLimit(2).textSelection(.enabled)
+            }
             Text(model.lines.prefix(8).joined(separator: "\n"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -688,9 +763,25 @@ struct DeskView: View {
         }
         .padding(16)
         .frame(width: 380)
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
+                let url: URL?
+                if let data = item as? Data {
+                    url = URL(dataRepresentation: data, relativeTo: nil)
+                } else if let item = item as? URL {
+                    url = item
+                } else {
+                    url = nil
+                }
+                guard let url else { return }
+                Task { @MainActor in model.sendFile(url) }
+            }
+            return true
+        }
         .sheet(isPresented: $showAbout) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("BridgeLink 0.4.0").font(.headline)
+                Text("BridgeLink 0.6.0").font(.headline)
                 Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 Button("Close") { showAbout = false }
             }

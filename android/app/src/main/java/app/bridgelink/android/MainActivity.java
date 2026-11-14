@@ -16,6 +16,8 @@ import android.provider.Settings;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -36,6 +38,10 @@ public class MainActivity extends AppCompatActivity {
     private EditText pin;
     private EditText pair;
     private EditText message;
+    private EditText link;
+    private final ActivityResultLauncher<String[]> picker = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(),
+            this::sendPicked);
     private TextView status;
     private TextView log;
     private MacBrowser browser;
@@ -66,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         pin = findViewById(R.id.pin);
         pair = findViewById(R.id.pair);
         message = findViewById(R.id.message);
+        link = findViewById(R.id.link);
         status = findViewById(R.id.status);
         log = findViewById(R.id.log);
 
@@ -94,6 +101,15 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.send).setOnClickListener(v -> {
             startLink(LinkService.ACTION_SEND, message.getText().toString());
             message.setText("");
+        });
+        findViewById(R.id.sendFile).setOnClickListener(v -> picker.launch(new String[]{"*/*"}));
+        findViewById(R.id.sendLink).setOnClickListener(v -> {
+            Intent intent = new Intent(this, LinkService.class);
+            intent.setAction(LinkService.ACTION_SEND);
+            intent.putExtra(LinkService.EXTRA_KIND, "link");
+            intent.putExtra(LinkService.EXTRA_BODY, link.getText().toString().trim());
+            ContextCompat.startForegroundService(this, intent);
+            link.setText("");
         });
         findViewById(R.id.clipboard).setOnClickListener(v -> sendClipboard());
         findViewById(R.id.stopRing).setOnClickListener(v -> {
@@ -231,6 +247,20 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(LinkService.EXTRA_PIN, pin.getText().toString().trim());
         intent.putExtra(LinkService.EXTRA_KIND, "text");
         intent.putExtra(LinkService.EXTRA_BODY, body);
+        ContextCompat.startForegroundService(this, intent);
+    }
+
+    private void sendPicked(Uri uri) {
+        if (uri == null) return;
+        try {
+            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {
+            // Share-sheet grants are temporary. The document picker grant is the one we can keep.
+        }
+        Intent intent = new Intent(this, LinkService.class);
+        intent.setAction(LinkService.ACTION_SEND);
+        intent.putExtra(LinkService.EXTRA_KIND, "file");
+        intent.putExtra(LinkService.EXTRA_BODY, uri.toString());
         ContextCompat.startForegroundService(this, intent);
     }
 

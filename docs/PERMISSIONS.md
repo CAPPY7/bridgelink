@@ -11,6 +11,7 @@
 | Receive boot completed | Reconnect after a reboot if a token is saved | Install time |
 | Vibrate, wake lock | Ring the phone if no alarm sound is available | During a ring |
 | Ignore battery optimizations | Stop the vendor from killing the service | When you tap Keep me connected |
+| None for files | The file picker and the share sheet hand over one file. The app does not ask for storage access | When you send or receive a file |
 | Camera | Reserved for a future in-app QR scanner. Not requested in 0.3.0 | Not yet |
 
 Not requested, because the feature is not built: SMS, contacts, notification listener, accessibility, media projection, nearby Bluetooth, location.

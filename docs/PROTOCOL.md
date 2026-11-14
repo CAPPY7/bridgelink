@@ -69,6 +69,13 @@ A waiting connection must send hello within 10 seconds. A fifth waiting connecti
 | ping | empty | Phone, about every 20 seconds |
 | pong | empty | Mac |
 | ring | empty | Mac |
+| link | `url` http or https only | Either side |
+| file_begin | `id`, `name`, `size` | Either side |
+| file_chunk | `id`, `offset`, `data` base64, at most 32 KB decoded | Either side |
+| file_end | `id`, `sha256` | Either side |
+| file_cancel | `id` | Either side |
+
+A file name is the last path segment, with control characters removed. `..` is not a name. The receiver checks the SHA-256 and deletes the file if it does not match. Files over 100 MB are refused. A link that is not http or https is refused.
 
 ## Pairing
 

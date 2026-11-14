@@ -23,6 +23,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 
@@ -37,6 +38,7 @@ import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.HelloPlan;
 import app.bridgelink.android.protocol.LinkState;
 import app.bridgelink.android.protocol.Sas;
+import app.bridgelink.android.protocol.Transfers;
 import app.bridgelink.android.protocol.MacList;
 
 import java.io.BufferedWriter;
@@ -91,6 +93,7 @@ public class LinkService extends Service {
     private volatile int lastPort = 8787;
     private int savedAlarmVolume = -1;
     private final LinkState linkState = new LinkState();
+    private FileBridge files;
     private ConnectivityManager.NetworkCallback networkCallback;
     private volatile long lastRx;
     private volatile String sessionFp = "";
@@ -123,6 +126,7 @@ public class LinkService extends Service {
         NotificationChannel channel = new NotificationChannel(CHANNEL, "BridgeLink", NotificationManager.IMPORTANCE_LOW);
         channel.setDescription("Phone to Mac link");
         manager().createNotificationChannel(channel);
+        files = new FileBridge(this);
         watchNetwork();
     }
 
@@ -143,7 +147,10 @@ public class LinkService extends Service {
                     intent.getStringExtra(EXTRA_PIN)
             );
         } else if (ACTION_SEND.equals(action)) {
-            send(intent.getStringExtra(EXTRA_KIND), intent.getStringExtra(EXTRA_BODY));
+            String kind = intent.getStringExtra(EXTRA_KIND);
+            if ("file".equals(kind)) sendFile(intent.getStringExtra(EXTRA_BODY));
+            else if ("link".equals(kind)) sendLink(intent.getStringExtra(EXTRA_BODY));
+            else send(kind, intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
         } else if (ACTION_CONFIRM.equals(action)) {
@@ -371,6 +378,20 @@ public class LinkService extends Service {
                     publish("Mac is ringing this phone", null);
                     startRing();
                 }
+                case "link" -> openLink(message.text("url"));
+                case "file_begin" -> {
+                    String status = files.begin(message.text("id"), message.text("name"), longText(message, "size"));
+                    if (status != null) publish(status, null);
+                }
+                case "file_chunk" -> {
+                    String status = files.chunk(message.text("id"), longText(message, "offset"), message.text("data"));
+                    if (status != null) publish(status, null);
+                }
+                case "file_end" -> publish(files.finish(message.text("id"), message.text("sha256")), null);
+                case "file_cancel" -> {
+                    files.cancel(message.text("id"));
+                    publish("File cancelled", null);
+                }
                 default -> {
                     JsonObject payload = new JsonObject();
                     payload.addProperty("code", "unsupported_type");
@@ -434,6 +455,66 @@ public class LinkService extends Service {
                 publish("Send failed: " + error.getMessage(), null);
             }
         });
+    }
+
+    private void sendFile(String source) {
+        new Thread(() -> {
+            if (!paired || files == null) {
+                publish("Connect and pair before sending", null);
+                return;
+            }
+            try {
+                files.send(source, (type, payload) -> writeEnvelope(Envelope.make(type, "android", payload)));
+                publish("Sent the file", null);
+            } catch (Exception error) {
+                publish(error.getMessage() == null ? "Could not send the file" : error.getMessage(), null);
+            }
+        }, "bridgelink-file").start();
+    }
+
+    private void sendLink(String raw) {
+        new Thread(() -> {
+            if (!paired || files == null) {
+                publish("Connect and pair before sending", null);
+                return;
+            }
+            try {
+                files.sendLink(raw, (type, payload) -> writeEnvelope(Envelope.make(type, "android", payload)));
+                publish("Sent the link", null);
+            } catch (Exception error) {
+                publish(error.getMessage() == null ? "Could not send the link" : error.getMessage(), null);
+            }
+        }, "bridgelink-link").start();
+    }
+
+    private void openLink(String raw) {
+        String url = Transfers.acceptUrl(raw);
+        if (url == null) {
+            publish("Refused a link that is not http or https", null);
+            return;
+        }
+        PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
+        if (power == null || !power.isInteractive()) {
+            publish("Link from the Mac is waiting", null);
+            alert("Link from the Mac", "The screen was off, so the link was not opened.");
+            return;
+        }
+        try {
+            Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(view);
+            publish("Opened a link from the Mac", null);
+        } catch (Exception error) {
+            publish("Could not open that link", null);
+        }
+    }
+
+    private static long longText(Envelope message, String key) {
+        try {
+            return Long.parseLong(message.text(key));
+        } catch (Exception error) {
+            return -1;
+        }
     }
 
     private void writeEnvelope(Envelope envelope) throws Exception {

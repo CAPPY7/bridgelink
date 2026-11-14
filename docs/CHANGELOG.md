@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Files go both ways. The name is sanitized, the size is capped at 100 MB, and the SHA-256 is checked before the file is kept. The phone saves into Downloads/BridgeLink. The Mac saves into ~/Downloads/BridgeLink.
+- A link is sent only if it is http or https. The Mac asks before opening it. The phone opens it when the screen is on.
+- The Android share sheet can send text, a link, or one file. A Quick Settings tile opens the app. A file dropped on the Mac menu window is sent.
+- A dropped connection does not resume a half-sent file. There is no global shortcut. 0.5.0 was not released.
+- v0.4.0 can still pair. These messages are new types on the same link.
+
 ## 0.4.0
 
 - A typed PIN is no longer a proof. Without the QR fingerprint, both screens show a match code. The nonces are committed with SHA-256 before they are revealed, so a relay cannot grind them. A bad reveal or three wrong confirms drops the link on both sides.

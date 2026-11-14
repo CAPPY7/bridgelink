@@ -15,6 +15,11 @@
     <string name="codes_match">Codes match</string>
     <string name="note_hint">Note for the Mac</string>
     <string name="send_note">Send note</string>
+    <string name="send_file">Send file</string>
+    <string name="link_hint">https:// link to open on the Mac</string>
+    <string name="open_on_mac">Open link on Mac</string>
+    <string name="sending">Sending to the Mac…</string>
+    <string name="quick_drop">Send to Mac</string>
     <string name="send_clipboard">Send clipboard</string>
     <string name="stop_ringing">Stop ringing</string>
     <string name="forget_mac">Forget this Mac</string>

@@ -116,4 +116,30 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(MacIdentity.identityCount(), afterFirst)
         XCTAssertLessThanOrEqual(afterFirst, 1)
     }
+
+    func testFileNamesAndLinksRejectTricks() {
+        XCTAssertEqual(Transfers.sanitizeName("../etc/passwd"), "passwd")
+        XCTAssertEqual(Transfers.sanitizeName("..\\etc\\passwd"), "passwd")
+        XCTAssertEqual(Transfers.sanitizeName(".."), "file")
+        XCTAssertEqual(Transfers.sanitizeName("a\u{0}b.txt"), "a_b.txt")
+        XCTAssertNil(Transfers.acceptUrl("javascript:alert(1)"))
+        XCTAssertNil(Transfers.acceptUrl("file:///etc/passwd"))
+        XCTAssertNil(Transfers.acceptUrl("intent://scan/#Intent;end"))
+        XCTAssertEqual(Transfers.acceptUrl(" https://example.com/a "), "https://example.com/a")
+    }
+
+    func testIncomingFileChecksHashAndResumeOffset() {
+        let empty = IncomingFile(id: "1", name: "a.txt", size: 0)
+        XCTAssertEqual(empty?.matches("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"), true)
+        let one = IncomingFile(id: "2", name: "../b.txt", size: 1)
+        XCTAssertEqual(one?.name, "b.txt")
+        let raw = one?.accept(offset: 0, base64: Data([7]).base64EncodedString())
+        XCTAssertEqual(raw?.count, 1)
+        XCTAssertEqual(one?.matches(Transfers.sha256Hex(Data([7]))), true)
+        let gap = IncomingFile(id: "3", name: "c.txt", size: 2)
+        XCTAssertNotNil(gap?.accept(offset: 0, base64: Data([1]).base64EncodedString()))
+        XCTAssertNil(gap?.accept(offset: 0, base64: Data([1]).base64EncodedString()))
+        XCTAssertNotNil(gap?.accept(offset: 1, base64: Data([2]).base64EncodedString()))
+        XCTAssertNil(IncomingFile(id: "4", name: "d.txt", size: Transfers.maxBytes + 1))
+    }
 }

@@ -156,6 +156,37 @@
             android:text="@string/send_note" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/sendFile"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/send_file" />
+
+        <EditText
+            android:id="@+id/link"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@color/panel"
+            android:hint="@string/link_hint"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:minHeight="48dp"
+            android:padding="14dp"
+            android:textColor="@color/text" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sendLink"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/open_on_mac" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/clipboard"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"

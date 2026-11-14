@@ -2,7 +2,7 @@ package app.bridgelink.android.protocol;
 
 import org.junit.Test;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -12,6 +12,8 @@ import javax.crypto.SecretKey;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ProtocolTest {
@@ -214,6 +216,58 @@ public class ProtocolTest {
         assertEquals("Home, Office", MacList.names(list));
         assertNotEquals(list, MacList.removeHost(list, "10.0.0.4"));
         assertEquals("Office", MacList.names(MacList.removeHost(list, "10.0.0.4")));
+    }
+
+    @Test
+    public void fileNamesAndLinksRejectTricks() {
+        assertEquals("passwd", Transfers.sanitizeName("../etc/passwd"));
+        assertEquals("passwd", Transfers.sanitizeName("..\\etc\\passwd"));
+        assertEquals("file", Transfers.sanitizeName(".."));
+        assertEquals("file", Transfers.sanitizeName("."));
+        assertEquals("file", Transfers.sanitizeName(""));
+        assertEquals("a_b.txt", Transfers.sanitizeName("a\u0000b.txt"));
+        assertNull(Transfers.acceptUrl("javascript:alert(1)"));
+        assertNull(Transfers.acceptUrl("file:///etc/passwd"));
+        assertNull(Transfers.acceptUrl("intent://scan/#Intent;end"));
+        assertNull(Transfers.acceptUrl("data:text/html,hi"));
+        assertEquals("https://example.com/a", Transfers.acceptUrl(" https://example.com/a "));
+    }
+
+    @Test
+    public void incomingFileChecksHashAndResumeOffset() {
+        Transfers.Incoming empty = Transfers.Incoming.begin("1", "a.txt", 0);
+        assertTrue(empty.matches(Transfers.sha256Hex(new byte[0])));
+        assertFalse(empty.matches("00"));
+        Transfers.Incoming one = Transfers.Incoming.begin("2", "../b.txt", 1);
+        assertEquals("b.txt", one.name);
+        byte[] raw = one.accept(0, Base64.getEncoder().encodeToString(new byte[]{7}));
+        assertEquals(1, raw.length);
+        assertTrue(one.matches(Transfers.sha256Hex(new byte[]{7})));
+        Transfers.Incoming gap = Transfers.Incoming.begin("3", "c.txt", 2);
+        assertNotNull(gap.accept(0, Base64.getEncoder().encodeToString(new byte[]{1})));
+        assertNull(gap.accept(0, Base64.getEncoder().encodeToString(new byte[]{1})));
+        assertNotNull(gap.accept(1, Base64.getEncoder().encodeToString(new byte[]{2})));
+        assertNull(Transfers.Incoming.begin("4", "d.txt", Transfers.MAX_BYTES + 1));
+    }
+
+    @Test
+    public void hundredMegabyteFileStaysInChunks() throws Exception {
+        byte[] zeros = new byte[Transfers.CHUNK];
+        String encoded = Base64.getEncoder().encodeToString(zeros);
+        Transfers.Incoming incoming = Transfers.Incoming.begin("big", "big.bin", Transfers.MAX_BYTES);
+        for (long offset = 0; offset < Transfers.MAX_BYTES; offset += Transfers.CHUNK) {
+            assertNotNull(incoming.accept(offset, encoded));
+        }
+        java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+        long left = Transfers.MAX_BYTES;
+        while (left > 0) {
+            digest.update(zeros);
+            left -= zeros.length;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (byte value : digest.digest()) builder.append(String.format("%02x", value));
+        assertTrue(incoming.matches(builder.toString()));
+        assertNull(incoming.accept(Transfers.MAX_BYTES, encoded));
     }
 
     private static String fixture() throws Exception {

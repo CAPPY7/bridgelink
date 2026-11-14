@@ -16,6 +16,12 @@ The read loop owns the single network thread. Forget and match-code confirm run 
 
 SetTextI18n and UnusedAttribute stay disabled. Status lines are built in Java. HardcodedText and ContentDescription are on.
 
+## v0.6.0 files and links
+
+Files use the existing JSON frames. Each chunk is at most 32 KB of base64 so neither app holds the whole file. The receiver writes to a temporary file and moves it only after the SHA-256 matches. Names are the last path segment. Links are http or https only. The Mac does not open a link until the user taps. A dropped socket does not resume the transfer.
+
+The share sheet copies a shared file into the app cache first, because the temporary URI grant ends when the share activity closes. The Quick Settings tile only opens the app. It does not read the clipboard in the background.
+
 ## v0.3.0 is the native foundation, not the full desk
 
 The product is the Android app and the Mac menu-bar app. The page under `src/` is a labeled simulation for the browser preview. Its feature table is not the status of the installable apps. The README table is.
