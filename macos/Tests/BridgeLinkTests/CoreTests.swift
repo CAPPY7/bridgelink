@@ -142,4 +142,107 @@ final class CoreTests: XCTestCase {
         XCTAssertNotNil(gap?.accept(offset: 1, base64: Data([2]).base64EncodedString()))
         XCTAssertNil(IncomingFile(id: "4", name: "d.txt", size: Transfers.maxBytes + 1))
     }
+
+    func testFeaturesMatchThePhoneRules() throws {
+        XCTAssertEqual(Features.shared(["files", "sms", "clipboard"], ["clipboard", "files"]), ["files", "clipboard"])
+        XCTAssertFalse(Features.enabled("", "sms", fallback: false))
+        XCTAssertTrue(Features.enabled("sms=1,notify=0", "sms", fallback: false))
+        XCTAssertFalse(Features.enabled("sms=1,notify=0", "notify", fallback: true))
+        XCTAssertEqual(Features.resumeFrom(have: 4, size: 10), 4)
+        XCTAssertEqual(Features.resumeFrom(have: 11, size: 10), -1)
+        XCTAssertTrue(Features.isEcho(Features.echoKey("same"), "same"))
+        XCTAssertEqual(Features.otp("HDFC Bank: 482193 is the OTP for UPI payment of Rs.500"), "482193")
+        XCTAssertEqual(Features.otp("G-998877 is your Google verification code"), "998877")
+        XCTAssertEqual(Features.otp("OTP 4821 for A/c XX3291"), "4821")
+        XCTAssertNil(Features.otp("Debited Rs.5000 on 12/11/2026"))
+        XCTAssertNil(Features.otp("Your code is 123456789"))
+        XCTAssertNil(Features.otp("barcode 112233 is on the box"))
+        XCTAssertTrue(Features.sensitiveText("4111111111111111"))
+        XCTAssertFalse(Features.sensitiveText("hello from the phone"))
+        XCTAssertEqual(Features.mediaAction("pause"), "pause")
+        XCTAssertNil(Features.mediaAction("shutdown"))
+        XCTAssertGreaterThan(Features.smsParts(String(repeating: "a", count: 161)).count, 1)
+        XCTAssertEqual(Features.smsParts(String(repeating: "ह", count: 71)).count, 2)
+        XCTAssertEqual(Features.scanName(1_763_150_400_000), "scan-20251114-200000.pdf")
+        XCTAssertEqual(Features.safeRelative("photos/cat.jpg"), "photos/cat.jpg")
+        XCTAssertNil(Features.safeRelative("../etc/passwd"))
+        XCTAssertEqual(Features.unseen(already: ["a"], current: ["a", "b"]), ["b"])
+        let lock = Features.LeaveLock(weakRssi: -70, graceMs: 30_000)
+        XCTAssertFalse(lock.observe(connected: true, rssi: -60, now: 0))
+        XCTAssertFalse(lock.observe(connected: true, rssi: -80, now: 1_000))
+        XCTAssertFalse(lock.observe(connected: false, rssi: -80, now: 20_000))
+        XCTAssertTrue(lock.observe(connected: false, rssi: -90, now: 31_000))
+        let rate = Features.RateLimit(max: 2, windowMs: 1_000)
+        XCTAssertTrue(rate.allow(0))
+        XCTAssertTrue(rate.allow(10))
+        XCTAssertFalse(rate.allow(20))
+        XCTAssertTrue(rate.allow(1_000))
+        let history = Features.ClipHistory()
+        XCTAssertFalse(history.add(id: "1", text: "123456"))
+        XCTAssertTrue(history.add(id: "2", text: "grocery list"))
+        XCTAssertEqual(history.search("groc"), ["grocery list"])
+        XCTAssertEqual(Features.roomId("pairing-secret-value"), "f507aed2ed2149bbb78e8dccbe166a53")
+        let key = Features.deriveKey("pairing-secret-value")
+        XCTAssertEqual(key.map { String(format: "%02x", $0) }.joined(), "530b21bed696739ee321edc2b49c0dc8a0c443df9799e6ca8601f74f2fa5f959")
+        var nonce = Data(count: 12)
+        nonce[0] = 7
+        let sealed = try Features.seal(key: key, counter: 1, nonce: nonce, plaintext: Data("hello".utf8))
+        XCTAssertEqual(sealed.map { String(format: "%02x", $0) }.joined(), "0700000000000000000000000000000000000001ba56ed7d29da1f0d090e38babf509b3f45c3284483")
+        XCTAssertEqual(try Features.open(key: key, sealed: sealed), Data("hello".utf8))
+        var flipped = sealed
+        flipped[flipped.count - 1] ^= 1
+        XCTAssertThrowsError(try Features.open(key: key, sealed: flipped))
+        let replay = Features.Replay()
+        XCTAssertTrue(replay.accept(1))
+        XCTAssertFalse(replay.accept(1))
+        let header = try XCTUnwrap(Features.streamHeader(streamId: 3, offset: 100, flags: 1, length: 20))
+        XCTAssertEqual(header.count, 17)
+        XCTAssertEqual(Features.streamLength(header), 20)
+        XCTAssertEqual(otpRows.filter { Features.otp($0.1) == $0.0 }.count, otpRows.count)
+    }
 }
+
+private let otpRows: [(String?, String)] = [
+    ("482193", "HDFC Bank: 482193 is the OTP for UPI payment of Rs.500"),
+    ("123456", "123456 is your OTP"),
+    ("998877", "G-998877 is your Google verification code"),
+    ("1234", "PIN is 1234"),
+    ("12345678", "Your code is 12345678"),
+    (nil, "Your code is 123456789"),
+    (nil, "Debited Rs.5000 on 12/11/2026"),
+    (nil, "Call 9876543210 about the order"),
+    (nil, "hello from the phone"),
+    ("492813", "OTP: 492813. Valid for 10 min"),
+    ("556677", "SBI: one time password is 556677"),
+    ("111222", "Use verification code 111222 to continue"),
+    ("909090", "Paytm OTP 909090. Do not share this code"),
+    ("445566", "ICICI Bank OTP is 445566 for credit card txn"),
+    (nil, "Your balance is Rs 25000"),
+    (nil, "Meeting on 15-11-2026 at noon"),
+    ("2468", "passcode 2468"),
+    (nil, "Order #12 is ready"),
+    ("135790", "WhatsApp code: 135790"),
+    ("102938", "Your Amazon OTP is 102938"),
+    (nil, "Price $19.99 only today"),
+    ("657483", "Airtel: OTP 657483 to login"),
+    ("2222", "ATM PIN 2222 was requested"),
+    (nil, "Reference 123 is not a code"),
+    ("314159", "code 314159 expires soon"),
+    (nil, "The year 2026 was busy"),
+    ("808080", "PhonePe OTP: 808080 for UPI"),
+    (nil, "UPI ref 123456789012"),
+    ("191919", "password code 191919"),
+    (nil, "See you at 6"),
+    ("454545", "Gpay verification 454545"),
+    (nil, "Invoice 44 for milk"),
+    ("787878", "one-time code 787878"),
+    (nil, "Rs.123456 debited"),
+    ("363636", "OTP 363636"),
+    (nil, "barcode 112233 is on the box"),
+    ("575757", "Your login code is 575757"),
+    (nil, "Date of birth 01/02/1990"),
+    ("646464", "Bank of Baroda OTP 646464"),
+    ("818181", "Use 818181 as the code"),
+    (nil, "Call center 1800123456"),
+    ("929292", "Axis Bank: 929292 is the OTP"),
+]

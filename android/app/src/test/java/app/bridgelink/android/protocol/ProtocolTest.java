@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -269,6 +270,159 @@ public class ProtocolTest {
         for (byte value : digest.digest()) builder.append(String.format("%02x", value));
         assertTrue(incoming.matches(builder.toString()));
         assertNull(incoming.accept(Transfers.MAX_BYTES, encoded));
+    }
+
+    @Test
+    public void featuresAgreeOnResumeClipboardOtpAndLock() throws Exception {
+        assertEquals(List.of("files", "clipboard"), Features.shared(List.of("files", "sms", "clipboard"), List.of("clipboard", "files")));
+        assertFalse(Features.enabled("", "sms", false));
+        assertTrue(Features.enabled("sms=1,notify=0", "sms", false));
+        assertFalse(Features.enabled("sms=1,notify=0", "notify", true));
+        assertEquals(4L, Features.resumeFrom(4, 10));
+        assertEquals(-1L, Features.resumeFrom(11, 10));
+        assertTrue(Features.isEcho(Features.echoKey("same"), "same"));
+        assertFalse(Features.isEcho(Features.echoKey("same"), "other"));
+        assertEquals("482193", Features.otp("HDFC Bank: 482193 is the OTP for UPI payment of Rs.500"));
+        assertEquals("123456", Features.otp("123456 is your OTP"));
+        assertEquals("998877", Features.otp("G-998877 is your Google verification code"));
+        assertEquals("1234", Features.otp("PIN is 1234"));
+        assertEquals("12345678", Features.otp("Your code is 12345678"));
+        assertNull(Features.otp("Your code is 123456789"));
+        assertNull(Features.otp("Debited Rs.5000 on 12/11/2026"));
+        assertNull(Features.otp("Call 9876543210 about the order"));
+        assertNull(Features.otp("Flight 6E1234 is on time"));
+        assertNull(Features.otp("hello from the phone"));
+        assertEquals("492813", Features.otp("OTP: 492813. Valid for 10 min"));
+        assertEquals("4821", Features.otp("OTP 4821 for A/c XX3291"));
+        assertTrue(Features.looksSensitive("password: hunter2"));
+        assertTrue(Features.looksSensitive("4111111111111111"));
+        assertFalse(Features.looksSensitive("hello from the phone"));
+        assertTrue(Features.batteryChanged(0, false, false, 80, false));
+        assertFalse(Features.batteryChanged(80, true, true, 80, true));
+        assertTrue(Features.lowBattery(10, false, false));
+        assertFalse(Features.lowBattery(10, true, false));
+        assertEquals("pause", Features.mediaAction("pause"));
+        assertNull(Features.mediaAction("shutdown"));
+        assertEquals(1, Features.smsParts("hi").size());
+        assertTrue(Features.smsParts("a".repeat(161)).size() > 1);
+        assertEquals(2, Features.smsParts("ह".repeat(71)).size());
+        assertEquals("scan-20251114-200000.pdf", Features.scanName(1_763_150_400_000L));
+        assertTrue(Features.triggerMatches("charging", "charging", true));
+        assertFalse(Features.triggerMatches("charging", "charging", false));
+        assertEquals(List.of("b"), Features.unseen(List.of("a"), List.of("a", "b")));
+        assertEquals("photos/cat.jpg", Features.safeRelative("photos/../photos/cat.jpg".replace("photos/../", "")));
+        assertEquals("photos/cat.jpg", Features.safeRelative("photos/cat.jpg"));
+        assertNull(Features.safeRelative("../etc/passwd"));
+        assertNull(Features.safeRelative("/etc/passwd"));
+        assertFalse(Features.shouldMirror(true, false, true, false));
+        assertTrue(Features.shouldMirror(false, false, true, false));
+        Features.LeaveLock lock = new Features.LeaveLock(-70, 30_000);
+        assertFalse(lock.observe(true, -60, 0));
+        assertFalse(lock.observe(true, -80, 1_000));
+        assertFalse(lock.observe(false, -80, 20_000));
+        assertTrue(lock.observe(false, -90, 31_000));
+        assertFalse(lock.observe(true, -60, 40_000));
+        Features.RateLimit rate = new Features.RateLimit(2, 1_000);
+        assertTrue(rate.allow(0));
+        assertTrue(rate.allow(10));
+        assertFalse(rate.allow(20));
+        assertTrue(rate.allow(1_000));
+        Features.ClipHistory history = new Features.ClipHistory();
+        assertFalse(history.add("1", "123456"));
+        assertTrue(history.add("2", "grocery list"));
+        assertEquals(List.of("grocery list"), history.search("groc"));
+        String secret = "pairing-secret-value";
+        assertEquals(32, Features.roomId(secret).length());
+        assertFalse(Features.roomId(secret).contains(secret));
+        byte[] key = Features.deriveKey(secret);
+        byte[] nonce = new byte[12];
+        nonce[0] = 7;
+        byte[] sealed = Features.seal(key, 1, nonce, "hello".getBytes(StandardCharsets.UTF_8));
+        assertEquals("hello", new String(Features.open(key, sealed), StandardCharsets.UTF_8));
+        sealed[sealed.length - 1] ^= 1;
+        try {
+            Features.open(key, sealed);
+            assertTrue(false);
+        } catch (Exception expected) {
+            assertTrue(true);
+        }
+        Features.Replay replay = new Features.Replay();
+        assertTrue(replay.accept(1));
+        assertFalse(replay.accept(1));
+        assertEquals(17, Features.streamHeader(3, 100, 1, 20).length);
+        assertEquals(20, Features.streamLength(Features.streamHeader(3, 100, 1, 20)));
+        Frame.Parser parser = new Frame.Parser();
+        java.util.Random random = new java.util.Random(1);
+        for (int i = 0; i < 40; i++) {
+            byte[] noise = new byte[random.nextInt(64)];
+            random.nextBytes(noise);
+            try {
+                parser.push(noise);
+            } catch (Exception expected) {
+                parser = new Frame.Parser();
+            }
+        }
+        assertEquals(32, Features.digestLength(noiseSafe()));
+    }
+
+    private static byte[] noiseSafe() {
+        return new byte[]{1, 2, 3, 4};
+    }
+
+    @Test
+    public void otpTableRejectsPricesDatesAndLongNumbers() {
+        String[][] rows = otpRows();
+        assertTrue(rows.length >= 40);
+        for (String[] row : rows) {
+            assertEquals(row[0], row[2], Features.otp(row[1]));
+        }
+    }
+
+    private static String[][] otpRows() {
+        return new String[][]{
+                {"482193", "HDFC Bank: 482193 is the OTP for UPI payment of Rs.500", "482193"},
+                {"123456", "123456 is your OTP", "123456"},
+                {"998877", "G-998877 is your Google verification code", "998877"},
+                {"1234", "PIN is 1234", "1234"},
+                {"12345678", "Your code is 12345678", "12345678"},
+                {null, "Your code is 123456789", null},
+                {null, "Debited Rs.5000 on 12/11/2026", null},
+                {null, "Call 9876543210 about the order", null},
+                {null, "hello from the phone", null},
+                {"492813", "OTP: 492813. Valid for 10 min", "492813"},
+                {"556677", "SBI: one time password is 556677", "556677"},
+                {"111222", "Use verification code 111222 to continue", "111222"},
+                {"909090", "Paytm OTP 909090. Do not share this code", "909090"},
+                {"445566", "ICICI Bank OTP is 445566 for credit card txn", "445566"},
+                {null, "Your balance is Rs 25000", null},
+                {null, "Meeting on 15-11-2026 at noon", null},
+                {"2468", "passcode 2468", "2468"},
+                {null, "Order #12 is ready", null},
+                {"135790", "WhatsApp code: 135790", "135790"},
+                {"102938", "Your Amazon OTP is 102938", "102938"},
+                {null, "Price $19.99 only today", null},
+                {"657483", "Airtel: OTP 657483 to login", "657483"},
+                {"2222", "ATM PIN 2222 was requested", "2222"},
+                {null, "Reference 123 is not a code", null},
+                {"314159", "code 314159 expires soon", "314159"},
+                {null, "The year 2026 was busy", null},
+                {"808080", "PhonePe OTP: 808080 for UPI", "808080"},
+                {null, "UPI ref 123456789012", null},
+                {"191919", "password code 191919", "191919"},
+                {null, "See you at 6", null},
+                {"454545", "Gpay verification 454545", "454545"},
+                {null, "Invoice 44 for milk", null},
+                {"787878", "one-time code 787878", "787878"},
+                {null, "Rs.123456 debited", null},
+                {"363636", "OTP 363636", "363636"},
+                {null, "barcode 112233 is on the box", null},
+                {"575757", "Your login code is 575757", "575757"},
+                {null, "Date of birth 01/02/1990", null},
+                {"646464", "Bank of Baroda OTP 646464", "646464"},
+                {"818181", "Use 818181 as the code", "818181"},
+                {null, "Call center 1800123456", null},
+                {"929292", "Axis Bank: 929292 is the OTP", "929292"}
+        };
     }
 
     private static String fixture() throws Exception {
