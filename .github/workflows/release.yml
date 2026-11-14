@@ -1,10 +1,15 @@
-name: Build apps
+name: Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing or new tag to publish, for example v0.3.0"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,55 +23,71 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Build APK
+      - name: Build a release APK when the signing secrets exist
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=$SDK" > local.properties
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::Missing Android signing secrets. The APK will be labeled debug and cannot update an installed build. See docs/SETUP_FOR_OWNER.md."
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/BridgeLink-android-debug.apk"
+          else
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
+            ./gradlew assembleRelease --no-daemon \
+              -PRELEASE_STORE_FILE="$GITHUB_WORKSPACE/release.keystore" \
+              -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+              -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+              -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/BridgeLink-android.apk"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            BridgeLink-android.apk
+            BridgeLink-android-debug.apk
+          if-no-files-found: error
 
   mac:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Build Mac app
-        run: bash macos/build.sh
+      - run: bash macos/build.sh
       - uses: actions/upload-artifact@v4
         with:
           name: mac-app
           path: macos/BridgeLink-mac.zip
 
   publish:
-    if: always() && !cancelled() && (needs.android.result == 'success' || needs.mac.result == 'success')
     needs: [android, mac]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-      - name: Attach whichever apps built
+      - name: Create the release if needed, then attach both apps
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${GITHUB_REF}" = "${GITHUB_REF#refs/tags/v}" ]; then
-            TAG="v0.2.0"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
           else
             TAG="${GITHUB_REF_NAME}"
           fi
+          case "$TAG" in
+            v*) ;;
+            *) echo "Tag must start with v"; exit 1 ;;
+          esac
+          gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
+            || gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --title "$TAG" --generate-notes
           files=()
-          if [ -f android-apk/app-debug.apk ]; then
-            mv android-apk/app-debug.apk BridgeLink-android.apk
-            files+=(BridgeLink-android.apk)
-          fi
-          if [ -f mac-app/BridgeLink-mac.zip ]; then
-            mv mac-app/BridgeLink-mac.zip BridgeLink-mac.zip
-            files+=(BridgeLink-mac.zip)
-          fi
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No artifacts"
-            exit 1
-          fi
+          if [ -f android-apk/BridgeLink-android.apk ]; then files+=(android-apk/BridgeLink-android.apk); fi
+          if [ -f android-apk/BridgeLink-android-debug.apk ]; then files+=(android-apk/BridgeLink-android-debug.apk); fi
+          if [ -f mac-app/BridgeLink-mac.zip ]; then files+=(mac-app/BridgeLink-mac.zip); fi
+          if [ "${#files[@]}" -eq 0 ]; then echo "No artifacts"; exit 1; fi
           gh release upload "$TAG" "${files[@]}" --repo "${GITHUB_REPOSITORY}" --clobber

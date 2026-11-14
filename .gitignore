@@ -16,6 +16,11 @@ android/build/
 android/app/build/
 android/local.properties
 macos/build/
+macos/.build/
 macos/BridgeLink.app
 macos/*.zip
 *.apk
+*.keystore
+attachments/
+AGENTS.md
+startup.sh
