@@ -36,12 +36,14 @@ import app.bridgelink.android.protocol.Outbox;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.HelloPlan;
 import app.bridgelink.android.protocol.LinkState;
+import app.bridgelink.android.protocol.Sas;
 import app.bridgelink.android.protocol.MacList;
 
 import java.io.BufferedWriter;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutorService;
@@ -57,6 +59,7 @@ public class LinkService extends Service {
     public static final String ACTION_CONNECT = "app.bridgelink.android.CONNECT";
     public static final String ACTION_SEND = "app.bridgelink.android.SEND";
     public static final String ACTION_STOP_RING = "app.bridgelink.android.STOP_RING";
+    public static final String ACTION_CONFIRM = "app.bridgelink.android.CONFIRM";
     public static final String ACTION_FORGET = "app.bridgelink.android.FORGET";
     public static final String EVENT = "app.bridgelink.android.EVENT";
     public static final String EXTRA_HOST = "host";
@@ -90,6 +93,8 @@ public class LinkService extends Service {
     private final LinkState linkState = new LinkState();
     private ConnectivityManager.NetworkCallback networkCallback;
     private volatile long lastRx;
+    private volatile String sessionFp = "";
+    private volatile String matchCode = "";
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -139,6 +144,8 @@ public class LinkService extends Service {
             send(intent.getStringExtra(EXTRA_KIND), intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
+        } else if (ACTION_CONFIRM.equals(action)) {
+            new Thread(this::confirmSas, "bridgelink-confirm").start();
         } else if (ACTION_FORGET.equals(action)) {
             forgetMac();
         }
@@ -181,8 +188,11 @@ public class LinkService extends Service {
             SharedPreferences prefs = Prefs.open(this);
             String savedToken = prefs.getString("token", "");
             String pinned = prefs.getString("fp", "");
-            if (address.isEmpty() || ((savedToken == null || savedToken.length() < 16) && code.length() != 6)) {
-                linkState.failFatal("Enter the Mac address and the 6-digit PIN");
+            boolean tokenReady = savedToken != null && savedToken.length() >= 16 && pinned != null && !pinned.isEmpty();
+            boolean qrReady = code.length() == 6 && pinned != null && !pinned.isEmpty();
+            boolean sasReady = pinned == null || pinned.isEmpty();
+            if (address.isEmpty() || !(tokenReady || qrReady || sasReady)) {
+                linkState.failFatal("Scan the Mac code, or enter the Mac address and confirm the match code.");
                 publish(linkState.fatal, null);
                 return;
             }
@@ -195,7 +205,13 @@ public class LinkService extends Service {
                 next.setTcpNoDelay(true);
                 next.startHandshake();
                 String seen = fingerprint((X509Certificate) next.getSession().getPeerCertificates()[0]);
-                HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen);
+                sessionFp = seen;
+                matchCode = "";
+                byte[] nonceRaw = new byte[16];
+                new SecureRandom().nextBytes(nonceRaw);
+                StringBuilder nonce = new StringBuilder(nonceRaw.length * 2);
+                for (byte value : nonceRaw) nonce.append(String.format("%02x", value));
+                HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen, nonce.toString());
                 if (plan.fatal != null) {
                     next.close();
                     linkState.failFatal(plan.fatal);
@@ -267,21 +283,26 @@ public class LinkService extends Service {
                     if (issued.length() >= 16) {
                         SharedPreferences prefs = Prefs.open(this);
                         SharedPreferences.Editor editor = prefs.edit().putString("token", issued);
-                        String pending = prefs.getString("pendingFp", "");
-                        String fp = prefs.getString("fp", "");
-                        if (pending != null && !pending.isEmpty()) {
-                            editor.putString("fp", pending);
-                            fp = pending;
-                        }
+                        String fp = sessionFp == null || sessionFp.isEmpty() ? prefs.getString("fp", "") : sessionFp;
+                        if (fp != null && !fp.isEmpty()) editor.putString("fp", fp);
                         String device = message.text("deviceId");
                         if (!device.isEmpty()) editor.putString("deviceId", device);
                         String macs = prefs.getString("macs", "[]");
                         editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp));
-                        editor.remove("pin").apply();
+                        editor.remove("pendingFp").remove("pin").apply();
                     }
                     publish("Paired with the Mac", "Mac accepted the phone");
                     main.removeCallbacks(heartbeat);
                     main.postDelayed(heartbeat, 20_000);
+                }
+                case "sas" -> {
+                    String echo = message.text("echo");
+                    if (echo.isEmpty()) {
+                        publish("The Mac sent a match code this phone cannot check.", null);
+                    } else {
+                        matchCode = Sas.code(sessionFp, echo, message.text("nonce"));
+                        publish("Match code " + matchCode + ". Tap Codes match on the phone and the Mac.", null);
+                    }
                 }
                 case "pong" -> lastRx = System.currentTimeMillis();
                 case "forget" -> {
@@ -351,6 +372,21 @@ public class LinkService extends Service {
             paired = false;
             publish("Forgot this Mac", null);
         });
+    }
+
+    private void confirmSas() {
+        if (matchCode == null || matchCode.isEmpty()) {
+            publish("Wait until both screens show a code.", null);
+            return;
+        }
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("code", matchCode);
+            writeEnvelope(Envelope.make("sas_confirm", "android", payload));
+            publish("Waiting for the Mac to confirm the same code.", null);
+        } catch (Exception error) {
+            publish("Could not confirm. Connect again.", null);
+        }
     }
 
     public void send(String kind, String body) {
@@ -569,7 +605,6 @@ public class LinkService extends Service {
             android.content.SharedPreferences prefs = Prefs.open(context);
             String pinned = prefs.getString("fp", "");
             if (pinned == null || pinned.isEmpty()) {
-                prefs.edit().putString("pendingFp", fp).apply();
                 return;
             }
             if (!MessageDigest.isEqual(pinned.getBytes(StandardCharsets.UTF_8), fp.getBytes(StandardCharsets.UTF_8))) {

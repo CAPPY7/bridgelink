@@ -47,6 +47,6 @@ public final class LinkState {
 
     public static boolean isFatalCode(String code) {
         return "bad_proof".equals(code) || "bad_pin".equals(code) || "bad_token".equals(code)
-                || "bad_version".equals(code) || "key_changed".equals(code);
+                || "bad_version".equals(code) || "key_changed".equals(code) || "bad_code".equals(code);
     }
 }

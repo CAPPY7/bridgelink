@@ -2,7 +2,7 @@
 
 ## v0.4.0 pairing proof
 
-The first hello sends `proof`, an HMAC-SHA256 of the certificate fingerprint keyed by the PIN. The raw PIN is not a field. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens and can keep more than one phone. A new PIN does not delete that list. The PIN on the Mac refreshes itself after 120 seconds.
+The first hello sends `proof` only when the QR link already contained the certificate fingerprint and the live certificate matches it. A typed address does not send a PIN proof. Both screens show a 6-digit match code from the certificate the phone saw. The user confirms on both. A relay sees a different code and is not given a token. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens. The PIN on the Mac refreshes itself after 120 seconds.
 
 Android reconnect is a small state machine: fatal errors do not retry. Forget on the phone sends a `forget` message, then drops the token. The UI is still the existing Java form. Kotlin and Compose wait until the shell is replaced, because rewriting it in the same release as the pairing change would hide the security fix.
 

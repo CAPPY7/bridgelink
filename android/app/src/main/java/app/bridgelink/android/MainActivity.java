@@ -83,6 +83,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         findViewById(R.id.connect).setOnClickListener(v -> connect());
+        findViewById(R.id.confirm).setOnClickListener(v -> {
+            Intent confirm = new Intent(this, LinkService.class);
+            confirm.setAction(LinkService.ACTION_CONFIRM);
+            ContextCompat.startForegroundService(this, confirm);
+        });
         findViewById(R.id.scan).setOnClickListener(v -> scan());
         findViewById(R.id.applyLink).setOnClickListener(v -> applyLink());
         findViewById(R.id.find).setOnClickListener(v -> findMac());

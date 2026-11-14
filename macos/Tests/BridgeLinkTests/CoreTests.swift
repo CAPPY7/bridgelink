@@ -74,6 +74,17 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(preferredLanAddress(interface: "en0", address: "192.168.1.20"))
     }
 
+    func testRelayCannotReuseAMatchCode() {
+        XCTAssertEqual(sasCode(macFingerprint: "ab", phoneNonce: "phone", macNonce: "mac"), "001826")
+        let phoneSees = sasCode(macFingerprint: "attacker", phoneNonce: "phone", macNonce: "mac")
+        let macSees = sasCode(macFingerprint: "realmac", phoneNonce: "phone", macNonce: "mac")
+        XCTAssertNotEqual(phoneSees, macSees)
+        XCTAssertEqual(sasDecision(macConfirmed: true, phoneCode: phoneSees, expected: macSees), .reject)
+        XCTAssertEqual(sasDecision(macConfirmed: false, phoneCode: macSees, expected: macSees), .waitForMac)
+        XCTAssertEqual(sasDecision(macConfirmed: true, phoneCode: macSees, expected: macSees), .accept)
+        XCTAssertEqual(sasDecision(macConfirmed: true, phoneCode: nil, expected: macSees), .waitForMac)
+    }
+
     func testIdentityFingerprintStaysAndKeychainDoesNotGrow() throws {
         let savedService = MacIdentity.service
         let savedLabel = MacIdentity.label

@@ -10,8 +10,9 @@
     <string name="host_hint">Mac address, for example 192.168.1.20</string>
     <string name="port_hint">Port</string>
     <string name="default_port">8787</string>
-    <string name="pin_hint">6-digit PIN from the Mac</string>
+    <string name="pin_hint">PIN from the QR. Leave empty to match a code.</string>
     <string name="connect">Connect</string>
+    <string name="codes_match">Codes match</string>
     <string name="note_hint">Note for the Mac</string>
     <string name="send_note">Send note</string>
     <string name="send_clipboard">Send clipboard</string>

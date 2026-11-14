@@ -29,17 +29,28 @@ Golden fixture: `docs/fixtures/text.json`.
 
 ## Pairing proof
 
-The phone never sends the PIN. After the TLS handshake it computes:
+The phone never sends the PIN.
+
+A QR or `bridgelink://` link contains the Mac certificate fingerprint. The phone sends a PIN proof only when the certificate it sees matches that fingerprint:
 
 ```text
-proof = HMAC-SHA256(key = PIN, message = fingerprint the phone actually saw)
+proof = HMAC-SHA256(key = PIN, message = fingerprint from the QR)
 ```
 
-The Mac computes the same value with its own certificate fingerprint. A stand-in with a different certificate cannot reuse the proof, and it never sees the PIN.
+If the certificate is different, the phone sends nothing. A relay cannot collect a proof and guess the PIN offline.
+
+If the phone has no fingerprint yet (typed address or Wi-Fi discovery), it sends a random nonce and no PIN. The Mac answers with its own nonce. Both screens show:
+
+```text
+code = first 6 digits of HMAC-SHA256(key = "bridgelink-sas-v1",
+        message = macFingerprint + newline + phoneNonce + newline + macNonce)
+```
+
+The phone uses the fingerprint it actually saw. The Mac uses its own. A relay makes the codes differ. The Mac issues a token only after both sides tap confirm and the codes match. Five wrong codes end the attempt.
 
 A saved token is sent only when the certificate matches the pinned fingerprint. The Mac stores a hash of each phone token, not the token itself. `New PIN` adds a slot. It does not remove phones that are already paired.
 
-`forget` tells the other side to drop that device. Fatal error codes are `bad_proof`, `bad_token`, `bad_pin`, `bad_version`, and `key_changed`. The phone does not retry those.
+`forget` tells the other side to drop that device. Fatal error codes are `bad_proof`, `bad_token`, `bad_pin`, `bad_version`, `key_changed`, and `bad_code`. The phone does not retry those.
 
 A waiting connection must send hello within 10 seconds. A fifth waiting connection is refused. Three failed hellos from one address pause that address for 60 seconds.
 
@@ -47,8 +58,10 @@ A waiting connection must send hello within 10 seconds. A fifth waiting connecti
 
 | type | payload | Who sends it |
 |---|---|---|
-| hello | `name`, plus `proof` or `token` | Phone, first message |
-| paired | `token` | Mac, after a good PIN or a known token |
+| hello | `name`, plus `proof`, `token`, or `nonce` | Phone, first message |
+| sas | `nonce`, `echo` | Mac, match-code step |
+| sas_confirm | `code` | Phone, after the user taps Codes match |
+| paired | `token` | Mac, after a good QR PIN, a match code, or a known token |
 | error | `body` | Either side |
 | text | `body` | Either side |
 | clipboard | `body` | Either side |

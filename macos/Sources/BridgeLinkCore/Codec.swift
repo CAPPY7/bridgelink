@@ -247,3 +247,27 @@ public func looksSensitive(_ text: String) -> Bool {
     return compact.allSatisfy { $0.isNumber }
 }
 
+public func sasCode(macFingerprint: String, phoneNonce: String, macNonce: String) -> String {
+    let message = Data((macFingerprint + "\n" + phoneNonce + "\n" + macNonce).utf8)
+    let key = SymmetricKey(data: Data("bridgelink-sas-v1".utf8))
+    let mac = HMAC<SHA256>.authenticationCode(for: message, using: key)
+    let bytes = Array(mac)
+    let value = (UInt32(bytes[0]) << 24) | (UInt32(bytes[1]) << 16) | (UInt32(bytes[2]) << 8) | UInt32(bytes[3])
+    return String(format: "%06d", value % 1_000_000)
+}
+
+public enum SasDecision: Equatable {
+    case waitForMac
+    case accept
+    case reject
+}
+
+/// A token is issued only after this Mac was confirmed and the phone's code
+/// matches the code computed from this Mac's own certificate.
+public func sasDecision(macConfirmed: Bool, phoneCode: String?, expected: String) -> SasDecision {
+    guard macConfirmed, let phoneCode, !phoneCode.isEmpty else { return .waitForMac }
+    if constantTimeEquals(phoneCode, expected) { return .accept }
+    return .reject
+}
+
+

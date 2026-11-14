@@ -20,6 +20,7 @@ enum Phase: Equatable {
 final class LinkModel: ObservableObject {
     @Published var pin: String
     @Published var pinLeft = 120
+    @Published var matchCode = ""
     @Published var phase: Phase = .idle
     @Published var addresses = ""
     @Published var addressChoices: [String] = []
@@ -49,6 +50,14 @@ final class LinkModel: ObservableObject {
     private var pendingGate = PendingGate()
     private var pendingCount = 0
     private var liveDeviceId = ""
+    private var sasConnectionID: UUID?
+    private var sasPhoneNonce = ""
+    private var sasMacNonce = ""
+    private var sasExpected = ""
+    private var sasName = "Phone"
+    private var sasMacConfirmed = false
+    private var sasPhoneCode: String?
+    private var sasFails = 0
     private var gate: PairingGate
     private var gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
 
@@ -72,6 +81,18 @@ final class LinkModel: ObservableObject {
         gate = PairingGate(token: token, now: gateStarted)
         if case .paired = phase {} else { phase = .listening }
         note("New PIN. Phones that are already paired stay linked.")
+    }
+
+    func confirmMatch() {
+        guard sasConnectionID != nil else {
+            note("No phone is waiting to match a code.")
+            return
+        }
+        sasMacConfirmed = true
+        note("This Mac confirmed \(matchCode). Confirm the same code on the phone.")
+        if let connection = pending, let id = sasConnectionID {
+            finishSas(connection: connection, id: id)
+        }
     }
 
     func forget() {
@@ -294,9 +315,19 @@ final class LinkModel: ObservableObject {
         queue.asyncAfter(deadline: .now() + 10) { [weak self] in
             Task { @MainActor in
                 guard let self, self.pendingID == id, self.liveID != id else { return }
+                if self.sasConnectionID == id { return }
                 connection.cancel()
                 self.finishPending(id)
                 self.note("A connection did not pair in time.")
+            }
+        }
+        queue.asyncAfter(deadline: .now() + 120) { [weak self] in
+            Task { @MainActor in
+                guard let self, self.sasConnectionID == id, self.liveID != id else { return }
+                connection.cancel()
+                self.clearSas()
+                self.finishPending(id)
+                self.note("The match code expired. Connect again.")
             }
         }
     }
@@ -361,8 +392,24 @@ final class LinkModel: ObservableObject {
                 note("Rejected an unknown phone. Paired phones stay linked.")
                 return
             }
+            let phoneNonce = envelope.text("nonce")
+            if proof.isEmpty && !phoneNonce.isEmpty {
+                let macNonce = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+                sasConnectionID = id
+                sasPhoneNonce = phoneNonce
+                sasMacNonce = macNonce
+                sasName = name
+                sasExpected = sasCode(macFingerprint: fingerprint, phoneNonce: phoneNonce, macNonce: macNonce)
+                sasMacConfirmed = false
+                sasPhoneCode = nil
+                sasFails = 0
+                matchCode = sasExpected
+                send(type: "sas", payload: ["nonce": macNonce, "echo": phoneNonce], on: connection)
+                note("Match code \(sasExpected). Tap Codes match on both screens.")
+                return
+            }
             let expected = pairingProof(pin: pin, fingerprint: fingerprint)
-            if gate.observe(matched: constantTimeEquals(expected, proof), now: now) {
+            if !proof.isEmpty && gate.observe(matched: constantTimeEquals(expected, proof), now: now) {
                 let issued = UUID().uuidString.replacingOccurrences(of: "-", with: "")
                 let device = book.remember(name: name, token: issued, now: now)
                 saveBook()
@@ -374,6 +421,12 @@ final class LinkModel: ObservableObject {
                 finishPending(id)
                 note("Rejected a PIN. Paired phones stay linked.")
             }
+            return
+        }
+        if envelope.type == "sas_confirm" && pending {
+            guard id == sasConnectionID else { return }
+            sasPhoneCode = envelope.text("code")
+            finishSas(connection: connection, id: id)
             return
         }
         guard !pending, liveID == id else {
@@ -430,6 +483,42 @@ final class LinkModel: ObservableObject {
         send(type: "paired", payload: ["token": token, "deviceId": deviceId], on: connection)
         lastRx = Date()
         note("Paired with \(name)")
+    }
+
+    private func finishSas(connection: NWConnection, id: UUID) {
+        guard id == sasConnectionID else { return }
+        let decision = sasDecision(macConfirmed: sasMacConfirmed, phoneCode: sasPhoneCode, expected: sasExpected)
+        switch decision {
+        case .waitForMac:
+            note("The phone confirmed. Tap Codes match on this Mac if the codes are the same.")
+        case .accept:
+            let now = Int64(Date().timeIntervalSince1970 * 1000)
+            let issued = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            let device = book.remember(name: sasName, token: issued, now: now)
+            saveBook()
+            clearSas()
+            promote(connection, id: id, name: sasName, token: issued, deviceId: device.id)
+        case .reject:
+            sasFails += 1
+            if sasFails >= 5 {
+                pendingGate.fail(ip: Self.endpointHost(connection), now: Int64(Date().timeIntervalSince1970 * 1000))
+                send(type: "error", payload: ["code": "bad_code", "body": "The match codes did not agree"], on: connection)
+                connection.cancel()
+                clearSas()
+                finishPending(id)
+                note("Match codes did not agree. Paired phones stay linked.")
+            } else {
+                sasPhoneCode = nil
+                note("Those codes do not match. Look at both screens.")
+            }
+        }
+    }
+
+    private func clearSas() {
+        sasConnectionID = nil
+        sasPhoneCode = nil
+        sasMacConfirmed = false
+        matchCode = ""
     }
 
     private func loadBook() {
@@ -539,9 +628,13 @@ struct DeskView: View {
             Text(pairingText).font(.caption2.monospaced()).textSelection(.enabled).lineLimit(3)
             Text("Key \(model.fingerprint)").font(.caption.monospaced()).textSelection(.enabled)
             Text("PIN \(model.pin)").font(.title3.monospacedDigit().weight(.medium))
-            Text("Expires in \(model.pinLeft) seconds. Scan the QR, or paste the link into the phone.")
+            Text("Expires in \(model.pinLeft) seconds. Scan the QR. That is the safe way to pair.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            if !model.matchCode.isEmpty {
+                Text("Match code \(model.matchCode)").font(.title3.monospacedDigit().weight(.medium))
+                Button("Codes match") { model.confirmMatch() }
+            }
             HStack {
                 Button("New PIN") { model.newPin() }
                 Button("Forget phone") { model.forget() }

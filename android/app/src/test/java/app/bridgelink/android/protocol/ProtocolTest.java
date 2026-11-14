@@ -119,20 +119,38 @@ public class ProtocolTest {
 
     @Test
     public void helloNeverSendsPinOrTokenToAnUnpinnedKey() {
-        HelloPlan first = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "", "seenfp");
-        assertEquals(null, first.fatal);
-        assertFalse(first.payload.has("pin"));
-        assertFalse(first.payload.has("token"));
-        assertEquals(Proof.hmacHex("123456", "seenfp"), first.payload.get("proof").getAsString());
+        HelloPlan typed = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "", "attacker", "phone-nonce");
+        assertEquals(null, typed.fatal);
+        assertFalse(typed.payload.has("pin"));
+        assertFalse(typed.payload.has("proof"));
+        assertFalse(typed.payload.has("token"));
+        assertEquals("phone-nonce", typed.payload.get("nonce").getAsString());
 
-        HelloPlan again = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "pinned");
+        HelloPlan qr = HelloPlan.decide("Pixel", "123456", "", "realfp", "realfp", "n");
+        assertFalse(qr.payload.has("pin"));
+        assertFalse(qr.payload.has("nonce"));
+        assertEquals(Proof.hmacHex("123456", "realfp"), qr.payload.get("proof").getAsString());
+
+        HelloPlan again = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "pinned", "n");
         assertFalse(again.payload.has("pin"));
         assertFalse(again.payload.has("proof"));
         assertEquals("tokentokentoken1", again.payload.get("token").getAsString());
 
-        HelloPlan mitm = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "attacker");
+        HelloPlan mitm = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "attacker", "n");
         assertEquals(null, mitm.payload);
         assertTrue(mitm.fatal.contains("key changed"));
+    }
+
+    @Test
+    public void relayShowsADifferentMatchCodeAndGetsNoToken() {
+        assertEquals("001826", Sas.code("ab", "phone", "mac"));
+        String phoneSees = Sas.code("attacker", "phone", "mac");
+        String macSees = Sas.code("realmac", "phone", "mac");
+        assertFalse(phoneSees.equals(macSees));
+        HelloPlan relay = HelloPlan.decide("Pixel", "123456", "", "", "attacker", "phone");
+        assertFalse(relay.payload.has("proof"));
+        assertFalse(relay.payload.has("token"));
+        assertFalse(relay.payload.has("pin"));
     }
 
     @Test
@@ -143,6 +161,7 @@ public class ProtocolTest {
         assertFalse(state.retryScheduled);
         assertEquals(LinkState.Phase.FATAL, state.phase);
         assertTrue(LinkState.isFatalCode("bad_proof"));
+        assertTrue(LinkState.isFatalCode("bad_code"));
         assertFalse(LinkState.isFatalCode("timeout"));
         state.begin();
         state.retryable("timeout");

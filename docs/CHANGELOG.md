@@ -2,7 +2,7 @@
 
 ## 0.4.0
 
-- The phone no longer sends the PIN or a saved token to a certificate it does not already trust. The first hello carries an HMAC of the certificate it actually saw.
+- A typed PIN is no longer a proof. Without the QR fingerprint, both screens show a match code. A relay with a different certificate gets a different code and no token.
 - A wrong PIN, a changed key, or a rejected token stops reconnecting and keeps the reason on screen.
 - Forget on either side tells the other and drops that device only.
 - The Mac caps waiting connections, refreshes Wi-Fi addresses, skips VPN and bridge addresses, and a new PIN does not sign out phones that are already paired. The PIN countdown restarts the code after two minutes.
