@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Security
 
@@ -12,12 +13,19 @@ public enum CodecError: Error, Equatable {
     case badJson
 }
 
-public struct ParsedEnvelope: Equatable {
+public struct ParsedEnvelope {
     public var id: String
     public var type: String
     public var from: String
     public var ts: Int64
-    public var payload: [String: String]
+    public var payload: [String: Any]
+
+    public func text(_ key: String) -> String {
+        let value = payload[key]
+        if let text = value as? String { return text }
+        if let number = value as? NSNumber { return number.stringValue }
+        return ""
+    }
 }
 
 public enum EnvelopeCodec {
@@ -35,19 +43,11 @@ public enum EnvelopeCodec {
         guard let ts = (object["ts"] as? NSNumber)?.int64Value, ts >= 0 else {
             throw CodecError.badJson
         }
-        var payload: [String: String] = [:]
-        if let raw = object["payload"] as? [String: Any] {
-            for (key, value) in raw {
-                guard let text = value as? String else { throw CodecError.badJson }
-                payload[key] = text
-            }
-        } else {
-            throw CodecError.badJson
-        }
+        guard let payload = object["payload"] as? [String: Any] else { throw CodecError.badJson }
         return ParsedEnvelope(id: id, type: type, from: from, ts: ts, payload: payload)
     }
 
-    public static func json(type: String, from: String, payload: [String: String]) -> Data {
+    public static func json(type: String, from: String, payload: [String: Any]) -> Data {
         let object: [String: Any] = [
             "v": 1,
             "id": UUID().uuidString,
@@ -121,9 +121,9 @@ public struct PairingGate {
         return String(format: "%06d", value % 1_000_000)
     }
 
-    public mutating func check(_ guess: String, now: Int64) -> Bool {
+    public mutating func observe(matched: Bool, now: Int64) -> Bool {
         if now > expiresAt || now < lockedUntil || used { return false }
-        if constantTimeEquals(token, guess) {
+        if matched {
             failures = 0
             used = true
             return true
@@ -156,6 +156,87 @@ public func pairingLink(host: String, port: Int, fingerprint: String, pin: Strin
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
     return "bridgelink://pair?v=1&host=\(enc(host))&port=\(port)&fp=\(enc(fingerprint))&pin=\(enc(pin))"
+}
+
+public func pairingProof(pin: String, fingerprint: String) -> String {
+    let key = SymmetricKey(data: Data(pin.utf8))
+    let mac = HMAC<SHA256>.authenticationCode(for: Data(fingerprint.utf8), using: key)
+    return Data(mac).map { String(format: "%02x", $0) }.joined()
+}
+
+public func sha256Hex(_ text: String) -> String {
+    SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+}
+
+public struct PairedDevice: Codable, Equatable {
+    public var id: String
+    public var name: String
+    public var tokenHash: String
+    public var pairedAt: Int64
+    public var lastSeen: Int64
+}
+
+public struct DeviceBook {
+    public private(set) var devices: [PairedDevice] = []
+
+    public init() {}
+
+    public init(devices: [PairedDevice]) {
+        self.devices = devices
+    }
+
+    public mutating func remember(name: String, token: String, now: Int64) -> PairedDevice {
+        let device = PairedDevice(id: UUID().uuidString, name: name, tokenHash: sha256Hex(token), pairedAt: now, lastSeen: now)
+        devices.append(device)
+        return device
+    }
+
+    public mutating func touch(id: String, now: Int64) {
+        guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
+        devices[index].lastSeen = now
+    }
+
+    public func match(token: String) -> PairedDevice? {
+        let hash = sha256Hex(token)
+        return devices.first { constantTimeEquals($0.tokenHash, hash) }
+    }
+
+    public mutating func forget(id: String) {
+        devices.removeAll { $0.id == id }
+    }
+}
+
+public struct PendingGate {
+    public static let maxPending = 4
+    public static let failLimit = 3
+    public static let blockMs: Int64 = 60_000
+    private var blockedUntil: [String: Int64] = [:]
+    private var failures: [String: Int] = [:]
+
+    public init() {}
+
+    public mutating func admit(ip: String, openCount: Int, now: Int64) -> Bool {
+        if openCount >= PendingGate.maxPending { return false }
+        if let until = blockedUntil[ip], now < until { return false }
+        return true
+    }
+
+    public mutating func fail(ip: String, now: Int64) {
+        let count = (failures[ip] ?? 0) + 1
+        failures[ip] = count
+        if count >= PendingGate.failLimit {
+            blockedUntil[ip] = now + PendingGate.blockMs
+            failures[ip] = 0
+        }
+    }
+}
+
+public func preferredLanAddress(interface name: String, address: String) -> Bool {
+    let blocked = ["utun", "bridge", "vmnet", "docker", "awdl", "llw"]
+    if blocked.contains(where: { name.hasPrefix($0) }) { return false }
+    if address.hasPrefix("169.254.") || address == "127.0.0.1" { return false }
+    if address.contains(":") { return false }
+    return true
 }
 
 public func looksSensitive(_ text: String) -> Bool {

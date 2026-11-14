@@ -18,13 +18,20 @@ jobs:
           java-version: "17"
       - name: Versions match
         run: python3 scripts/check-versions.py
-      - name: Unit tests and debug APK
+      - name: Unit tests, lint, and release APK
         working-directory: android
         run: |
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=$SDK" > local.properties
           chmod +x gradlew
-          ./gradlew test assembleDebug --no-daemon
+          KEYSTORE="$RUNNER_TEMP/ci.keystore"
+          keytool -genkeypair -keystore "$KEYSTORE" -alias bridgelink -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android -dname "CN=BridgeLink CI" 
+          ./gradlew lint test assembleRelease --no-daemon \
+            -PRELEASE_STORE_FILE="$KEYSTORE" \
+            -PRELEASE_STORE_PASSWORD=android \
+            -PRELEASE_KEY_ALIAS=bridgelink \
+            -PRELEASE_KEY_PASSWORD=android
 
   mac:
     runs-on: macos-15
@@ -40,7 +47,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install
+      - run: npm ci
       - run: npm run typecheck
       - name: Demo protocol tests
         run: node --experimental-strip-types --test src/lib/bridgelink/protocol.test.ts

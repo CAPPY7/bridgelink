@@ -11,7 +11,7 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(envelope.type, "text")
         XCTAssertEqual(envelope.from, "android")
         XCTAssertEqual(envelope.ts, 1000)
-        XCTAssertEqual(envelope.payload["body"], "hello")
+        XCTAssertEqual(envelope.text("body"), "hello")
     }
 
     func testFrameRoundTrip() throws {
@@ -25,15 +25,15 @@ final class CoreTests: XCTestCase {
 
     func testPinLockout() {
         var gate = PairingGate(token: "123456", now: 0)
-        XCTAssertFalse(gate.check("000000", now: 1))
-        XCTAssertFalse(gate.check("000000", now: 2))
-        XCTAssertFalse(gate.check("000000", now: 3))
-        XCTAssertFalse(gate.check("000000", now: 4))
-        XCTAssertFalse(gate.check("000000", now: 5))
-        XCTAssertFalse(gate.check("123456", now: 6))
+        XCTAssertFalse(gate.observe(matched: false, now: 1))
+        XCTAssertFalse(gate.observe(matched: false, now: 2))
+        XCTAssertFalse(gate.observe(matched: false, now: 3))
+        XCTAssertFalse(gate.observe(matched: false, now: 4))
+        XCTAssertFalse(gate.observe(matched: false, now: 5))
+        XCTAssertFalse(gate.observe(matched: true, now: 6))
         var fresh = PairingGate(token: "123456", now: 0)
-        XCTAssertTrue(fresh.check("123456", now: 10))
-        XCTAssertFalse(fresh.check("123456", now: 11))
+        XCTAssertTrue(fresh.observe(matched: true, now: 10))
+        XCTAssertFalse(fresh.observe(matched: true, now: 11))
     }
 
     func testBackoff() {
@@ -51,5 +51,26 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(looksSensitive("123456"))
         XCTAssertTrue(looksSensitive("password: hunter2"))
         XCTAssertFalse(looksSensitive("hello from the phone"))
+    }
+
+    func testProofDevicesAndPendingCap() {
+        let proof = pairingProof(pin: "123456", fingerprint: "abc")
+        XCTAssertFalse(proof.contains("123456"))
+        XCTAssertNotEqual(proof, pairingProof(pin: "123456", fingerprint: "other"))
+        var book = DeviceBook()
+        let device = book.remember(name: "Pixel", token: "tokentokentoken1", now: 10)
+        XCTAssertNotNil(book.match(token: "tokentokentoken1"))
+        XCTAssertNil(book.match(token: "other-token-value"))
+        XCTAssertEqual(device.name, "Pixel")
+        var gate = PendingGate()
+        XCTAssertFalse(gate.admit(ip: "1.1.1.1", openCount: 4, now: 0))
+        XCTAssertTrue(gate.admit(ip: "1.1.1.1", openCount: 1, now: 0))
+        gate.fail(ip: "9.9.9.9", now: 0)
+        gate.fail(ip: "9.9.9.9", now: 1)
+        gate.fail(ip: "9.9.9.9", now: 2)
+        XCTAssertFalse(gate.admit(ip: "9.9.9.9", openCount: 0, now: 3))
+        XCTAssertFalse(preferredLanAddress(interface: "utun0", address: "10.0.0.1"))
+        XCTAssertFalse(preferredLanAddress(interface: "en0", address: "169.254.1.1"))
+        XCTAssertTrue(preferredLanAddress(interface: "en0", address: "192.168.1.20"))
     }
 }

@@ -34,6 +34,10 @@ final class LinkModel: ObservableObject {
     private var pendingID = UUID()
     private var liveID = UUID()
     private let queue = DispatchQueue(label: "app.bridgelink.mac")
+    private var book = DeviceBook()
+    private var pendingGate = PendingGate()
+    private var pendingCount = 0
+    private var liveDeviceId = ""
     private var gate: PairingGate
     private var gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
 
@@ -41,6 +45,7 @@ final class LinkModel: ObservableObject {
         let token = PairingGate.newToken()
         pin = token
         gate = PairingGate(token: token, now: Int64(Date().timeIntervalSince1970 * 1000))
+        loadBook()
         addresses = Self.lanAddresses().joined(separator: "\n")
         if addresses.isEmpty { addresses = "No Wi-Fi address yet" }
         start()
@@ -51,17 +56,21 @@ final class LinkModel: ObservableObject {
         pin = token
         gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
         gate = PairingGate(token: token, now: gateStarted)
-        UserDefaults.standard.removeObject(forKey: "peerToken")
         phase = .listening
-        note("New PIN. The phone must pair again.")
+        note("New PIN. Phones that are already paired stay linked.")
     }
 
     func forget() {
-        UserDefaults.standard.removeObject(forKey: "peerToken")
+        if !liveDeviceId.isEmpty {
+            send(type: "forget", payload: ["deviceId": liveDeviceId], on: live)
+            book.forget(id: liveDeviceId)
+            saveBook()
+        }
+        liveDeviceId = ""
         live?.cancel()
         live = nil
         phase = .listening
-        note("Forgot the phone.")
+        note("Forgot the connected phone. Other paired phones stay linked.")
     }
 
     func toggleLogin() {
@@ -165,20 +174,41 @@ final class LinkModel: ObservableObject {
     }
 
     private func accept(_ connection: NWConnection) {
+        let now = Int64(Date().timeIntervalSince1970 * 1000)
+        let ip = Self.endpointHost(connection)
+        if !pendingGate.admit(ip: ip, openCount: pendingCount, now: now) {
+            connection.cancel()
+            note("Refused an extra connection so a real phone can still pair.")
+            return
+        }
         let id = UUID()
+        pendingCount += 1
         pendingID = id
         pending = connection
         connection.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
-                guard let self, self.pendingID == id else { return }
+                guard let self, self.pendingID == id, self.liveID != id else { return }
                 if case .failed = state {
-                    self.pending = nil
+                    self.finishPending(id)
                     self.note("A connection failed before it paired. The current phone stays linked.")
                 }
             }
         }
         connection.start(queue: queue)
         receive(connection, id: id, buffer: FrameBuffer())
+        queue.asyncAfter(deadline: .now() + 10) { [weak self] in
+            Task { @MainActor in
+                guard let self, self.pendingID == id, self.liveID != id else { return }
+                connection.cancel()
+                self.finishPending(id)
+                self.note("A connection did not pair in time.")
+            }
+        }
+    }
+
+    private func finishPending(_ id: UUID) {
+        if pendingID == id { pending = nil }
+        pendingCount = max(0, pendingCount - 1)
     }
 
     private func receive(_ connection: NWConnection, id: UUID, buffer: FrameBuffer) {
@@ -217,36 +247,49 @@ final class LinkModel: ObservableObject {
     private func handle(_ data: Data, connection: NWConnection, id: UUID, pending: Bool) {
         guard let envelope = try? EnvelopeCodec.parse(data) else { return }
         if envelope.type == "hello" {
-            let saved = UserDefaults.standard.string(forKey: "peerToken") ?? ""
-            let token = envelope.payload["token"] ?? ""
-            let guess = envelope.payload["pin"] ?? ""
-            let name = envelope.payload["name"] ?? "Phone"
-            if !saved.isEmpty && constantTimeEquals(saved, token) {
-                promote(connection, id: id, name: name, token: saved)
+            let now = Int64(Date().timeIntervalSince1970 * 1000)
+            let token = envelope.text("token")
+            let proof = envelope.text("proof")
+            let name = envelope.text("name").isEmpty ? "Phone" : envelope.text("name")
+            if !token.isEmpty, let device = book.match(token: token) {
+                book.touch(id: device.id, now: now)
+                saveBook()
+                promote(connection, id: id, name: device.name, token: token, deviceId: device.id)
                 return
             }
-            let now = Int64(Date().timeIntervalSince1970 * 1000)
-            if gate.check(guess, now: now) {
-                let issued = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-                promote(connection, id: id, name: name, token: issued)
-            } else {
-                send(type: "error", payload: ["body": "Wrong or expired PIN"], on: connection)
+            if !token.isEmpty {
+                pendingGate.fail(ip: Self.endpointHost(connection), now: now)
+                send(type: "error", payload: ["code": "bad_token", "body": "This phone is not paired"], on: connection)
                 connection.cancel()
-                if self.pendingID == id { self.pending = nil }
-                note("Rejected a PIN. The paired phone was not disconnected.")
+                finishPending(id)
+                note("Rejected an unknown phone. Paired phones stay linked.")
+                return
+            }
+            let expected = pairingProof(pin: pin, fingerprint: fingerprint)
+            if gate.observe(matched: constantTimeEquals(expected, proof), now: now) {
+                let issued = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+                let device = book.remember(name: name, token: issued, now: now)
+                saveBook()
+                promote(connection, id: id, name: name, token: issued, deviceId: device.id)
+            } else {
+                pendingGate.fail(ip: Self.endpointHost(connection), now: now)
+                send(type: "error", payload: ["code": "bad_proof", "body": "Wrong or expired PIN"], on: connection)
+                connection.cancel()
+                finishPending(id)
+                note("Rejected a PIN. Paired phones stay linked.")
             }
             return
         }
         guard !pending, liveID == id else {
-            send(type: "error", payload: ["body": "Pair first"], on: connection)
+            send(type: "error", payload: ["code": "pair_first", "body": "Pair first"], on: connection)
             return
         }
         switch envelope.type {
         case "text":
-            note(envelope.payload["body"] ?? "")
-            notify("Note from the phone", envelope.payload["body"] ?? "")
+            note(envelope.text("body"))
+            notify("Note from the phone", envelope.text("body"))
         case "clipboard":
-            let text = envelope.payload["body"] ?? ""
+            let text = envelope.text("body")
             if clipboardMode == "off" {
                 note("Ignored clipboard from the phone")
                 return
@@ -262,19 +305,33 @@ final class LinkModel: ObservableObject {
             send(type: "pong", payload: [:], on: connection)
         default:
             note(envelope.type)
+            send(type: "error", payload: ["code": "unsupported_type", "body": "Unsupported"], on: connection)
         }
     }
 
-    private func promote(_ connection: NWConnection, id: UUID, name: String, token: String) {
-        guard pendingID == id else { return }
-        UserDefaults.standard.set(token, forKey: "peerToken")
+    private func promote(_ connection: NWConnection, id: UUID, name: String, token: String, deviceId: String) {
+        guard pendingID == id || liveID == id else { return }
         live?.cancel()
         liveID = id
         live = connection
+        liveDeviceId = deviceId
         pending = nil
+        pendingCount = max(0, pendingCount - 1)
         phase = .paired(name)
-        send(type: "paired", payload: ["token": token], on: connection)
+        send(type: "paired", payload: ["token": token, "deviceId": deviceId], on: connection)
         note("Paired with \(name)")
+    }
+
+    private func loadBook() {
+        guard let data = UserDefaults.standard.data(forKey: "devices"),
+              let decoded = try? JSONDecoder().decode([PairedDevice].self, from: data) else { return }
+        book = DeviceBook(devices: decoded)
+    }
+
+    private func saveBook() {
+        if let data = try? JSONEncoder().encode(book.devices) {
+            UserDefaults.standard.set(data, forKey: "devices")
+        }
     }
 
     private func applyClipboard(_ text: String) {
@@ -314,14 +371,24 @@ final class LinkModel: ObservableObject {
             if (flags & IFF_UP) != 0, (flags & IFF_LOOPBACK) == 0,
                let address = item.pointee.ifa_addr, address.pointee.sa_family == UInt8(AF_INET) {
                 var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                let interfaceName = String(cString: item.pointee.ifa_name)
                 if getnameinfo(address, socklen_t(address.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
                     let value = String(cString: host)
-                    if value != "127.0.0.1" { result.append(value) }
+                    if preferredLanAddress(interface: interfaceName, address: value) { result.append(value) }
                 }
             }
             cursor = item.pointee.ifa_next
         }
         return result
+    }
+
+    private static func endpointHost(_ connection: NWConnection) -> String {
+        switch connection.endpoint {
+        case .hostPort(let host, _):
+            return "\(host)"
+        default:
+            return "unknown"
+        }
     }
 }
 
@@ -386,7 +453,7 @@ struct DeskView: View {
         .frame(width: 380)
         .sheet(isPresented: $showAbout) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("BridgeLink 0.3.0").font(.headline)
+                Text("BridgeLink 0.4.0").font(.headline)
                 Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 Button("Close") { showAbout = false }
             }

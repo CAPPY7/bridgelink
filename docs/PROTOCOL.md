@@ -23,15 +23,31 @@ Each message is a frame:
 | type | Message name |
 | from | `android`, `mac`, or `relay` |
 | ts | Unix milliseconds |
-| payload | String values only |
+| payload | JSON object. Unknown fields are ignored |
 
 Golden fixture: `docs/fixtures/text.json`.
 
-## Types in 0.3.0
+## Pairing proof
+
+The phone never sends the PIN. After the TLS handshake it computes:
+
+```text
+proof = HMAC-SHA256(key = PIN, message = fingerprint the phone actually saw)
+```
+
+The Mac computes the same value with its own certificate fingerprint. A stand-in with a different certificate cannot reuse the proof, and it never sees the PIN.
+
+A saved token is sent only when the certificate matches the pinned fingerprint. The Mac stores a hash of each phone token, not the token itself. `New PIN` adds a slot. It does not remove phones that are already paired.
+
+`forget` tells the other side to drop that device. Fatal error codes are `bad_proof`, `bad_token`, `bad_pin`, `bad_version`, and `key_changed`. The phone does not retry those.
+
+A waiting connection must send hello within 10 seconds. A fifth waiting connection is refused. Three failed hellos from one address pause that address for 60 seconds.
+
+## Types in 0.4.0
 
 | type | payload | Who sends it |
 |---|---|---|
-| hello | `name`, `pin` and/or `token` | Phone, first message |
+| hello | `name`, plus `proof` or `token` | Phone, first message |
 | paired | `token` | Mac, after a good PIN or a known token |
 | error | `body` | Either side |
 | text | `body` | Either side |

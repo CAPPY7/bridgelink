@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- The phone no longer sends the PIN or a saved token to a certificate it does not already trust. The first hello carries an HMAC of the certificate it actually saw.
+- A wrong PIN, a changed key, or a rejected token stops reconnecting and keeps the reason on screen.
+- The Mac caps waiting connections, ignores VPN and bridge addresses, and a new PIN does not sign out phones that are already paired.
+- Payload values may be numbers and booleans, not only strings.
+- v0.3.0 cannot talk to 0.4.0.
+
 ## 0.3.0
 
 - Phone and Mac speak length-prefixed frames and TLS. The phone pins the Mac certificate.

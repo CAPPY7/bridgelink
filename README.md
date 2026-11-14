@@ -12,7 +12,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_GUIDE.md](docs/USER_GUIDE.
 
 ## Status of the 25 features
 
-Honest status of the **installable apps** in 0.3.0. The demo is not counted.
+Honest status of the **installable apps** in 0.4.0. The demo is not counted.
 
 | # | Feature | Status |
 |---|---|---|
@@ -38,7 +38,7 @@ Honest status of the **installable apps** in 0.3.0. The demo is not counted.
 | 20 | Scan to Mac | Not started |
 | 21 | Automations | Not started |
 | 22 | Quick drop | Not started |
-| 23 | Pairing | Partial. QR link, pasted link, Wi-Fi discovery, one-time PIN, saved token. No in-app camera scanner |
+| 23 | Pairing | Partial. QR link opens the app, PIN is never sent, saved token, more than one phone. No in-app camera scanner |
 | 24 | End-to-end encryption | Partial. TLS on the local link. No relay |
 | 25 | Key pin | Partial. Phone pins the Mac certificate after the first pair |
 

@@ -1,5 +1,15 @@
 # Decisions
 
+## v0.4.0 pairing proof
+
+The first hello sends `proof`, an HMAC-SHA256 of the certificate fingerprint keyed by the PIN. The raw PIN is not a field. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens and can keep more than one phone. A new PIN does not delete that list.
+
+Android reconnect is a small state machine: fatal errors do not retry. The UI is still the existing Java form. Kotlin and Compose wait until the shell is replaced, because rewriting it in the same release as the pairing change would hide the security fix.
+
+EncryptedSharedPreferences remains for this release. Replacing it with a hand-rolled keystore wrapper without a device test would risk locking people out of a saved pairing. The fallback to a plain file is still a known gap.
+
+The Mac identity is still created with openssl and imported on launch. The certificate now lasts 10 years. A memory-only import is not in 0.4.0.
+
 ## v0.3.0 is the native foundation, not the full desk
 
 The product is the Android app and the Mac menu-bar app. The page under `src/` is a labeled simulation for the browser preview. Its feature table is not the status of the installable apps. The README table is.

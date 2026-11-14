@@ -97,6 +97,55 @@ public class ProtocolTest {
         outbox.close();
     }
 
+    @Test
+    public void richPayloadKeepsNumbers() {
+        Envelope envelope = Envelope.parse("{\"v\":1,\"id\":\"n1\",\"type\":\"battery\",\"from\":\"android\",\"ts\":5,\"payload\":{\"percent\":87,\"charging\":true,\"label\":\"phone\"}}");
+        assertEquals("87", envelope.text("percent"));
+        assertEquals("true", envelope.text("charging"));
+        assertEquals("phone", envelope.text("label"));
+    }
+
+    @Test
+    public void proofHidesThePin() {
+        String proof = Proof.hmacHex("123456", "abc");
+        assertTrue(Proof.matches("123456", "abc", proof));
+        assertFalse(Proof.matches("123456", "def", proof));
+        assertFalse(proof.contains("123456"));
+    }
+
+    @Test
+    public void helloNeverSendsPinOrTokenToAnUnpinnedKey() {
+        HelloPlan first = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "", "seenfp");
+        assertEquals(null, first.fatal);
+        assertFalse(first.payload.has("pin"));
+        assertFalse(first.payload.has("token"));
+        assertEquals(Proof.hmacHex("123456", "seenfp"), first.payload.get("proof").getAsString());
+
+        HelloPlan again = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "pinned");
+        assertFalse(again.payload.has("pin"));
+        assertFalse(again.payload.has("proof"));
+        assertEquals("tokentokentoken1", again.payload.get("token").getAsString());
+
+        HelloPlan mitm = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "attacker");
+        assertEquals(null, mitm.payload);
+        assertTrue(mitm.fatal.contains("key changed"));
+    }
+
+    @Test
+    public void fatalErrorsDoNotRetry() {
+        LinkState state = new LinkState();
+        state.begin();
+        state.failFatal("bad pin");
+        assertFalse(state.retryScheduled);
+        assertEquals(LinkState.Phase.FATAL, state.phase);
+        assertTrue(LinkState.isFatalCode("bad_proof"));
+        assertFalse(LinkState.isFatalCode("timeout"));
+        state.begin();
+        state.retryable("timeout");
+        assertTrue(state.retryScheduled);
+        assertEquals(500L, state.delayMs());
+    }
+
     private static String fixture() throws Exception {
         Path[] paths = new Path[]{
                 Path.of("docs", "fixtures", "text.json"),

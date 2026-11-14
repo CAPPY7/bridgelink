@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -85,6 +86,23 @@ public class MainActivity extends AppCompatActivity {
             Intent settings = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
             startActivity(settings);
         });
+        applyLinkUri(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        applyLinkUri(intent);
+    }
+
+    private void applyLinkUri(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri data = intent.getData();
+        if (data == null || !"bridgelink".equals(data.getScheme())) return;
+        pair.setText(data.toString());
+        applyLink();
+        status.setText("Pairing link opened. Tap Connect within 2 minutes.");
     }
 
     @Override

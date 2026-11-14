@@ -35,7 +35,7 @@ enum MacIdentity {
         ])
         try runOpenSSL([
             "req", "-new", "-x509", "-key", keyURL.path, "-out", certURL.path,
-            "-days", "1825", "-subj", "/CN=BridgeLink",
+            "-days", "3650", "-subj", "/CN=BridgeLink",
         ])
         try runOpenSSL([
             "pkcs12", "-export",

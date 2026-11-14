@@ -26,12 +26,16 @@ import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 
+import com.google.gson.JsonObject;
+
 import app.bridgelink.android.protocol.Backoff;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Frame;
 import app.bridgelink.android.protocol.Outbox;
 
-import org.json.JSONObject;
+import app.bridgelink.android.protocol.Envelope;
+import app.bridgelink.android.protocol.HelloPlan;
+import app.bridgelink.android.protocol.LinkState;
 
 import java.io.BufferedWriter;
 import java.net.InetSocketAddress;
@@ -79,7 +83,8 @@ public class LinkService extends Service {
     private MediaPlayer player;
     private volatile boolean paired;
     private int savedAlarmVolume = -1;
-    private final AtomicInteger retryAttempt = new AtomicInteger();
+    private final LinkState linkState = new LinkState();
+    private ConnectivityManager.NetworkCallback networkCallback;
     private volatile long lastRx;
     private final Runnable heartbeat = new Runnable() {
         @Override
@@ -137,7 +142,20 @@ public class LinkService extends Service {
     @Override
     public void onDestroy() {
         stopRing();
-        closeSocket();
+        if (networkCallback != null) {
+            ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            if (manager != null) {
+                try {
+                    manager.unregisterNetworkCallback(networkCallback);
+                } catch (Exception ignored) {
+                }
+            }
+            networkCallback = null;
+        }
+        main.removeCallbacksAndMessages(null);
+        linkState.stop();
+        generation.incrementAndGet();
+        io.execute(this::closeSocket);
         outbox.close();
         io.shutdownNow();
         super.onDestroy();
@@ -148,13 +166,16 @@ public class LinkService extends Service {
         final String code = pin == null ? "" : pin.trim();
         final int gen = generation.incrementAndGet();
         closeSocket();
+        linkState.begin();
         io.execute(() -> {
             if (generation.get() != gen) return;
             paired = false;
-            String savedToken = Prefs.open(this).getString("token", "");
-            boolean haveToken = savedToken != null && savedToken.length() >= 16;
-            if (address.isEmpty() || (!haveToken && code.length() != 6)) {
-                publish("Enter the Mac address and the 6-digit PIN", null);
+            SharedPreferences prefs = Prefs.open(this);
+            String savedToken = prefs.getString("token", "");
+            String pinned = prefs.getString("fp", "");
+            if (address.isEmpty() || ((savedToken == null || savedToken.length() < 16) && code.length() != 6)) {
+                linkState.failFatal("Enter the Mac address and the 6-digit PIN");
+                publish(linkState.fatal, null);
                 return;
             }
             publish("Connecting to " + address + "…", null);
@@ -165,6 +186,15 @@ public class LinkService extends Service {
                 next.connect(new InetSocketAddress(address, port), 8000);
                 next.setTcpNoDelay(true);
                 next.startHandshake();
+                String seen = fingerprint((X509Certificate) next.getSession().getPeerCertificates()[0]);
+                HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen);
+                if (plan.fatal != null) {
+                    next.close();
+                    linkState.failFatal(plan.fatal);
+                    if (plan.fatal.contains("key changed")) prefs.edit().remove("token").apply();
+                    publish(plan.fatal, null);
+                    return;
+                }
                 synchronized (writeLock) {
                     if (generation.get() != gen) {
                         next.close();
@@ -173,18 +203,7 @@ public class LinkService extends Service {
                     socket = next;
                     writer = null;
                 }
-                JSONObject hello = new JSONObject();
-                hello.put("v", 1);
-                hello.put("id", java.util.UUID.randomUUID().toString());
-                hello.put("type", "hello");
-                hello.put("from", "android");
-                hello.put("ts", System.currentTimeMillis());
-                JSONObject payload = new JSONObject();
-                payload.put("name", Build.MODEL);
-                payload.put("pin", code);
-                if (haveToken) payload.put("token", savedToken);
-                hello.put("payload", payload);
-                writeJson(hello);
+                writeEnvelope(Envelope.make("hello", "android", plan.payload));
                 Frame.Parser parser = new Frame.Parser();
                 byte[] buffer = new byte[8192];
                 int count;
@@ -199,20 +218,27 @@ public class LinkService extends Service {
                     }
                 }
             } catch (Exception error) {
-                if (generation.get() == gen) {
-                    publish("Link dropped: " + error.getMessage(), null);
+                if (generation.get() == gen && linkState.phase != LinkState.Phase.FATAL) {
+                    String message = error.getMessage() == null ? "Link dropped" : error.getMessage();
+                    if (message.contains("key changed") || message.contains("Unsupported version")) {
+                        linkState.failFatal(message);
+                        Prefs.open(this).edit().remove("token").apply();
+                        publish(message, null);
+                    } else {
+                        linkState.retryable(message);
+                        publish(message, null);
+                    }
                 }
             } finally {
                 main.removeCallbacks(heartbeat);
                 if (generation.get() == gen) {
                     paired = false;
                     closeSocket();
-                    String token = Prefs.open(this).getString("token", "");
-                    if (token != null && token.length() >= 16 && !address.isEmpty()) {
-                        int attempt = retryAttempt.incrementAndGet();
+                    if (linkState.retryScheduled && !address.isEmpty()) {
+                        long delay = linkState.delayMs();
                         publish("Reconnecting…", null);
-                        main.postDelayed(() -> connect(address, port, code), Backoff.nextMs(attempt));
-                    } else {
+                        main.postDelayed(() -> connect(address, port, code), delay);
+                    } else if (linkState.phase != LinkState.Phase.FATAL) {
                         publish("Disconnected", null);
                     }
                 }
@@ -222,26 +248,21 @@ public class LinkService extends Service {
 
     private void onLine(String line) {
         try {
-            JSONObject message = new JSONObject(line);
-            String type = message.optString("type", "");
-            String body = message.optString("body", "");
-            JSONObject payload = message.optJSONObject("payload");
-            if (payload != null) {
-                if (payload.has("body")) body = payload.optString("body", body);
-                if (payload.has("name") && "hello".equals(type)) body = payload.optString("name", body);
-            }
-            String id = message.optString("id", "");
-            if (!id.isEmpty() && !seen.firstTime(id)) return;
-            switch (type) {
+            Envelope message = Envelope.parse(line);
+            if (!message.id.isEmpty() && !seen.firstTime(message.id)) return;
+            String body = message.body();
+            switch (message.type) {
                 case "paired" -> {
                     paired = true;
-                    retryAttempt.set(0);
-                    String issued = payload == null ? "" : payload.optString("token", "");
+                    linkState.paired();
+                    String issued = message.text("token");
                     if (issued.length() >= 16) {
                         SharedPreferences prefs = Prefs.open(this);
                         SharedPreferences.Editor editor = prefs.edit().putString("token", issued);
                         String pending = prefs.getString("pendingFp", "");
                         if (pending != null && !pending.isEmpty()) editor.putString("fp", pending);
+                        String device = message.text("deviceId");
+                        if (!device.isEmpty()) editor.putString("deviceId", device);
                         editor.remove("pin").apply();
                     }
                     publish("Paired with the Mac", "Mac accepted the phone");
@@ -249,7 +270,26 @@ public class LinkService extends Service {
                     main.postDelayed(heartbeat, 20_000);
                 }
                 case "pong" -> lastRx = System.currentTimeMillis();
-                case "error" -> publish(body.isEmpty() ? "Mac rejected the link" : body, null);
+                case "forget" -> {
+                    Prefs.open(this).edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").apply();
+                    linkState.failFatal("The Mac forgot this phone");
+                    publish("The Mac forgot this phone", null);
+                    generation.incrementAndGet();
+                    closeSocket();
+                }
+                case "error" -> {
+                    String code = message.code();
+                    String shown = body.isEmpty() ? "Mac rejected the link" : body;
+                    if (LinkState.isFatalCode(code)) {
+                        linkState.failFatal(shown);
+                        if ("bad_token".equals(code) || "bad_proof".equals(code) || "bad_pin".equals(code)) {
+                            Prefs.open(this).edit().remove("token").apply();
+                        }
+                        generation.incrementAndGet();
+                        closeSocket();
+                    }
+                    publish(shown, null);
+                }
                 case "text" -> {
                     publish("Note from the Mac", body);
                     alert("Note from the Mac", body);
@@ -263,10 +303,15 @@ public class LinkService extends Service {
                     publish("Mac is ringing this phone", null);
                     startRing();
                 }
-                default -> publish("Mac: " + type, body);
+                default -> {
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("code", "unsupported_type");
+                    payload.addProperty("body", "This phone does not handle " + message.type);
+                    writeEnvelope(Envelope.make("error", "android", payload));
+                }
             }
         } catch (Exception error) {
-            publish("Bad message from the Mac", line);
+            publish("Bad message from the Mac", null);
         }
     }
 
@@ -277,16 +322,9 @@ public class LinkService extends Service {
                 return;
             }
             try {
-                JSONObject message = new JSONObject();
-                message.put("v", 1);
-                message.put("id", java.util.UUID.randomUUID().toString());
-                message.put("type", kind == null ? "text" : kind);
-                message.put("from", "android");
-                message.put("ts", System.currentTimeMillis());
-                JSONObject payload = new JSONObject();
-                payload.put("body", body == null ? "" : body);
-                message.put("payload", payload);
-                writeJson(message);
+                JsonObject payload = new JsonObject();
+                payload.addProperty("body", body == null ? "" : body);
+                writeEnvelope(Envelope.make(kind == null ? "text" : kind, "android", payload));
                 if (!"ping".equals(kind)) {
                     publish("Sent", body == null || body.isEmpty() ? kind : "Sent");
                 }
@@ -296,8 +334,8 @@ public class LinkService extends Service {
         });
     }
 
-    private void writeJson(JSONObject obj) throws Exception {
-        byte[] frame = Frame.encode(Frame.JSON, obj.toString().getBytes(StandardCharsets.UTF_8));
+    private void writeEnvelope(Envelope envelope) throws Exception {
+        byte[] frame = Frame.encode(Frame.JSON, envelope.toJsonString().getBytes(StandardCharsets.UTF_8));
         synchronized (writeLock) {
             if (socket == null) throw new IllegalStateException("not connected");
             socket.getOutputStream().write(frame);
@@ -440,8 +478,8 @@ public class LinkService extends Service {
 
     private void watchNetwork() {
         ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        if (manager == null) return;
-        manager.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
+        if (manager == null || networkCallback != null) return;
+        networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(Network network) {
                 if (paired) return;
@@ -455,9 +493,13 @@ public class LinkService extends Service {
                 } catch (Exception ignored) {
                 }
                 int chosen = port;
-                main.post(() -> connect(host, chosen, ""));
+                main.post(() -> {
+                    if (linkState.phase == LinkState.Phase.CONNECTING || linkState.phase == LinkState.Phase.PAIRED) return;
+                    connect(host, chosen, "");
+                });
             }
-        });
+        };
+        manager.registerDefaultNetworkCallback(networkCallback);
     }
 
     private static String fingerprint(X509Certificate certificate) throws CertificateException {
