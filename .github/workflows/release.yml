@@ -34,6 +34,7 @@ jobs:
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=$SDK" > local.properties
           chmod +x gradlew
+          ./gradlew test lint --no-daemon
           if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
             echo "::error::Missing Android signing secrets. The APK will be labeled debug and cannot update an installed build. See docs/SETUP_FOR_OWNER.md."
             ./gradlew assembleDebug --no-daemon

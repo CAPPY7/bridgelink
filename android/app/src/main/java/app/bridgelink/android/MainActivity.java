@@ -127,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
         if (data == null || !"bridgelink".equals(data.getScheme())) return;
         pair.setText(data.toString());
         applyLink();
-        status.setText(R.string.link_opened);
     }
 
     @Override
@@ -174,8 +173,14 @@ public class MainActivity extends AppCompatActivity {
         if (link.fingerprint != null && !link.fingerprint.isEmpty()) {
             editor.putString("fp", link.fingerprint).remove("pendingFp");
         }
-        editor.apply();
+        // Commit, do not apply. The service reads the fingerprint during the
+        // handshake, and an unflushed apply would skip the QR proof.
+        if (!editor.commit()) {
+            status.setText(R.string.bad_link);
+            return;
+        }
         status.setText(R.string.link_saved);
+        connect();
     }
 
     private void findMac() {

@@ -149,7 +149,9 @@ public class LinkService extends Service {
         } else if (ACTION_CONFIRM.equals(action)) {
             new Thread(this::confirmSas, "bridgelink-confirm").start();
         } else if (ACTION_FORGET.equals(action)) {
-            forgetMac();
+            // The read loop blocks the single io thread. Forgetting on that
+            // thread would wait for the read it is supposed to cancel.
+            new Thread(this::forgetMac, "bridgelink-forget").start();
         }
         return START_STICKY;
     }
@@ -376,24 +378,22 @@ public class LinkService extends Service {
     }
 
     private void forgetMac() {
-        io.execute(() -> {
-            try {
-                JsonObject payload = new JsonObject();
-                String id = Prefs.open(this).getString("deviceId", "");
-                payload.addProperty("deviceId", id == null ? "" : id);
-                writeEnvelope(Envelope.make("forget", "android", payload));
-            } catch (Exception ignored) {
-            }
-            SharedPreferences prefs = Prefs.open(this);
-            String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
-            prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").remove("pin")
-                    .putString("macs", macs).apply();
-            linkState.stop();
-            generation.incrementAndGet();
-            closeSocket();
-            paired = false;
-            publish("Forgot this Mac", null);
-        });
+        try {
+            JsonObject payload = new JsonObject();
+            String id = Prefs.open(this).getString("deviceId", "");
+            payload.addProperty("deviceId", id == null ? "" : id);
+            writeEnvelope(Envelope.make("forget", "android", payload));
+        } catch (Exception ignored) {
+        }
+        SharedPreferences prefs = Prefs.open(this);
+        String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
+        prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").remove("pin")
+                .putString("macs", macs).commit();
+        linkState.stop();
+        generation.incrementAndGet();
+        closeSocket();
+        paired = false;
+        publish("Forgot this Mac", null);
     }
 
     private void confirmSas() {

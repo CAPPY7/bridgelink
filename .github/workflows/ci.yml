@@ -27,7 +27,7 @@ jobs:
           KEYSTORE="$RUNNER_TEMP/ci.keystore"
           keytool -genkeypair -keystore "$KEYSTORE" -alias bridgelink -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android -dname "CN=BridgeLink CI" 
-          ./gradlew lint test assembleRelease --no-daemon \
+          ./gradlew lint test assembleRelease assembleDebugAndroidTest --no-daemon \
             -PRELEASE_STORE_FILE="$KEYSTORE" \
             -PRELEASE_STORE_PASSWORD=android \
             -PRELEASE_KEY_ALIAS=bridgelink \
@@ -51,3 +51,35 @@ jobs:
       - run: npm run typecheck
       - name: Demo protocol tests
         run: node --experimental-strip-types --test src/lib/bridgelink/protocol.test.ts
+
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.users.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Cache the emulator image
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-34-x86_64-google-apis-v1
+      - name: Pair, send a note, forget, and pair again
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
+          script: bash android/emulator-ci.sh

@@ -20,9 +20,8 @@
     <string name="forget_mac">Forget this Mac</string>
     <string name="keep_connected">Keep me connected</string>
     <string name="forgot_mac">Forgot this Mac. Pair again with a new PIN.</string>
-    <string name="link_saved">Link saved. Tap Connect before the PIN expires.</string>
+    <string name="link_saved">Connecting with this pairing link.</string>
     <string name="bad_link">That is not a BridgeLink pairing link</string>
-    <string name="link_opened">Pairing link opened. Tap Connect within 2 minutes.</string>
     <string name="scan_failed">Scan cancelled. Paste the pairing link instead.</string>
     <string name="saved_macs">Saved Macs: %1$s</string>
 </resources>

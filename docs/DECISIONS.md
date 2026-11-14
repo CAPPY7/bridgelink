@@ -10,9 +10,9 @@ The phone seals the pairing token with AES-256-GCM. The key is created in the An
 
 The Mac identity is still created with openssl because Swift has no small X.509 writer here. The certificate lasts 10 years. A new identity uses a random PKCS#12 password stored in the keychain, not a password in the source. Identities created by 0.3.0 still open with the old fixed password. After the first import the identity is labeled and later launches load that label, so the keychain does not gain another copy. A unit test checks that loading twice keeps the same fingerprint and the same identity count.
 
-The in-app QR scanner uses Google’s code scanner (Play services). It does not add a CAMERA permission. Phones without Play services can still paste the link or use the camera app, which opens `bridgelink://`.
+The in-app QR scanner uses Google’s code scanner (Play services). It does not add a CAMERA permission. Phones without Play services can still paste the link or use the camera app, which opens `bridgelink://`. Opening that link connects at once. The fingerprint is committed to preferences before the service starts, because an unflushed write would make the phone treat a QR pair as a match-code pair.
 
-There is no Android emulator job yet. A test that installs the APK and speaks to a fake Mac needs an instrumentation test that is not written. Unit tests cover the proof, the sealed token, the Mac list, and the Mac identity. That is not the same as an emulator run.
+The read loop owns the single network thread. Forget and match-code confirm run on their own threads so they can close that socket. CI installs a release APK on an API 34 emulator, then runs `PairingEmulatorTest`: QR pair, one note, forget (the token is gone), then a second pair by match code. That job is required. It is not a substitute for a test on a real phone.
 
 SetTextI18n and UnusedAttribute stay disabled. Status lines are built in Java. HardcodedText and ContentDescription are on.
 

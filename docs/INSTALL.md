@@ -21,7 +21,7 @@ These are not Play Store or Mac App Store builds. The Mac app is ad-hoc signed. 
 ## Pair
 
 1. Phone and Mac join the same Wi-Fi. VPN clients often hide local addresses. Turn the VPN off for the first pair.
-2. On the Mac, read the QR with the phone's normal camera app and copy the link. Paste it into **pairing link** on the phone and tap **Use pairing link**, then **Connect**. The PIN expires in 2 minutes. Tap **New PIN** on the Mac if it does.
+2. On the Mac, read the QR with the phone's normal camera app and copy the link. Paste it into **pairing link** on the phone and tap **Use pairing link**. That connects. The PIN expires in 2 minutes. Tap **New PIN** on the Mac if it does.
 3. Or tap **Find Mac on Wi-Fi**, type the 6-digit PIN, and tap **Connect**.
 4. After this, the phone reconnects with the saved token. You do not enter the PIN again unless you tap **Forget** or **New PIN**.
 5. Send a note either way. Send clipboard, or ring the phone. Ring uses the alarm volume at maximum for up to 2 minutes.

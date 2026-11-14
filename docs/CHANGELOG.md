@@ -3,6 +3,9 @@
 ## 0.4.0
 
 - A typed PIN is no longer a proof. Without the QR fingerprint, both screens show a match code. The nonces are committed with SHA-256 before they are revealed, so a relay cannot grind them. A bad reveal or three wrong confirms drops the link on both sides.
+- Opening a pairing link connects immediately. The fingerprint is saved before the handshake, so the QR proof is not skipped.
+- Forget runs even while the phone is blocked waiting for the Mac. It clears the token.
+- An API 34 emulator test pairs by QR, sends a note, forgets, and pairs again with the match code.
 - A wrong PIN, a changed key, or a rejected token stops reconnecting and keeps the reason on screen.
 - Forget on either side tells the other and drops that device only.
 - The Mac caps waiting connections, refreshes Wi-Fi addresses, skips VPN and bridge addresses, and a new PIN does not sign out phones that are already paired. The PIN countdown restarts the code after two minutes.
