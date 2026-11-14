@@ -1,3 +1,4 @@
 -keep class app.bridgelink.android.** { *; }
 -keep class org.json.** { *; }
 -keep class com.google.gson.** { *; }
+-dontwarn javax.annotation.concurrent.GuardedBy
