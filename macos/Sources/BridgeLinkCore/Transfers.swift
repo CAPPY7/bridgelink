@@ -11,7 +11,7 @@ public enum Transfers {
             let next = name.index(after: slash)
             name = next < name.endIndex ? String(name[next...]) : ""
         }
-        name = name.replacingOccurrences(of: "\u{0}", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         var out = ""
         for scalar in name.unicodeScalars {
             if out.count >= 120 { break }

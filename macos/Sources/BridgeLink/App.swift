@@ -766,7 +766,7 @@ struct DeskView: View {
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard let provider = providers.first else { return false }
             provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { item, _ in
-                let url: URL?
+                var url: URL?
                 if let data = item as? Data {
                     url = URL(dataRepresentation: data, relativeTo: nil)
                 } else if let item = item as? URL {

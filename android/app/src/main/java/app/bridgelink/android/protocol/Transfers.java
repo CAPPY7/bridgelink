@@ -18,7 +18,7 @@ public final class Transfers {
         int slash = name.lastIndexOf('/');
         if (slash >= 0 && slash < name.length() - 1) name = name.substring(slash + 1);
         else if (slash >= 0) name = "";
-        name = name.replace("\u0000", "").trim();
+        name = name.trim();
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < name.length() && out.length() < 120; i++) {
             char c = name.charAt(i);
