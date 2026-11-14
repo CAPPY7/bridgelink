@@ -1,20 +1,29 @@
 # Decisions
 
+## Installable apps, v0.2.0
+
+The release now has two real apps:
+
+- Android: a Java app, debug-signed APK, foreground service, port 8787.
+- Mac: a SwiftUI menu-bar app. It is compiled on a GitHub macOS runner because this environment is Linux and cannot produce a Mach-O Mac binary.
+
+They speak newline-delimited JSON over the local network. Features in this pair: pair with a PIN, notes, clipboard, and ring. TLS pinning, file transfer, notification mirroring, and screen mirror stay in the browser desk. The Mac app is ad-hoc signed. There is no Apple Developer certificate and no Play Store listing.
+
 ## One desk instead of two native installers
 
-The preview can run a web app. It cannot compile Kotlin, sign an APK, or build a macOS `.app`. BridgeLink is therefore the working product: phone UI and Mac UI sharing one protocol, one paired link, and one history.
+The preview can run a web app. The browser desk is still the place the full feature list is demonstrated. See the feature guide inside the desk.
 
 ## Protocol
 
-JSON envelopes, message ids, chunked file reads, and AES-GCM for the relay path. See `src/lib/bridgelink/protocol.ts`. Local traffic stays in the desk. The relay path seals the envelope before the log records only the sealed length.
+The desk uses JSON envelopes, message ids, chunked file reads, and AES-GCM for the relay path. See `src/lib/bridgelink/protocol.ts`. The installable apps use a smaller line protocol: `v`, `type`, `from`, `body`, plus `pin` and `name` on hello.
 
 ## Pairing
 
-A six-digit PIN expires in two minutes. After a match, each side pins a public-key fingerprint. A changed fingerprint blocks sending until you trust or reject it.
+The Mac shows a six-digit PIN. The phone must send that PIN. A wrong PIN is rejected.
 
 ## What stays partial
 
-Screen mirror is a live view of the phone UI, not an H.264 hardware encode. Control uses the accessibility path, not wireless ADB. The camera is a preview window, not a virtual camera. Shared folders can be browsed and copied, not mounted in Finder. Away-from-home is a path you choose (local, saved host, encrypted relay), not a hosted relay or Firebase project. Scan cleans contrast and does not OCR.
+Screen mirror in the desk is a live view of the phone UI, not an H.264 hardware encode. The installable apps do not mirror the screen. The camera in the desk is a preview window, not a virtual camera. Shared folders can be browsed and copied, not mounted in Finder.
 
 ## Not attempted
 

@@ -11,3 +11,11 @@ screenshots
 .env
 .env.*
 .node_modules.lock
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+macos/build/
+macos/BridgeLink.app
+macos/*.zip
+*.apk
