@@ -329,10 +329,10 @@ public enum Features {
     private static func isPrice(_ lower: String, _ start: Int) -> Bool {
         let chars = Array(lower)
         var i = start - 1
-        while i >= 0 && (chars[i] == " " || chars[i] == "," || chars[i] == ".") { i -= 1 }
+        while i >= 0 && (chars[i] == Character(" ") || chars[i] == Character(",") || chars[i] == Character(".")) { i -= 1 }
         if i >= 0 {
             let c = chars[i]
-            if c == "$" || c == "₹" || c == "€" || c == "£" { return true }
+            if c == Character("$") || c == Character("₹") || c == Character("€") || c == Character("£") { return true }
         }
         let from = max(0, start - 4)
         let pre = String(chars[from..<max(from, start)])
@@ -347,9 +347,9 @@ public enum Features {
         let mark = direction < 0 ? edge - 1 : edge
         if mark < 0 || mark >= chars.count { return false }
         let sep = chars[mark]
-        if sep != "/" && sep != "-" { return false }
+        if sep != Character("/") && sep != Character("-") { return false }
         var i = mark + direction
-        while i >= 0 && i < chars.count && chars[i] == " " { i += direction }
+        while i >= 0 && i < chars.count && chars[i] == Character(" ") { i += direction }
         return i >= 0 && i < chars.count && chars[i].isNumber
     }
 
@@ -375,16 +375,13 @@ public enum Features {
         var index = 0
         while index < chars.count {
             if chars[index].isNumber {
-                var raw = ""
                 var digits = ""
                 while index < chars.count {
                     let c = chars[index]
                     if c.isNumber {
-                        raw.append(c)
                         digits.append(c)
                         index += 1
-                    } else if (c == " " || c == "-") && !digits.isEmpty {
-                        raw.append(c)
+                    } else if (c == Character(" ") || c == Character("-")) && !digits.isEmpty {
                         index += 1
                     } else { break }
                 }
