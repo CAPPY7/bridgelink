@@ -2,13 +2,19 @@
 
 ## v0.4.0 pairing proof
 
-The first hello sends `proof`, an HMAC-SHA256 of the certificate fingerprint keyed by the PIN. The raw PIN is not a field. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens and can keep more than one phone. A new PIN does not delete that list.
+The first hello sends `proof`, an HMAC-SHA256 of the certificate fingerprint keyed by the PIN. The raw PIN is not a field. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens and can keep more than one phone. A new PIN does not delete that list. The PIN on the Mac refreshes itself after 120 seconds.
 
-Android reconnect is a small state machine: fatal errors do not retry. The UI is still the existing Java form. Kotlin and Compose wait until the shell is replaced, because rewriting it in the same release as the pairing change would hide the security fix.
+Android reconnect is a small state machine: fatal errors do not retry. Forget on the phone sends a `forget` message, then drops the token. The UI is still the existing Java form. Kotlin and Compose wait until the shell is replaced, because rewriting it in the same release as the pairing change would hide the security fix.
 
-EncryptedSharedPreferences remains for this release. Replacing it with a hand-rolled keystore wrapper without a device test would risk locking people out of a saved pairing. The fallback to a plain file is still a known gap.
+The phone seals the pairing token with AES-256-GCM. The key is created in the Android Keystore and is not exported. If the keystore cannot be opened, the token is not written to a file and the screen says so. `androidx.security:security-crypto` is no longer a dependency. Host, port, and certificate fingerprint are not the token; they stay in a private preferences file so the phone can still show the saved Mac.
 
-The Mac identity is still created with openssl and imported on launch. The certificate now lasts 10 years. A memory-only import is not in 0.4.0.
+The Mac identity is still created with openssl because Swift has no small X.509 writer here. The certificate lasts 10 years. A new identity uses a random PKCS#12 password stored in the keychain, not a password in the source. Identities created by 0.3.0 still open with the old fixed password. After the first import the identity is labeled and later launches load that label, so the keychain does not gain another copy. A unit test checks that loading twice keeps the same fingerprint and the same identity count.
+
+The in-app QR scanner uses Google’s code scanner (Play services). It does not add a CAMERA permission. Phones without Play services can still paste the link or use the camera app, which opens `bridgelink://`.
+
+There is no Android emulator job yet. A test that installs the APK and speaks to a fake Mac needs an instrumentation test that is not written. Unit tests cover the proof, the sealed token, the Mac list, and the Mac identity. That is not the same as an emulator run.
+
+SetTextI18n and UnusedAttribute stay disabled. Status lines are built in Java. HardcodedText and ContentDescription are on.
 
 ## v0.3.0 is the native foundation, not the full desk
 
@@ -24,11 +30,11 @@ The Mac certificate is made with the system `openssl` and stored as a PKCS#12 bl
 
 ## Pairing
 
-The Mac shows a real QR (Core Image) whose text is `bridgelink://pair?v=1&host&port&fp&pin`. The phone pastes that link. It can also discover `_bridgelink._tcp` and type the PIN. There is no in-app camera scanner yet, so scanning is "open the camera app, copy the link, paste it". The PIN is single-use, lasts 2 minutes, locks for 60 seconds after 5 failures, and is not saved on the phone. After pairing, a random token is saved. An unauthenticated connection does not replace the paired phone.
+The Mac shows a real QR (Core Image) whose text is `bridgelink://pair?v=1&host&port&fp&pin`. The phone can scan that QR in the app, paste the link, or open it from the camera app. It can also discover `_bridgelink._tcp` and type the PIN. The PIN is single-use, lasts 2 minutes, locks for 60 seconds after 5 failures, and is not saved on the phone. After pairing, a random token is saved. An unauthenticated connection does not replace the paired phone.
 
 ## Secrets on the phone
 
-The token and fingerprint go through EncryptedSharedPreferences, which uses the Android Keystore. If that fails to open, the app falls back to a normal private preferences file and still runs. The PIN is not stored.
+The token is sealed with a Keystore AES-GCM key. The fingerprint and the list of Mac names are not the token. If the keystore fails, the app refuses to store the token and shows a warning. The PIN is not stored.
 
 ## History
 

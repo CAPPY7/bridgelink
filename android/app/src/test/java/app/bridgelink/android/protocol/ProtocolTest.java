@@ -6,8 +6,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class ProtocolTest {
@@ -144,6 +148,34 @@ public class ProtocolTest {
         state.retryable("timeout");
         assertTrue(state.retryScheduled);
         assertEquals(500L, state.delayMs());
+    }
+
+    @Test
+    public void secretBoxRoundTripHidesTheToken() throws Exception {
+        KeyGenerator generator = KeyGenerator.getInstance("AES");
+        generator.init(256);
+        SecretKey key = generator.generateKey();
+        String sealed = SecretBox.seal(key, "tokentokentoken1");
+        assertEquals("tokentokentoken1", SecretBox.open(key, sealed));
+        assertFalse(sealed.contains("tokentokentoken1"));
+        SecretKey other = generator.generateKey();
+        try {
+            SecretBox.open(other, sealed);
+            assertTrue(false);
+        } catch (Exception expected) {
+            assertTrue(true);
+        }
+    }
+
+    @Test
+    public void macListKeepsSeveralMacsAndDropsOne() {
+        String list = MacList.add("[]", "Office", "192.168.1.20", 8787, "aa");
+        list = MacList.add(list, "Home", "10.0.0.4", 8788, "bb");
+        assertEquals("Office, Home", MacList.names(list));
+        list = MacList.add(list, "Office", "192.168.1.20", 8787, "cc");
+        assertEquals("Home, Office", MacList.names(list));
+        assertNotEquals(list, MacList.removeHost(list, "10.0.0.4"));
+        assertEquals("Office", MacList.names(MacList.removeHost(list, "10.0.0.4")));
     }
 
     private static String fixture() throws Exception {

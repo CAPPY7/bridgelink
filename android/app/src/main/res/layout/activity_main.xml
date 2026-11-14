@@ -13,7 +13,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="BridgeLink"
+            android:text="@string/app_name"
             android:textColor="@color/text"
             android:textSize="28sp"
             android:textStyle="bold" />
@@ -22,7 +22,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Phone. Same Wi-Fi as the Mac."
+            android:text="@string/subtitle"
             android:textColor="@color/muted"
             android:textSize="14sp" />
 
@@ -31,7 +31,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Not connected"
+            android:text="@string/not_connected"
             android:textColor="@color/accent"
             android:textSize="15sp" />
 
@@ -41,11 +41,21 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:background="@color/panel"
-            android:hint="Paste the pairing link from the Mac QR"
+            android:hint="@string/pair_hint"
             android:importantForAutofill="no"
             android:inputType="textUri"
+            android:minHeight="48dp"
             android:padding="14dp"
             android:textColor="@color/text" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/scan"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/scan_qr" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/applyLink"
@@ -53,7 +63,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Use pairing link" />
+            android:minHeight="48dp"
+            android:text="@string/use_link" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/find"
@@ -61,7 +72,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Find Mac on Wi-Fi" />
+            android:minHeight="48dp"
+            android:text="@string/find_mac" />
 
         <EditText
             android:id="@+id/host"
@@ -69,9 +81,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:background="@color/panel"
-            android:hint="Mac address, for example 192.168.1.20"
+            android:hint="@string/host_hint"
             android:importantForAutofill="no"
             android:inputType="text"
+            android:minHeight="48dp"
             android:padding="14dp"
             android:textColor="@color/text" />
 
@@ -81,11 +94,12 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:background="@color/panel"
-            android:hint="Port"
+            android:hint="@string/port_hint"
             android:importantForAutofill="no"
             android:inputType="number"
+            android:minHeight="48dp"
             android:padding="14dp"
-            android:text="8787"
+            android:text="@string/default_port"
             android:textColor="@color/text" />
 
         <EditText
@@ -94,10 +108,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:background="@color/panel"
-            android:hint="6-digit PIN from the Mac"
+            android:hint="@string/pin_hint"
             android:importantForAutofill="no"
             android:inputType="number"
             android:maxLength="6"
+            android:minHeight="48dp"
             android:padding="14dp"
             android:textColor="@color/text" />
 
@@ -106,7 +121,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Connect" />
+            android:minHeight="48dp"
+            android:text="@string/connect" />
 
         <EditText
             android:id="@+id/message"
@@ -114,9 +130,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:background="@color/panel"
-            android:hint="Note for the Mac"
+            android:hint="@string/note_hint"
             android:importantForAutofill="no"
             android:inputType="textCapSentences|textMultiLine"
+            android:minHeight="48dp"
             android:minLines="2"
             android:padding="14dp"
             android:textColor="@color/text" />
@@ -126,7 +143,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Send note" />
+            android:minHeight="48dp"
+            android:text="@string/send_note" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/clipboard"
@@ -134,7 +152,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Send clipboard" />
+            android:minHeight="48dp"
+            android:text="@string/send_clipboard" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/stopRing"
@@ -142,7 +161,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Stop ringing" />
+            android:minHeight="48dp"
+            android:text="@string/stop_ringing" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/forget"
@@ -150,7 +170,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Forget this Mac" />
+            android:minHeight="48dp"
+            android:text="@string/forget_mac" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/battery"
@@ -158,7 +179,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Keep me connected" />
+            android:minHeight="48dp"
+            android:text="@string/keep_connected" />
 
         <TextView
             android:id="@+id/log"

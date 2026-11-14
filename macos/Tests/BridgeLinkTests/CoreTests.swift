@@ -73,4 +73,23 @@ final class CoreTests: XCTestCase {
         XCTAssertFalse(preferredLanAddress(interface: "en0", address: "169.254.1.1"))
         XCTAssertTrue(preferredLanAddress(interface: "en0", address: "192.168.1.20"))
     }
+
+    func testIdentityFingerprintStaysAndKeychainDoesNotGrow() throws {
+        let savedService = MacIdentity.service
+        let savedLabel = MacIdentity.label
+        MacIdentity.service = "app.bridgelink.test.\(UUID().uuidString)"
+        MacIdentity.label = "BridgeLinkTest-\(UUID().uuidString)"
+        defer {
+            MacIdentity.removeStored()
+            MacIdentity.service = savedService
+            MacIdentity.label = savedLabel
+        }
+        let first = try MacIdentity.load()
+        let afterFirst = MacIdentity.identityCount()
+        let second = try MacIdentity.load()
+        XCTAssertFalse(first.fingerprint.isEmpty)
+        XCTAssertEqual(first.fingerprint, second.fingerprint)
+        XCTAssertEqual(MacIdentity.identityCount(), afterFirst)
+        XCTAssertLessThanOrEqual(afterFirst, 1)
+    }
 }

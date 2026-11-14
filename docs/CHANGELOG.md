@@ -4,7 +4,10 @@
 
 - The phone no longer sends the PIN or a saved token to a certificate it does not already trust. The first hello carries an HMAC of the certificate it actually saw.
 - A wrong PIN, a changed key, or a rejected token stops reconnecting and keeps the reason on screen.
-- The Mac caps waiting connections, ignores VPN and bridge addresses, and a new PIN does not sign out phones that are already paired.
+- Forget on either side tells the other and drops that device only.
+- The Mac caps waiting connections, refreshes Wi-Fi addresses, skips VPN and bridge addresses, and a new PIN does not sign out phones that are already paired. The PIN countdown restarts the code after two minutes.
+- The pairing token on the phone is sealed with the Android Keystore. It is not stored in a plain file.
+- The phone can scan the Mac QR in the app, or the camera app can open the pairing link.
 - Payload values may be numbers and booleans, not only strings.
 - v0.3.0 cannot talk to 0.4.0.
 

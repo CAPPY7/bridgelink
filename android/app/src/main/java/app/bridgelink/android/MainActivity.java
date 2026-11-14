@@ -19,7 +19,15 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
+
+import app.bridgelink.android.protocol.MacList;
 import app.bridgelink.android.protocol.PairingLink;
 
 public class MainActivity extends AppCompatActivity {
@@ -47,6 +55,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
+            var bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return insets;
+        });
         host = findViewById(R.id.host);
         port = findViewById(R.id.port);
         pin = findViewById(R.id.pin);
@@ -59,6 +73,9 @@ public class MainActivity extends AppCompatActivity {
         host.setText(prefs.getString("host", ""));
         port.setText(prefs.getString("port", "8787"));
         pin.setText("");
+        if (Prefs.keystoreFailed()) append(Prefs.WARNING);
+        String macs = MacList.names(prefs.getString("macs", "[]"));
+        if (!macs.isEmpty()) append(getString(R.string.saved_macs, macs));
 
         if (Build.VERSION.SDK_INT >= 33
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -66,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         findViewById(R.id.connect).setOnClickListener(v -> connect());
+        findViewById(R.id.scan).setOnClickListener(v -> scan());
         findViewById(R.id.applyLink).setOnClickListener(v -> applyLink());
         findViewById(R.id.find).setOnClickListener(v -> findMac());
         findViewById(R.id.send).setOnClickListener(v -> {
@@ -79,8 +97,10 @@ public class MainActivity extends AppCompatActivity {
             ContextCompat.startForegroundService(this, stop);
         });
         findViewById(R.id.forget).setOnClickListener(v -> {
-            Prefs.open(this).edit().remove("token").remove("fp").remove("pendingFp").remove("pin").apply();
-            status.setText("Forgot this Mac. Paste a new link or enter a PIN.");
+            Intent forget = new Intent(this, LinkService.class);
+            forget.setAction(LinkService.ACTION_FORGET);
+            ContextCompat.startForegroundService(this, forget);
+            status.setText(R.string.forgot_mac);
         });
         findViewById(R.id.battery).setOnClickListener(v -> {
             Intent settings = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
@@ -102,18 +122,14 @@ public class MainActivity extends AppCompatActivity {
         if (data == null || !"bridgelink".equals(data.getScheme())) return;
         pair.setText(data.toString());
         applyLink();
-        status.setText("Pairing link opened. Tap Connect within 2 minutes.");
+        status.setText(R.string.link_opened);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         IntentFilter filter = new IntentFilter(LinkService.EVENT);
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(events, filter, RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(events, filter);
-        }
+        ContextCompat.registerReceiver(this, events, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -140,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
     private void applyLink() {
         PairingLink link = PairingLink.parse(pair.getText().toString());
         if (link == null) {
-            status.setText("That is not a BridgeLink pairing link");
+            status.setText(R.string.bad_link);
             return;
         }
         host.setText(link.host);
@@ -154,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
             editor.putString("fp", link.fingerprint).remove("pendingFp");
         }
         editor.apply();
-        status.setText("Link saved. Tap Connect before the PIN expires.");
+        status.setText(R.string.link_saved);
     }
 
     private void findMac() {
@@ -172,6 +188,24 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         browser.start();
+    }
+
+    private void scan() {
+        GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build();
+        GmsBarcodeScanning.getClient(this, options)
+                .startScan()
+                .addOnSuccessListener(barcode -> {
+                    String raw = barcode.getRawValue();
+                    if (raw == null || raw.isEmpty()) {
+                        status.setText(R.string.scan_failed);
+                        return;
+                    }
+                    pair.setText(raw);
+                    applyLink();
+                })
+                .addOnFailureListener(error -> status.setText(R.string.scan_failed));
     }
 
     private void startLink(String action, String body) {

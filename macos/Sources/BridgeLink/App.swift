@@ -19,8 +19,13 @@ enum Phase: Equatable {
 @MainActor
 final class LinkModel: ObservableObject {
     @Published var pin: String
+    @Published var pinLeft = 120
     @Published var phase: Phase = .idle
     @Published var addresses = ""
+    @Published var addressChoices: [String] = []
+    @Published var chosenAddress = ""
+    @Published var listenPort: UInt16 = 8787
+    @Published var pairedSummary = ""
     @Published var fingerprint = ""
     @Published var draft = ""
     @Published var lines: [String] = ["Waiting for the phone."]
@@ -29,6 +34,12 @@ final class LinkModel: ObservableObject {
     @Published var pendingClipboard = ""
 
     private var listener: NWListener?
+    private var listenerGen = 0
+    private var listenAttempt = 0
+    private var pathMonitor: NWPathMonitor?
+    private var pinClock: DispatchSourceTimer?
+    private var silenceClock: DispatchSourceTimer?
+    private var lastRx = Date()
     private var live: NWConnection?
     private var pending: NWConnection?
     private var pendingID = UUID()
@@ -46,17 +57,20 @@ final class LinkModel: ObservableObject {
         pin = token
         gate = PairingGate(token: token, now: Int64(Date().timeIntervalSince1970 * 1000))
         loadBook()
-        addresses = Self.lanAddresses().joined(separator: "\n")
-        if addresses.isEmpty { addresses = "No Wi-Fi address yet" }
+        refreshAddresses()
         start()
+        watchNetwork()
+        armPinClock()
+        armSilenceClock()
     }
 
     func newPin() {
         let token = PairingGate.newToken()
         pin = token
+        pinLeft = 120
         gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
         gate = PairingGate(token: token, now: gateStarted)
-        phase = .listening
+        if case .paired = phase {} else { phase = .listening }
         note("New PIN. Phones that are already paired stay linked.")
     }
 
@@ -141,6 +155,16 @@ final class LinkModel: ObservableObject {
     }
 
     private func start() {
+        listenAttempt = 0
+        openListener()
+    }
+
+    private func openListener() {
+        listenerGen += 1
+        let gen = listenerGen
+        listener?.cancel()
+        let portNumber = UInt16(8787 + listenAttempt)
+        guard let port = NWEndpoint.Port(rawValue: portNumber) else { return }
         do {
             let loaded = try MacIdentity.load()
             fingerprint = loaded.fingerprint
@@ -152,17 +176,27 @@ final class LinkModel: ObservableObject {
             sec_protocol_options_set_local_identity(tls.securityProtocolOptions, secIdentity)
             let params = NWParameters(tls: tls)
             params.allowLocalEndpointReuse = true
-            let listener = try NWListener(using: params, on: 8787)
+            let listener = try NWListener(using: params, on: port)
             listener.service = NWListener.Service(name: "BridgeLink", type: "_bridgelink._tcp")
             listener.newConnectionHandler = { [weak self] connection in
                 Task { @MainActor in self?.accept(connection) }
             }
             listener.stateUpdateHandler = { [weak self] state in
                 Task { @MainActor in
+                    guard let self, self.listenerGen == gen else { return }
                     switch state {
-                    case .ready: self?.phase = .listening
-                    case .failed(let error): self?.phase = .failed(error.localizedDescription)
-                    default: break
+                    case .ready:
+                        self.listenPort = listener.port?.rawValue ?? portNumber
+                        if case .paired = self.phase {} else { self.phase = .listening }
+                    case .failed(let error):
+                        self.listenAttempt += 1
+                        if self.listenAttempt < 8 {
+                            self.openListener()
+                        } else {
+                            self.phase = .failed(error.localizedDescription)
+                        }
+                    default:
+                        break
                     }
                 }
             }
@@ -171,6 +205,67 @@ final class LinkModel: ObservableObject {
         } catch {
             phase = .failed(String(describing: error))
         }
+    }
+
+    private func watchNetwork() {
+        let monitor = NWPathMonitor()
+        pathMonitor = monitor
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                guard let self else { return }
+                self.refreshAddresses()
+                if path.status == .satisfied, self.listener == nil {
+                    self.start()
+                }
+            }
+        }
+        monitor.start(queue: queue)
+    }
+
+    private func refreshAddresses() {
+        let list = Self.lanAddresses()
+        addressChoices = list
+        addresses = list.isEmpty ? "No Wi-Fi address yet" : list.joined(separator: "\n")
+        if chosenAddress.isEmpty || !list.contains(chosenAddress) {
+            chosenAddress = list.first ?? ""
+        }
+    }
+
+    private func armPinClock() {
+        let clock = DispatchSource.makeTimerSource(queue: queue)
+        clock.schedule(deadline: .now() + 1, repeating: 1)
+        clock.setEventHandler { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                if self.pinLeft <= 1 {
+                    self.newPin()
+                } else {
+                    self.pinLeft -= 1
+                }
+            }
+        }
+        pinClock = clock
+        clock.resume()
+    }
+
+    private func armSilenceClock() {
+        let clock = DispatchSource.makeTimerSource(queue: queue)
+        clock.schedule(deadline: .now() + 15, repeating: 15)
+        clock.setEventHandler { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                guard case .paired = self.phase else { return }
+                if Date().timeIntervalSince(self.lastRx) > 45 {
+                    self.live?.cancel()
+                    self.live = nil
+                    self.liveDeviceId = ""
+                    self.phase = .listening
+                    self.note("The phone went quiet. Still listening.")
+                }
+            }
+        }
+        silenceClock = clock
+        clock.resume()
     }
 
     private func accept(_ connection: NWConnection) {
@@ -246,6 +341,7 @@ final class LinkModel: ObservableObject {
 
     private func handle(_ data: Data, connection: NWConnection, id: UUID, pending: Bool) {
         guard let envelope = try? EnvelopeCodec.parse(data) else { return }
+        lastRx = Date()
         if envelope.type == "hello" {
             let now = Int64(Date().timeIntervalSince1970 * 1000)
             let token = envelope.text("token")
@@ -303,6 +399,19 @@ final class LinkModel: ObservableObject {
             applyClipboard(text)
         case "ping":
             send(type: "pong", payload: [:], on: connection)
+        case "forget":
+            let device = envelope.text("deviceId")
+            if !device.isEmpty {
+                book.forget(id: device)
+            } else if !liveDeviceId.isEmpty {
+                book.forget(id: liveDeviceId)
+            }
+            saveBook()
+            live?.cancel()
+            live = nil
+            liveDeviceId = ""
+            phase = .listening
+            note("The phone forgot this Mac")
         default:
             note(envelope.type)
             send(type: "error", payload: ["code": "unsupported_type", "body": "Unsupported"], on: connection)
@@ -319,6 +428,7 @@ final class LinkModel: ObservableObject {
         pendingCount = max(0, pendingCount - 1)
         phase = .paired(name)
         send(type: "paired", payload: ["token": token, "deviceId": deviceId], on: connection)
+        lastRx = Date()
         note("Paired with \(name)")
     }
 
@@ -326,12 +436,18 @@ final class LinkModel: ObservableObject {
         guard let data = UserDefaults.standard.data(forKey: "devices"),
               let decoded = try? JSONDecoder().decode([PairedDevice].self, from: data) else { return }
         book = DeviceBook(devices: decoded)
+        publishPairs()
     }
 
     private func saveBook() {
         if let data = try? JSONEncoder().encode(book.devices) {
             UserDefaults.standard.set(data, forKey: "devices")
         }
+        publishPairs()
+    }
+
+    private func publishPairs() {
+        pairedSummary = book.devices.map(\.name).joined(separator: ", ")
     }
 
     private func applyClipboard(_ text: String) {
@@ -406,6 +522,14 @@ struct DeskView: View {
             }
             Text(statusText).font(.callout).foregroundStyle(.secondary)
             Text(model.addresses).font(.system(.body, design: .monospaced)).textSelection(.enabled)
+            if model.addressChoices.count > 1 {
+                Picker("Address in the QR", selection: $model.chosenAddress) {
+                    ForEach(model.addressChoices, id: \.self) { Text($0).tag($0) }
+                }
+            }
+            if !model.pairedSummary.isEmpty {
+                Text("Paired phones: \(model.pairedSummary)").font(.caption)
+            }
             if let image = qrCode(pairingText) {
                 Image(nsImage: image)
                     .interpolation(.none)
@@ -415,7 +539,7 @@ struct DeskView: View {
             Text(pairingText).font(.caption2.monospaced()).textSelection(.enabled).lineLimit(3)
             Text("Key \(model.fingerprint)").font(.caption.monospaced()).textSelection(.enabled)
             Text("PIN \(model.pin)").font(.title3.monospacedDigit().weight(.medium))
-            Text("PIN expires in 2 minutes. Scan the QR, or paste the link into the phone.")
+            Text("Expires in \(model.pinLeft) seconds. Scan the QR, or paste the link into the phone.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack {
@@ -466,9 +590,9 @@ struct DeskView: View {
     }
 
     private var pairingText: String {
-        let host = model.addresses.split(separator: "\n").first.map(String.init) ?? ""
+        let host = model.chosenAddress
         let usable = host == "No Wi-Fi address yet" ? "" : host
-        return pairingLink(host: usable, port: 8787, fingerprint: model.fingerprint, pin: model.pin)
+        return pairingLink(host: usable, port: Int(model.listenPort), fingerprint: model.fingerprint, pin: model.pin)
     }
 
     private func qrCode(_ text: String) -> NSImage? {
@@ -487,7 +611,7 @@ struct DeskView: View {
     private var statusText: String {
         switch model.phase {
         case .idle: return "Starting…"
-        case .listening: return "Listening on port 8787"
+        case .listening: return "Listening on port \(model.listenPort)"
         case .paired(let name): return "Paired with \(name)"
         case .failed(let reason): return reason
         }

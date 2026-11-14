@@ -1,4 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BridgeLink</string>
+    <string name="subtitle">Phone. Same Wi-Fi as the Mac.</string>
+    <string name="not_connected">Not connected</string>
+    <string name="pair_hint">Paste the pairing link from the Mac QR</string>
+    <string name="use_link">Use pairing link</string>
+    <string name="scan_qr">Scan QR</string>
+    <string name="find_mac">Find Mac on Wi-Fi</string>
+    <string name="host_hint">Mac address, for example 192.168.1.20</string>
+    <string name="port_hint">Port</string>
+    <string name="default_port">8787</string>
+    <string name="pin_hint">6-digit PIN from the Mac</string>
+    <string name="connect">Connect</string>
+    <string name="note_hint">Note for the Mac</string>
+    <string name="send_note">Send note</string>
+    <string name="send_clipboard">Send clipboard</string>
+    <string name="stop_ringing">Stop ringing</string>
+    <string name="forget_mac">Forget this Mac</string>
+    <string name="keep_connected">Keep me connected</string>
+    <string name="forgot_mac">Forgot this Mac. Pair again with a new PIN.</string>
+    <string name="link_saved">Link saved. Tap Connect before the PIN expires.</string>
+    <string name="bad_link">That is not a BridgeLink pairing link</string>
+    <string name="link_opened">Pairing link opened. Tap Connect within 2 minutes.</string>
+    <string name="scan_failed">Scan cancelled. Paste the pairing link instead.</string>
+    <string name="saved_macs">Saved Macs: %1$s</string>
 </resources>

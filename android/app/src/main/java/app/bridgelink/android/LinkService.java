@@ -36,6 +36,7 @@ import app.bridgelink.android.protocol.Outbox;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.HelloPlan;
 import app.bridgelink.android.protocol.LinkState;
+import app.bridgelink.android.protocol.MacList;
 
 import java.io.BufferedWriter;
 import java.net.InetSocketAddress;
@@ -56,6 +57,7 @@ public class LinkService extends Service {
     public static final String ACTION_CONNECT = "app.bridgelink.android.CONNECT";
     public static final String ACTION_SEND = "app.bridgelink.android.SEND";
     public static final String ACTION_STOP_RING = "app.bridgelink.android.STOP_RING";
+    public static final String ACTION_FORGET = "app.bridgelink.android.FORGET";
     public static final String EVENT = "app.bridgelink.android.EVENT";
     public static final String EXTRA_HOST = "host";
     public static final String EXTRA_PORT = "port";
@@ -82,6 +84,8 @@ public class LinkService extends Service {
     private BufferedWriter writer;
     private MediaPlayer player;
     private volatile boolean paired;
+    private volatile String lastHost = "";
+    private volatile int lastPort = 8787;
     private int savedAlarmVolume = -1;
     private final LinkState linkState = new LinkState();
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -135,6 +139,8 @@ public class LinkService extends Service {
             send(intent.getStringExtra(EXTRA_KIND), intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
+        } else if (ACTION_FORGET.equals(action)) {
+            forgetMac();
         }
         return START_STICKY;
     }
@@ -164,6 +170,8 @@ public class LinkService extends Service {
     private void connect(String host, int port, String pin) {
         final String address = host == null ? "" : host.trim();
         final String code = pin == null ? "" : pin.trim();
+        lastHost = address;
+        lastPort = port;
         final int gen = generation.incrementAndGet();
         closeSocket();
         linkState.begin();
@@ -260,9 +268,15 @@ public class LinkService extends Service {
                         SharedPreferences prefs = Prefs.open(this);
                         SharedPreferences.Editor editor = prefs.edit().putString("token", issued);
                         String pending = prefs.getString("pendingFp", "");
-                        if (pending != null && !pending.isEmpty()) editor.putString("fp", pending);
+                        String fp = prefs.getString("fp", "");
+                        if (pending != null && !pending.isEmpty()) {
+                            editor.putString("fp", pending);
+                            fp = pending;
+                        }
                         String device = message.text("deviceId");
                         if (!device.isEmpty()) editor.putString("deviceId", device);
+                        String macs = prefs.getString("macs", "[]");
+                        editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp));
                         editor.remove("pin").apply();
                     }
                     publish("Paired with the Mac", "Mac accepted the phone");
@@ -271,7 +285,10 @@ public class LinkService extends Service {
                 }
                 case "pong" -> lastRx = System.currentTimeMillis();
                 case "forget" -> {
-                    Prefs.open(this).edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").apply();
+                    SharedPreferences prefs = Prefs.open(this);
+                    String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
+                    prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId")
+                            .putString("macs", macs).apply();
                     linkState.failFatal("The Mac forgot this phone");
                     publish("The Mac forgot this phone", null);
                     generation.incrementAndGet();
@@ -313,6 +330,27 @@ public class LinkService extends Service {
         } catch (Exception error) {
             publish("Bad message from the Mac", null);
         }
+    }
+
+    private void forgetMac() {
+        io.execute(() -> {
+            try {
+                JsonObject payload = new JsonObject();
+                String id = Prefs.open(this).getString("deviceId", "");
+                payload.addProperty("deviceId", id == null ? "" : id);
+                writeEnvelope(Envelope.make("forget", "android", payload));
+            } catch (Exception ignored) {
+            }
+            SharedPreferences prefs = Prefs.open(this);
+            String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
+            prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").remove("pin")
+                    .putString("macs", macs).apply();
+            linkState.stop();
+            generation.incrementAndGet();
+            closeSocket();
+            paired = false;
+            publish("Forgot this Mac", null);
+        });
     }
 
     public void send(String kind, String body) {

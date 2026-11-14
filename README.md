@@ -38,7 +38,7 @@ Honest status of the **installable apps** in 0.4.0. The demo is not counted.
 | 20 | Scan to Mac | Not started |
 | 21 | Automations | Not started |
 | 22 | Quick drop | Not started |
-| 23 | Pairing | Partial. QR link opens the app, PIN is never sent, saved token, more than one phone. No in-app camera scanner |
+| 23 | Pairing | Partial. QR opens the app, in-app scanner, PIN is never sent, saved token is sealed, more than one phone. No emulator test of a full pair |
 | 24 | End-to-end encryption | Partial. TLS on the local link. No relay |
 | 25 | Key pin | Partial. Phone pins the Mac certificate after the first pair |
 
