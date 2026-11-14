@@ -18,11 +18,11 @@ Honest status of the **installable apps** in 0.6.0. The demo is not counted.
 |---|---|---|
 | 1 | Send files, links, and text | Partial. Text both ways. Files both ways with a hash check, a 100 MB cap, sanitized names, and resume from the last saved offset |
 | 2 | Share sheet and drag-drop | Partial. Android share sheet sends text, a link, or one file. The Mac menu-bar icon and the panel accept a dropped file |
-| 3 | Notification mirroring | Not started |
+| 3 | Notification mirroring | Partial. The phone can mirror notifications after you turn it on and allow notification access. The Mac shows the app name, not the text in the menu log. Reply and dismiss are not done |
 | 4 | Media control | Not started |
-| 5 | Battery status | Not started |
+| 5 | Battery status | Partial. The phone sends its level when it pairs. The Mac shows it. The Mac battery is not sent yet |
 | 6 | Find phone | Partial. Rings at alarm volume, can vibrate, stops from the phone or the Mac, and the phone can ring the Mac |
-| 7 | OTP auto-copy | Not started |
+| 7 | OTP auto-copy | Partial. A code in a mirrored notification can be copied on the Mac and cleared after 60 seconds. It stays off until mirroring is turned on |
 | 8 | Open a link on the other device | Partial. http and https only. The Mac asks before opening. The phone opens when the screen is on |
 | 9 | Trackpad, keyboard, slides | Not started |
 | 10 | Clipboard sync | Partial. Manual send. A clipboard just received is not sent back. Sensitive text waits on the Mac |

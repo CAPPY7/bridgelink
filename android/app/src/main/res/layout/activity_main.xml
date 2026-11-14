@@ -223,6 +223,15 @@
             android:text="@string/forget_mac" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/mirror"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/mirror_notifications" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/battery"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"

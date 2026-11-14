@@ -9,6 +9,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.hardware.camera2.CameraManager;
@@ -159,6 +160,7 @@ public class LinkService extends Service {
             String kind = intent.getStringExtra(EXTRA_KIND);
             if ("file".equals(kind)) sendFile(intent.getStringExtra(EXTRA_BODY));
             else if ("link".equals(kind)) sendLink(intent.getStringExtra(EXTRA_BODY));
+            else if ("notify".equals(kind)) sendNotify(intent);
             else send(kind, intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
@@ -324,6 +326,7 @@ public class LinkService extends Service {
                     publish("Paired with the Mac", "Mac accepted the phone");
                     main.removeCallbacks(heartbeat);
                     main.postDelayed(heartbeat, 20_000);
+                    sendBattery();
                 }
                 case "sas" -> {
                     String commit = message.text("commit");
@@ -484,6 +487,36 @@ public class LinkService extends Service {
         });
     }
 
+    private void sendNotify(Intent intent) {
+        outbox.submit(() -> {
+            if (!paired) return;
+            if (!Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("title", safe(intent.getStringExtra(EXTRA_BODY)));
+                payload.addProperty("app", safe(intent.getStringExtra("app")));
+                payload.addProperty("body", safe(intent.getStringExtra("detail")));
+                writeEnvelope(Envelope.make("notify", "android", payload));
+                if ("1".equals(intent.getStringExtra("otp"))
+                        && Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) {
+                    String code = Features.otp(safe(intent.getStringExtra(EXTRA_BODY)) + "\n" + safe(intent.getStringExtra("detail")));
+                    if (code != null) {
+                        JsonObject otp = new JsonObject();
+                        otp.addProperty("body", code);
+                        writeEnvelope(Envelope.make("otp", "android", otp));
+                    }
+                }
+                publish("Mirrored a notification", null);
+            } catch (Exception error) {
+                publish("Could not mirror a notification", null);
+            }
+        });
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
+    }
+
     private void sendFile(String source) {
         new Thread(() -> {
             if (!paired || files == null) {
@@ -507,6 +540,38 @@ public class LinkService extends Service {
                 publish(error.getMessage() == null ? "Could not send the file" : error.getMessage(), null);
             }
         }, "bridgelink-file").start();
+    }
+
+    private int lastBattery = -1;
+    private boolean lastCharging;
+    private boolean sawBattery;
+
+    private void sendBattery() {
+        try {
+            Intent sticky = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (sticky == null) return;
+            int level = sticky.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int scale = sticky.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
+            int status = sticky.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            int percent = scale <= 0 ? level : (int) (level * 100f / scale);
+            boolean charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING
+                    || status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+            if (!Features.batteryChanged(lastBattery, lastCharging, sawBattery, percent, charging)) return;
+            sawBattery = true;
+            lastBattery = percent;
+            lastCharging = charging;
+            outbox.submit(() -> {
+                if (!paired) return;
+                try {
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("level", Integer.toString(percent));
+                    payload.addProperty("charging", charging ? "1" : "0");
+                    writeEnvelope(Envelope.make("battery", "android", payload));
+                } catch (Exception ignored) {
+                }
+            });
+        } catch (Exception ignored) {
+        }
     }
 
     private long waitHave(String id) {

@@ -132,6 +132,10 @@ public class MainActivity extends AppCompatActivity {
             Intent settings = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
             startActivity(settings);
         });
+        findViewById(R.id.mirror).setOnClickListener(v -> {
+            Prefs.open(this).edit().putString("flags", "notify=1,otp=1").apply();
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+        });
         applyLinkUri(getIntent());
     }
 

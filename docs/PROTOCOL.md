@@ -71,6 +71,9 @@ A waiting connection must send hello within 10 seconds. A fifth waiting connecti
 | ring | `flash`, `vibrate` optional | Mac |
 | find_stop | empty | Either side |
 | find_mac | empty | Phone |
+| notify | `app`, `title`, `body` | Phone, only if mirroring is on |
+| otp | `body` the code | Phone, only if OTP is on |
+| battery | `level`, `charging` | Phone |
 | link | `url` http or https only | Either side |
 | file_begin | `id`, `name`, `size` | Either side |
 | file_chunk | `id`, `offset`, `data` base64, at most 32 KB decoded | Either side |

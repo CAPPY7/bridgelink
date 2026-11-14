@@ -37,6 +37,7 @@ final class LinkModel: ObservableObject {
     @Published var pendingLink = ""
     @Published var linkDraft = ""
     @Published var phoneBattery = ""
+    @Published var mirrorOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "notify", fallback: false)
     private var haves: [String: Int] = [:]
     private var haveWaiters: [String: (Int) -> Void] = [:]
     private var lastEcho = ""
@@ -136,7 +137,15 @@ final class LinkModel: ObservableObject {
         NSApp.terminate(nil)
     }
 
+    func setMirror(_ on: Bool) {
+        mirrorOn = on
+        UserDefaults.standard.set(on ? "notify=1,otp=1" : "notify=0,otp=0", forKey: "flags")
+    }
+
     func setClipboardMode(_ mode: String) {
+        clipboardMode = mode
+        UserDefaults.standard.set(mode, forKey: "clipboardMode")
+    }
         clipboardMode = mode
         UserDefaults.standard.set(mode, forKey: "clipboardMode")
     }
@@ -597,6 +606,20 @@ final class LinkModel: ObservableObject {
         case "find_stop":
             stopFindMac()
             note("Find stopped")
+        case "notify":
+            let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
+            guard Features.enabled(flags, "notify", fallback: false) else { return }
+            let title = envelope.text("title")
+            notify(title.isEmpty ? "Notification" : title, envelope.text("app"))
+            note("Notification from the phone")
+        case "otp":
+            let otpFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
+            guard Features.enabled(otpFlags, "otp", fallback: false) else { return }
+            copyConcealed(envelope.text("body"))
+            note("Copied a code. It will clear in a minute.")
+        case "battery":
+            let level = envelope.text("level")
+            phoneBattery = level.isEmpty ? "" : "Phone battery \(level)%"
         case "forget":
             let device = envelope.text("deviceId")
             if !device.isEmpty {
@@ -693,6 +716,20 @@ final class LinkModel: ObservableObject {
         notify("Clipboard from the phone", "Clipboard updated")
     }
 
+    private func copyConcealed(_ text: String) {
+        guard !text.isEmpty else { return }
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(text, forType: .string)
+        board.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
+        lastEcho = Features.echoKey(text)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
+            if NSPasteboard.general.string(forType: .string) == text {
+                NSPasteboard.general.clearContents()
+            }
+        }
+    }
+
     private func send(type: String, payload: [String: String], on connection: NWConnection?) {
         let frame = encodeFrame(json: EnvelopeCodec.json(type: type, from: "mac", payload: payload))
         connection?.send(content: frame, completion: .contentProcessed { _ in })
@@ -772,6 +809,9 @@ struct DeskView: View {
                 Button("Quit") { model.quit() }.keyboardShortcut("q")
             }
             Text(statusText).font(.callout).foregroundStyle(.secondary)
+            if !model.phoneBattery.isEmpty {
+                Text(model.phoneBattery).font(.caption).foregroundStyle(.secondary)
+            }
             Text(model.addresses).font(.system(.body, design: .monospaced)).textSelection(.enabled)
             if model.addressChoices.count > 1 {
                 Picker("Address in the QR", selection: $model.chosenAddress) {
@@ -804,6 +844,10 @@ struct DeskView: View {
             Toggle("Launch at login", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: { _ in model.toggleLogin() }
+            ))
+            Toggle("Mirror notifications", isOn: Binding(
+                get: { model.mirrorOn },
+                set: { model.setMirror($0) }
             ))
             Picker("Clipboard from phone", selection: Binding(
                 get: { model.clipboardMode },
