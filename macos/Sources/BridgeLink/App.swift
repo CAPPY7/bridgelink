@@ -51,6 +51,7 @@ final class LinkModel: ObservableObject {
     private var pendingCount = 0
     private var liveDeviceId = ""
     private var sasConnectionID: UUID?
+    private var sasPhoneCommit = ""
     private var sasPhoneNonce = ""
     private var sasMacNonce = ""
     private var sasExpected = ""
@@ -392,20 +393,21 @@ final class LinkModel: ObservableObject {
                 note("Rejected an unknown phone. Paired phones stay linked.")
                 return
             }
-            let phoneNonce = envelope.text("nonce")
-            if proof.isEmpty && !phoneNonce.isEmpty {
+            let phoneCommit = envelope.text("commit")
+            if proof.isEmpty && !phoneCommit.isEmpty {
                 let macNonce = UUID().uuidString.replacingOccurrences(of: "-", with: "")
                 sasConnectionID = id
-                sasPhoneNonce = phoneNonce
+                sasPhoneCommit = phoneCommit
                 sasMacNonce = macNonce
+                sasPhoneNonce = ""
                 sasName = name
-                sasExpected = sasCode(macFingerprint: fingerprint, phoneNonce: phoneNonce, macNonce: macNonce)
+                sasExpected = ""
                 sasMacConfirmed = false
                 sasPhoneCode = nil
                 sasFails = 0
-                matchCode = sasExpected
-                send(type: "sas", payload: ["nonce": macNonce, "echo": phoneNonce], on: connection)
-                note("Match code \(sasExpected). Tap Codes match on both screens.")
+                matchCode = ""
+                send(type: "sas", payload: ["commit": sasCommit(macNonce)], on: connection)
+                note("Phone started a match. The code appears after both sides commit.")
                 return
             }
             let expected = pairingProof(pin: pin, fingerprint: fingerprint)
@@ -421,6 +423,24 @@ final class LinkModel: ObservableObject {
                 finishPending(id)
                 note("Rejected a PIN. Paired phones stay linked.")
             }
+            return
+        }
+        if envelope.type == "sas_reveal" && pending {
+            guard id == sasConnectionID else { return }
+            let revealed = envelope.text("nonce")
+            if !sasRevealMatches(commit: sasPhoneCommit, nonce: revealed) {
+                send(type: "error", payload: ["code": "bad_code", "body": "The other side changed its code"], on: connection)
+                connection.cancel()
+                clearSas()
+                finishPending(id)
+                note("The phone changed its code. Paired phones stay linked.")
+                return
+            }
+            sasPhoneNonce = revealed
+            send(type: "sas_reveal", payload: ["nonce": sasMacNonce], on: connection)
+            sasExpected = sasCode(macFingerprint: fingerprint, phoneNonce: revealed, macNonce: sasMacNonce)
+            matchCode = sasExpected
+            note("Match code \(sasExpected). Tap Codes match on both screens.")
             return
         }
         if envelope.type == "sas_confirm" && pending {
@@ -500,7 +520,7 @@ final class LinkModel: ObservableObject {
             promote(connection, id: id, name: sasName, token: issued, deviceId: device.id)
         case .reject:
             sasFails += 1
-            if sasFails >= 5 {
+            if sasFails >= 3 {
                 pendingGate.fail(ip: Self.endpointHost(connection), now: Int64(Date().timeIntervalSince1970 * 1000))
                 send(type: "error", payload: ["code": "bad_code", "body": "The match codes did not agree"], on: connection)
                 connection.cancel()

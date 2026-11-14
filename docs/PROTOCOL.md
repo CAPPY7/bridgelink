@@ -39,14 +39,14 @@ proof = HMAC-SHA256(key = PIN, message = fingerprint from the QR)
 
 If the certificate is different, the phone sends nothing. A relay cannot collect a proof and guess the PIN offline.
 
-If the phone has no fingerprint yet (typed address or Wi-Fi discovery), it sends a random nonce and no PIN. The Mac answers with its own nonce. Both screens show:
+If the phone has no fingerprint yet (typed address or Wi-Fi discovery), it sends only `SHA-256(phoneNonce)`. The Mac answers with only `SHA-256(macNonce)`. After both commits, each side reveals its nonce. A reveal that does not match the commit drops the link. The 6-digit code is computed only after both reveals, from the certificate the phone actually saw. A relay cannot grind a nonce after the commit, so it cannot force both screens to show the same code. Three wrong confirms, or one bad reveal, end the attempt on both sides.
 
 ```text
 code = first 6 digits of HMAC-SHA256(key = "bridgelink-sas-v1",
         message = macFingerprint + newline + phoneNonce + newline + macNonce)
 ```
 
-The phone uses the fingerprint it actually saw. The Mac uses its own. A relay makes the codes differ. The Mac issues a token only after both sides tap confirm and the codes match. Five wrong codes end the attempt.
+The phone uses the fingerprint it actually saw. The Mac uses its own. A relay makes the codes differ. The Mac issues a token only after both sides tap confirm and the codes match. Three wrong confirms end the attempt.
 
 A saved token is sent only when the certificate matches the pinned fingerprint. The Mac stores a hash of each phone token, not the token itself. `New PIN` adds a slot. It does not remove phones that are already paired.
 
@@ -58,8 +58,9 @@ A waiting connection must send hello within 10 seconds. A fifth waiting connecti
 
 | type | payload | Who sends it |
 |---|---|---|
-| hello | `name`, plus `proof`, `token`, or `nonce` | Phone, first message |
-| sas | `nonce`, `echo` | Mac, match-code step |
+| hello | `name`, plus `proof`, `token`, or `commit` | Phone, first message |
+| sas | `commit` = SHA-256 of the Mac nonce | Mac, before the reveal |
+| sas_reveal | `nonce` | Each side, after both commits |
 | sas_confirm | `code` | Phone, after the user taps Codes match |
 | paired | `token` | Mac, after a good QR PIN, a match code, or a known token |
 | error | `body` | Either side |

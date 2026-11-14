@@ -247,6 +247,14 @@ public func looksSensitive(_ text: String) -> Bool {
     return compact.allSatisfy { $0.isNumber }
 }
 
+public func sasCommit(_ nonce: String) -> String {
+    sha256Hex(nonce)
+}
+
+public func sasRevealMatches(commit: String, nonce: String) -> Bool {
+    constantTimeEquals(sasCommit(nonce), commit)
+}
+
 public func sasCode(macFingerprint: String, phoneNonce: String, macNonce: String) -> String {
     let message = Data((macFingerprint + "\n" + phoneNonce + "\n" + macNonce).utf8)
     let key = SymmetricKey(data: Data("bridgelink-sas-v1".utf8))

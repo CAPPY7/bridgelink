@@ -37,7 +37,7 @@ public final class HelloPlan {
         }
         if (!pinned) {
             JsonObject payload = base(name);
-            payload.addProperty("nonce", phoneNonce == null ? "" : phoneNonce);
+            payload.addProperty("commit", Sas.commit(phoneNonce));
             return new HelloPlan(null, payload);
         }
         return new HelloPlan("Scan the Mac code again. The saved key does not have a PIN.", null);

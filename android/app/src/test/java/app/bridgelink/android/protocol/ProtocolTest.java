@@ -124,7 +124,8 @@ public class ProtocolTest {
         assertFalse(typed.payload.has("pin"));
         assertFalse(typed.payload.has("proof"));
         assertFalse(typed.payload.has("token"));
-        assertEquals("phone-nonce", typed.payload.get("nonce").getAsString());
+        assertFalse(typed.payload.has("nonce"));
+        assertEquals(Sas.commit("phone-nonce"), typed.payload.get("commit").getAsString());
 
         HelloPlan qr = HelloPlan.decide("Pixel", "123456", "", "realfp", "realfp", "n");
         assertFalse(qr.payload.has("pin"));
@@ -151,6 +152,24 @@ public class ProtocolTest {
         assertFalse(relay.payload.has("proof"));
         assertFalse(relay.payload.has("token"));
         assertFalse(relay.payload.has("pin"));
+        assertFalse(relay.payload.has("nonce"));
+    }
+
+    @Test
+    public void relayCannotGrindACommittedNonce() {
+        String macNonce = "mac-nonce-fixed";
+        String commit = Sas.commit(macNonce);
+        String target = Sas.code("realmac", "phone-nonce-fixed", macNonce);
+        boolean forced = false;
+        for (int i = 0; i < 2000; i++) {
+            String guess = "guess-" + i;
+            if (Sas.code("attacker", "phone-nonce-fixed", guess).equals(target) && Sas.commit(guess).equals(commit)) {
+                forced = true;
+            }
+        }
+        assertFalse(forced);
+        assertFalse(Sas.revealMatches(commit, "guess-0"));
+        assertTrue(Sas.revealMatches(commit, macNonce));
     }
 
     @Test

@@ -95,6 +95,8 @@ public class LinkService extends Service {
     private volatile long lastRx;
     private volatile String sessionFp = "";
     private volatile String matchCode = "";
+    private volatile String sasPhoneNonce = "";
+    private volatile String macCommit = "";
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -207,10 +209,12 @@ public class LinkService extends Service {
                 String seen = fingerprint((X509Certificate) next.getSession().getPeerCertificates()[0]);
                 sessionFp = seen;
                 matchCode = "";
+                macCommit = "";
                 byte[] nonceRaw = new byte[16];
                 new SecureRandom().nextBytes(nonceRaw);
                 StringBuilder nonce = new StringBuilder(nonceRaw.length * 2);
                 for (byte value : nonceRaw) nonce.append(String.format("%02x", value));
+                sasPhoneNonce = nonce.toString();
                 HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen, nonce.toString());
                 if (plan.fatal != null) {
                     next.close();
@@ -296,11 +300,29 @@ public class LinkService extends Service {
                     main.postDelayed(heartbeat, 20_000);
                 }
                 case "sas" -> {
-                    String echo = message.text("echo");
-                    if (echo.isEmpty()) {
-                        publish("The Mac sent a match code this phone cannot check.", null);
+                    String commit = message.text("commit");
+                    if (commit.isEmpty() || sasPhoneNonce.isEmpty()) {
+                        linkState.failFatal("The Mac code did not match. Connect again.");
+                        publish(linkState.fatal, null);
+                        generation.incrementAndGet();
+                        closeSocket();
                     } else {
-                        matchCode = Sas.code(sessionFp, echo, message.text("nonce"));
+                        macCommit = commit;
+                        JsonObject reveal = new JsonObject();
+                        reveal.addProperty("nonce", sasPhoneNonce);
+                        writeEnvelope(Envelope.make("sas_reveal", "android", reveal));
+                        publish("Checking the match code…", null);
+                    }
+                }
+                case "sas_reveal" -> {
+                    String revealed = message.text("nonce");
+                    if (!Sas.revealMatches(macCommit, revealed)) {
+                        linkState.failFatal("The Mac code did not match. Connect again.");
+                        publish(linkState.fatal, null);
+                        generation.incrementAndGet();
+                        closeSocket();
+                    } else {
+                        matchCode = Sas.code(sessionFp, sasPhoneNonce, revealed);
                         publish("Match code " + matchCode + ". Tap Codes match on the phone and the Mac.", null);
                     }
                 }

@@ -83,6 +83,19 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(sasDecision(macConfirmed: false, phoneCode: macSees, expected: macSees), .waitForMac)
         XCTAssertEqual(sasDecision(macConfirmed: true, phoneCode: macSees, expected: macSees), .accept)
         XCTAssertEqual(sasDecision(macConfirmed: true, phoneCode: nil, expected: macSees), .waitForMac)
+        let commit = sasCommit("mac-nonce-fixed")
+        XCTAssertTrue(sasRevealMatches(commit: commit, nonce: "mac-nonce-fixed"))
+        XCTAssertFalse(sasRevealMatches(commit: commit, nonce: "guess-0"))
+        let target = sasCode(macFingerprint: "realmac", phoneNonce: "phone-nonce-fixed", macNonce: "mac-nonce-fixed")
+        var forced = false
+        for index in 0..<2000 {
+            let guess = "guess-\(index)"
+            if sasCode(macFingerprint: "attacker", phoneNonce: "phone-nonce-fixed", macNonce: guess) == target
+                && sasCommit(guess) == commit {
+                forced = true
+            }
+        }
+        XCTAssertFalse(forced)
     }
 
     func testIdentityFingerprintStaysAndKeychainDoesNotGrow() throws {

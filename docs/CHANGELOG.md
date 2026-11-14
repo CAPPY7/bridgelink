@@ -2,7 +2,7 @@
 
 ## 0.4.0
 
-- A typed PIN is no longer a proof. Without the QR fingerprint, both screens show a match code. A relay with a different certificate gets a different code and no token.
+- A typed PIN is no longer a proof. Without the QR fingerprint, both screens show a match code. The nonces are committed with SHA-256 before they are revealed, so a relay cannot grind them. A bad reveal or three wrong confirms drops the link on both sides.
 - A wrong PIN, a changed key, or a rejected token stops reconnecting and keeps the reason on screen.
 - Forget on either side tells the other and drops that device only.
 - The Mac caps waiting connections, refreshes Wi-Fi addresses, skips VPN and bridge addresses, and a new PIN does not sign out phones that are already paired. The PIN countdown restarts the code after two minutes.

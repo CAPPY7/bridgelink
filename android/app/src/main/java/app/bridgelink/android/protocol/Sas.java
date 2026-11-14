@@ -1,6 +1,7 @@
 package app.bridgelink.android.protocol;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Locale;
 
 import javax.crypto.Mac;
@@ -12,6 +13,25 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public final class Sas {
     private Sas() {}
+
+    public static String commit(String nonce) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(
+                    (nonce == null ? "" : nonce).getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(digest.length * 2);
+            for (byte value : digest) builder.append(String.format(Locale.US, "%02x", value));
+            return builder.toString();
+        } catch (Exception error) {
+            throw new IllegalStateException(error);
+        }
+    }
+
+    public static boolean revealMatches(String commit, String nonce) {
+        if (commit == null || nonce == null) return false;
+        return MessageDigest.isEqual(
+                commit.getBytes(StandardCharsets.UTF_8),
+                commit(nonce).getBytes(StandardCharsets.UTF_8));
+    }
 
     public static String code(String macFingerprint, String phoneNonce, String macNonce) {
         String message = (macFingerprint == null ? "" : macFingerprint)
