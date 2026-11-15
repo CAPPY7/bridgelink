@@ -176,6 +176,12 @@ struct DeskDetail: View {
     private var settings: some View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { _ in model.toggleLogin() }))
+            Toggle("Open scans automatically", isOn: Binding(
+                get: { UserDefaults.standard.object(forKey: "openScans") == nil || UserDefaults.standard.bool(forKey: "openScans") },
+                set: { UserDefaults.standard.set($0, forKey: "openScans") }
+            ))
+            Text("Other files stay closed until you press Open on the notification.")
+                .font(.callout).foregroundStyle(.secondary)
             Button("Send diagnostics") { model.saveDiagnostics() }
             Button("Check for update") { model.checkForUpdate() }
             Button("Show setup again") { model.replaySetup() }

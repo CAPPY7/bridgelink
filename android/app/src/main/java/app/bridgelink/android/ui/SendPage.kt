@@ -123,7 +123,7 @@ fun FilesPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Turn shared folder on", "folder-on", actions::syncFolder)
         BigButton(if (model.folderPaused) "Resume sync" else "Pause sync", "folder-pause", actions::pauseFolder, tonal = true)
         Text(
-            "Scan makes a PDF when Google Play services can open the document scanner. Otherwise pick a photo. The Mac saves it and opens it.",
+            "Scan makes a PDF when Google Play services can open the document scanner. Otherwise pick a photo. The Mac saves a scan and can open it. Other files stay closed until you press Open.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         val files = model.lines.filter { line ->

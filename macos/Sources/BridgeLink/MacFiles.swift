@@ -1,6 +1,7 @@
 import AppKit
 import BridgeLinkCore
 import CryptoKit
+import Darwin
 import Foundation
 
 /// Saves received files under Downloads/BridgeLink and reads files the user picked.
@@ -35,8 +36,11 @@ final class MacFiles {
         }
     }
 
-    func finish(id: String, sha256: String, done: @escaping (String) -> Void) {
-        queue.async { done(self.finishNow(id: id, sha256: sha256)) }
+    func finish(id: String, sha256: String, done: @escaping (String, URL?, Bool) -> Void) {
+        queue.async {
+            let result = self.finishNow(id: id, sha256: sha256)
+            done(result.line, result.url, result.opened)
+        }
     }
 
     func cancel(id: String) {
@@ -185,15 +189,15 @@ final class MacFiles {
         partials[id] = nil
     }
 
-    private func finishNow(id: String, sha256: String) -> String {
-        guard let file = incoming[id] else { return "That file is not in progress." }
+    private func finishNow(id: String, sha256: String) -> (line: String, url: URL?, opened: Bool) {
+        guard let file = incoming[id] else { return ("That file is not in progress.", nil, false) }
         try? handles[id]?.close()
         handles[id] = nil
         let partial = partials.removeValue(forKey: id)
         incoming[id] = nil
         guard file.matches(sha256), let partial else {
             if let partial { try? FileManager.default.removeItem(at: partial) }
-            return "The file hash did not match. It was not saved."
+            return ("The file hash did not match. It was not saved.", nil, false)
         }
         do {
             let folder = try downloadsFolder()
@@ -202,11 +206,25 @@ final class MacFiles {
                 dest = folder.appendingPathComponent("\(UUID().uuidString.prefix(8))-\(file.name)")
             }
             try FileManager.default.moveItem(at: partial, to: dest)
-            NSWorkspace.shared.open(dest)
-            return "Saved \(dest.lastPathComponent) in Downloads/BridgeLink"
+            markQuarantine(dest)
+            let openScans = UserDefaults.standard.object(forKey: "openScans") == nil
+                || UserDefaults.standard.bool(forKey: "openScans")
+            let opened = Features.autoOpenScan(dest.lastPathComponent, openScans)
+            if opened { NSWorkspace.shared.open(dest) }
+            return ("Saved \(dest.lastPathComponent) in Downloads/BridgeLink", dest, opened)
         } catch {
             try? FileManager.default.removeItem(at: partial)
-            return "Could not save the file."
+            return ("Could not save the file.", nil, false)
+        }
+    }
+
+    private func markQuarantine(_ url: URL) {
+        let raw = "0083;\(Int(Date().timeIntervalSince1970));BridgeLink;"
+        raw.withCString { bytes in
+            url.withUnsafeFileSystemRepresentation { path in
+                guard let path else { return }
+                setxattr(path, "com.apple.quarantine", bytes, strlen(bytes), 0, 0)
+            }
         }
     }
 

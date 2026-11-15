@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import UserNotifications
 
 /// The menu-bar icon is the drop target. A click opens the panel.
 @MainActor
@@ -139,7 +140,7 @@ final class DropCover: NSView {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     let model = LinkModel()
     private var menu: MenuHost?
 
@@ -155,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menu = MenuHost(model: model)
         menu?.presentSetupIfNeeded()
+        UNUserNotificationCenter.current().delegate = self
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         model.startClipboardWatch()
@@ -173,5 +175,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         model.fileCancel.on = false
         for url in urls { model.sendFile(url) }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let path = response.notification.request.content.userInfo["path"] as? String ?? ""
+        let url = URL(fileURLWithPath: path)
+        if response.actionIdentifier == "open" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            if !path.isEmpty { NSWorkspace.shared.open(url) }
+        } else if response.actionIdentifier == "finder", !path.isEmpty {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
+        completionHandler()
     }
 }

@@ -6,6 +6,8 @@ The Mac app is sideloaded. There is no paid Apple Developer account. A self-sign
 
 A pairing link never connects by itself. A different Mac key drops the active token before any hello, and each Mac's token is sealed under its own fingerprint.
 
+Received files are not opened by themselves. A scan PDF or JPG still opens when Open scans automatically is on, because that is the scan the user just made. Other files get a notification with Open and Show in Finder. macOS quarantine is set so a script still asks before it runs.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".

@@ -162,10 +162,14 @@ extension LinkModel {
                 if let line { Task { @MainActor in self?.note(line) } }
             }
         case "file_end":
-            files.finish(id: envelope.text("id"), sha256: envelope.text("sha256")) { [weak self] line in
+            files.finish(id: envelope.text("id"), sha256: envelope.text("sha256")) { [weak self] line, url, opened in
                 Task { @MainActor in
                     self?.note(line)
-                    self?.notify("File from the phone", line)
+                    if let url {
+                        self?.notifySaved(url.lastPathComponent, url, opened: opened)
+                    } else {
+                        self?.notify("File from the phone", line)
+                    }
                     self?.rememberInbox(kind: "file", title: StageFour.fileTitle(line), detail: "Saved on this Mac")
                     self?.fireAuto("file_in", line)
                 }

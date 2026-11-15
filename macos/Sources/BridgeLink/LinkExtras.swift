@@ -123,6 +123,20 @@ extension LinkModel {
         UNUserNotificationCenter.current().add(request)
     }
 
+    func notifySaved(_ name: String, _ url: URL, opened: Bool) {
+        let open = UNNotificationAction(identifier: "open", title: "Open", options: [])
+        let finder = UNNotificationAction(identifier: "finder", title: "Show in Finder", options: [])
+        let category = UNNotificationCategory(identifier: "bridgelink.file", actions: [open, finder], intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+        let content = UNMutableNotificationContent()
+        content.title = "\(name) saved"
+        content.body = opened ? "Opened because Open scans automatically is on." : "Open or show it in Finder."
+        content.categoryIdentifier = "bridgelink.file"
+        content.userInfo = ["path": url.path]
+        let request = UNNotificationRequest(identifier: "file-" + UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
     static func lanAddresses() -> [String] {
         var result: [String] = []
         var ifaddr: UnsafeMutablePointer<ifaddrs>?

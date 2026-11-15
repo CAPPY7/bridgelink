@@ -469,6 +469,13 @@ public class ProtocolTest {
         assertTrue(Features.smsParts("a".repeat(161)).size() > 1);
         assertEquals(2, Features.smsParts("ह".repeat(71)).size());
         assertEquals("scan-20251114-200000.pdf", Features.scanName(1_763_150_400_000L));
+        assertTrue(Features.autoOpenScan("scan-20251114-200000.pdf", true));
+        assertTrue(Features.autoOpenScan("scan-20251114-200000.jpg", true));
+        assertFalse(Features.autoOpenScan("scan-20251114-200000.pdf", false));
+        assertFalse(Features.autoOpenScan("photo.jpg", true));
+        assertFalse(Features.autoOpenScan("run.command", true));
+        assertFalse(Features.autoOpenScan("app.pkg", true));
+        assertFalse(Features.autoOpenScan("notes.txt", true));
         assertTrue(Features.triggerMatches("charging", "charging", true));
         assertFalse(Features.triggerMatches("charging", "charging", false));
         assertEquals(List.of("b"), Features.unseen(List.of("a"), List.of("a", "b")));

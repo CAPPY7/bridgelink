@@ -225,6 +225,13 @@ public final class Features {
         return "scan-" + stamp + ".pdf";
     }
 
+    /** Only a scan PDF or JPG may open by itself, and only when that setting is on. */
+    public static boolean autoOpenScan(String name, boolean openScans) {
+        if (!openScans || name == null) return false;
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        return lower.startsWith("scan-") && (lower.endsWith(".pdf") || lower.endsWith(".jpg"));
+    }
+
     public static boolean triggerMatches(String rule, String event, boolean enabled) {
         return enabled && rule != null && rule.equals(event);
     }

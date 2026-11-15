@@ -3,6 +3,9 @@ package app.bridgelink.android;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,22 +15,26 @@ import java.util.ArrayList;
 
 import app.bridgelink.android.protocol.Transfers;
 
-/** Share-sheet entry. The service streams the files. It does not copy them first. */
+/** Share-sheet entry. Nothing is sent until the user taps Send. */
 public class ShareActivity extends AppCompatActivity {
+    private String kind = "";
+    private String body = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        TextView view = new TextView(this);
-        view.setText(R.string.sending);
-        view.setPadding(48, 48, 48, 48);
-        setContentView(view);
         Intent incoming = getIntent();
         String action = incoming == null ? "" : incoming.getAction();
-        if (Intent.ACTION_SEND.equals(action) && "text/plain".equals(incoming.getType())) {
+        if (Intent.ACTION_SEND.equals(action) && incoming != null && "text/plain".equals(incoming.getType())) {
             String text = incoming.getStringExtra(Intent.EXTRA_TEXT);
-            if (Transfers.acceptUrl(text) != null) send("link", text);
-            else send("text", text == null ? "" : text);
-            finish();
+            if (Transfers.acceptUrl(text) != null) {
+                kind = "link";
+                body = text;
+            } else {
+                kind = "text";
+                body = text == null ? "" : text;
+            }
+            showConfirm(body.isEmpty() ? "Nothing to send" : "Send this to the Mac?", body.isEmpty());
             return;
         }
         ArrayList<Uri> uris = streams(incoming);
@@ -35,25 +42,65 @@ public class ShareActivity extends AppCompatActivity {
             finish();
             return;
         }
-        StringBuilder body = new StringBuilder();
+        StringBuilder joined = new StringBuilder();
         for (Uri uri : uris) {
-            try {
-                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            } catch (Exception ignored) {
-            }
-            if (body.length() > 0) body.append('\n');
-            body.append(uri.toString());
+            if (joined.length() > 0) joined.append('\n');
+            joined.append(uri.toString());
         }
-        send(uris.size() == 1 ? "file" : "files", body.toString());
-        finish();
+        kind = uris.size() == 1 ? "file" : "files";
+        body = joined.toString();
+        String title = uris.size() == 1 ? "Send 1 file to the Mac?" : "Send " + uris.size() + " files to the Mac?";
+        showConfirm(title, false);
     }
 
-    private void send(String kind, String body) {
+    private void showConfirm(String title, boolean empty) {
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setPadding(48, 48, 48, 48);
+        TextView view = new TextView(this);
+        view.setText(title);
+        view.setPadding(0, 0, 0, 24);
+        column.addView(view);
+        if (!empty) {
+            Button send = new Button(this);
+            send.setText("Send");
+            send.setOnClickListener(this::onSend);
+            column.addView(send);
+        }
+        Button cancel = new Button(this);
+        cancel.setText("Cancel");
+        cancel.setOnClickListener(v -> finish());
+        column.addView(cancel);
+        setContentView(column);
+    }
+
+    private void onSend(View ignored) {
+        Intent incoming = getIntent();
+        if (incoming != null) {
+            ArrayList<Uri> uris = streams(incoming);
+            for (Uri uri : uris) {
+                try {
+                    getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception ignoredError) {
+                }
+            }
+        }
         Intent service = new Intent(this, LinkService.class);
         service.setAction(LinkService.ACTION_SEND);
         service.putExtra(LinkService.EXTRA_KIND, kind);
         service.putExtra(LinkService.EXTRA_BODY, body);
+        if (incomingClip() != null) {
+            service.setClipData(incomingClip());
+            service.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
         ContextCompat.startForegroundService(this, service);
+        finish();
+    }
+
+    private android.content.ClipData incomingClip() {
+        Intent incoming = getIntent();
+        if (incoming == null) return null;
+        return incoming.getClipData();
     }
 
     private static ArrayList<Uri> streams(Intent incoming) {
