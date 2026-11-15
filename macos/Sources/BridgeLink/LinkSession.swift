@@ -111,6 +111,7 @@ extension LinkModel {
                 return
             }
             applyClipboard(text)
+            fireAuto("clip", "")
         case "ping":
             send(type: "pong", payload: [:], on: connection)
         case "link":
@@ -166,6 +167,7 @@ extension LinkModel {
                     self?.note(line)
                     self?.notify("File from the phone", line)
                     self?.rememberInbox(kind: "file", title: StageFour.fileTitle(line), detail: "Saved on this Mac")
+                    self?.fireAuto("file_in", line)
                 }
             }
         case "file_cancel":
@@ -199,11 +201,13 @@ extension LinkModel {
             notify(shown.title, shown.body)
             rememberInbox(kind: "notify", title: shown.title, detail: shown.body)
             note("Notification from the phone")
+            fireAuto("notify", app)
         case "otp":
             let otpFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
             guard Features.enabled(otpFlags, "otp", fallback: false) else { return }
             copyConcealed(envelope.text("body"))
             note("Copied a code. It will clear in a minute.")
+            fireAuto("sms_code", envelope.text("body"))
         case "battery":
             if envelope.text("label") == "mac" { break }
             let level = envelope.text("level")
@@ -219,6 +223,14 @@ extension LinkModel {
                 notify("Phone battery is low", "The phone battery is at \(level)%.")
             }
             if levelInt > 15 || charging { phoneLowAlerted = false }
+            if StageFive.batteryLow(levelInt, charging) {
+                if !batteryAuto {
+                    batteryAuto = true
+                    fireAuto("battery_low", level)
+                }
+            } else {
+                batteryAuto = false
+            }
             if level.isEmpty {
                 phoneBattery = ""
             } else {
@@ -239,6 +251,7 @@ extension LinkModel {
             phase = .listening
             note("The phone forgot this Mac")
         default:
+            if handleFive(envelope, connection) { break }
             if handleEasy(envelope, connection) { break }
             note(envelope.type)
             send(type: "error", payload: ["code": "unsupported_type", "body": "Unsupported"], on: connection)
@@ -258,6 +271,7 @@ extension LinkModel {
         lastRx = Date()
         note("Paired with \(name)")
         sendMacBattery()
+        startFive()
     }
 
     func finishSas(connection: NWConnection, id: UUID) {

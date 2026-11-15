@@ -83,6 +83,26 @@ A waiting connection must send hello within 10 seconds. A fifth waiting connecti
 
 A sender waits up to one second for `file_have`. It skips that many bytes and continues. The same file keeps the same id, so a dropped link can resume. The receiver keeps the partial until the hash matches. A file name is the last path segment, with control characters removed. `..` is not a name. The receiver checks the SHA-256 and deletes the file if it does not match. Files over 4 GB are refused. A folder is zipped first. `file_cancel` drops the partial. A link that is not http or https is refused. Clipboard images use `clipboard_image` and must fit in one frame.
 
+## Types in 0.12.0
+
+| type | payload | Who sends it |
+|---|---|---|
+| sms_list | `body` encoded texts, `sims` | Phone |
+| sms_new | `id`, `address`, `body`, `sim`, `incoming`, `at` | Phone, when a text arrives |
+| sms_send | `address`, `body`, `sim` | Mac |
+| sms_ask | empty | Mac |
+| folder_index | `body` one file per line, `paused` | Either side |
+| folder_want | `path` inside the shared folder | Either side |
+| folder_part | `path`, `offset`, `size`, `mtime`, `sha`, `data` base64 | Either side |
+| folder_delete | `path`, `sha` | Either side, only if that copy is unchanged |
+| folder_pause | `on` | Either side |
+| auto_rules | `body` up to 8 rules | Either side |
+| input | `on` | Either side |
+| pointer | `kind`, `x`, `y`, `text` | Phone |
+| wifi | `ssid` | Phone |
+
+A shared path cannot start with a slash, contain `..`, or leave the folder. If both copies differ, the receiver keeps its file and saves the incoming one as `name (BridgeLink conflict).ext`. A shared file over 32 MB is skipped. Pointer kinds are `move`, `tap`, `right`, `scroll`, `drag`, `key`, `slide`, and `laser`. The Mac ignores them until Accessibility is on.
+
 ## Pairing
 
 The Mac shows a QR code and a 6-digit PIN. The link inside the QR is:

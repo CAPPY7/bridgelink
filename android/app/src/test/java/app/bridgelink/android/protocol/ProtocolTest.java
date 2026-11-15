@@ -560,6 +560,69 @@ public class ProtocolTest {
         throw new IllegalStateException("Missing docs/fixtures/text.json");
     }
 
+    @Test
+    public void stageFiveRules() throws Exception {
+        assertEquals(0, StageFive.simSlot(-1, 2));
+        assertEquals(1, StageFive.simSlot(5, 2));
+        assertTrue(StageFive.addressOk("+1 415 555 0100"));
+        assertFalse(StageFive.addressOk("hello"));
+        assertNull(StageFive.pointer("shutdown", 1, 1));
+        assertEquals(10, StageFive.pointer("move", 10, -3)[0]);
+        assertEquals(-3, StageFive.pointer("move", 10, -3)[1]);
+        assertEquals(1, StageFive.pointer("laser", 5, 2)[0]);
+        assertEquals("right", StageFive.slideKey("next"));
+        assertEquals("left", StageFive.slideKey("prev"));
+        assertEquals("return", StageFive.keyName("Return"));
+        assertNull(StageFive.keyName("a\nb"));
+        assertEquals(40, StageFive.keyName("a".repeat(50)).length());
+        StageFive.Sms sms = new StageFive.Sms("1", "+1555", "hello\nthere", true, 0, 5);
+        assertEquals("hello\nthere", StageFive.decodeSms(StageFive.encodeSms(List.of(sms))).get(0).body);
+        assertEquals(StageFive.Choice.TAKE, StageFive.decide(false, false, "", false, "abc"));
+        assertEquals(StageFive.Choice.CONFLICT, StageFive.decide(false, true, "old", false, "new"));
+        assertEquals(StageFive.Choice.DELETE, StageFive.decide(false, true, "abc", true, "abc"));
+        assertEquals(StageFive.Choice.KEEP, StageFive.decide(false, true, "changed", true, "abc"));
+        assertEquals(StageFive.Choice.SKIP, StageFive.decide(true, false, "", false, "abc"));
+        assertEquals("notes/a (BridgeLink conflict).txt", StageFive.conflictName("notes/a.txt"));
+        assertFalse(StageFive.partOk("../x", 0, 1, 1));
+        assertTrue(StageFive.partOk("a.txt", 0, 4, 4));
+        java.util.List<StageFive.Rule> rules = StageFive.addRule(List.of(), "connect", "alert", "Hi");
+        assertEquals("alert", StageFive.fire(rules, "connect", "").get(0).thenAction);
+        assertTrue(StageFive.fire(StageFive.toggle(rules, rules.get(0).id, false), "connect", "").isEmpty());
+        java.util.List<StageFive.Rule> many = List.of();
+        for (int i = 0; i < 10; i++) many = StageFive.addRule(many, "connect", "note", "n" + i);
+        assertEquals(8, many.size());
+        assertTrue(StageFive.addRule(List.of(), "explode", "alert", "").isEmpty());
+        assertTrue(StageFive.batteryLow(19, false));
+        assertFalse(StageFive.batteryLow(19, true));
+        assertFalse(StageFive.batteryLow(20, false));
+        assertTrue(StageFive.homeWifi("Home", ""));
+        assertTrue(StageFive.homeWifi("Home", "home"));
+        assertFalse(StageFive.homeWifi("<unknown ssid>", ""));
+        assertEquals("Notes", StageFive.appName("Notes.app"));
+        assertNull(StageFive.appName("../Apps"));
+        assertTrue(StageFive.SMS_STEPS.contains("Allow restricted settings"));
+        assertTrue(StageFive.SMS_STEPS.contains("SMS"));
+        assertTrue(StageFive.POINTER_STEPS.contains("Accessibility"));
+        StageFive.Entry kept = new StageFive.Entry("a.txt", 1, 1, "aa", false);
+        StageFive.Entry gone = new StageFive.Entry("b.txt", 1, 1, "bb", false);
+        assertEquals("b.txt", StageFive.removed(List.of(kept, gone), List.of(kept)).get(0).path);
+        java.io.File root = Files.createTempDirectory("bl-folder").toFile();
+        FolderFiles box = new FolderFiles(root);
+        String sha = Transfers.sha256Hex("hello".getBytes(StandardCharsets.UTF_8));
+        String hello = Base64.getEncoder().encodeToString("hello".getBytes(StandardCharsets.UTF_8));
+        assertNull(box.part("notes/a.txt", 0, 5, 10, sha, hello));
+        assertEquals("hello", new String(Files.readAllBytes(root.toPath().resolve("notes/a.txt")), StandardCharsets.UTF_8));
+        String other = Transfers.sha256Hex("world".getBytes(StandardCharsets.UTF_8));
+        String world = Base64.getEncoder().encodeToString("world".getBytes(StandardCharsets.UTF_8));
+        assertNull(box.part("notes/a.txt", 0, 5, 11, other, world));
+        assertEquals("hello", new String(Files.readAllBytes(root.toPath().resolve("notes/a.txt")), StandardCharsets.UTF_8));
+        assertEquals("world", new String(Files.readAllBytes(root.toPath().resolve("notes/a (BridgeLink conflict).txt")), StandardCharsets.UTF_8));
+        assertFalse(box.remove("notes/a.txt", other));
+        assertTrue(box.remove("notes/a.txt", sha));
+        assertFalse(new java.io.File(root, "notes/a.txt").exists());
+        assertEquals("Refused a shared file.", box.part("../a.txt", 0, 1, 1, sha, "YQ=="));
+    }
+
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */
     public static final class ForegroundServiceStartNotAllowedException extends IllegalStateException {
         public ForegroundServiceStartNotAllowedException() {

@@ -69,6 +69,21 @@ final class LinkModel: ObservableObject {
     @Published var lockFar = savedLockInt("lockFar", 70)
     @Published var lockDelay = savedLockInt("lockDelay", 30)
     @Published var volumeText = "40"
+    @Published var messages: [StageFive.Sms] = []
+    @Published var smsTo = ""
+    @Published var smsBody = ""
+    @Published var smsSim = 0
+    @Published var simCount = 1
+    @Published var folderOn = false
+    @Published var folderPaused = false
+    @Published var folderPath = ""
+    @Published var rules: [StageFive.Rule] = []
+    @Published var ruleWhen = "connect"
+    @Published var ruleThen = "alert"
+    @Published var ruleExtra = ""
+    @Published var trackpadOn = false
+    var batteryAuto = false
+    let sharedBox = SharedBox()
     var beacon: LeaveBeacon?
     var lastMacNow = ""
     let fileCancel = CancelFlag()

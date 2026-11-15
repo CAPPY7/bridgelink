@@ -34,6 +34,11 @@ enum ShotBook {
         model.lockOn = true
         model.lockFar = 70
         model.lockDelay = 30
+        model.messages = [StageFive.Sms(id: "1", address: "+15551212", body: "On my way", incoming: true, sim: 0, at: 5)]
+        model.folderOn = true
+        model.folderPath = "BridgeLink Shared"
+        model.rules = [StageFive.Rule(id: "connect-alert-1", when: "connect", thenAction: "alert", extra: "Phone is here", enabled: true)]
+        model.trackpadOn = true
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover.png", folder, .light)
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover-dark.png", folder, .dark)
         for tab in DeskTab.allCases {

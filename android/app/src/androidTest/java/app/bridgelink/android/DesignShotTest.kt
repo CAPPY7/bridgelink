@@ -32,6 +32,15 @@ class DesignShotTest {
     @Test(timeout = 180_000)
     fun captureScreens() {
         val dirs = writableDirs()
+        compose.runOnIdle {
+            val model = compose.activity.model
+            model.smsOn = true
+            model.trackpadOn = true
+            model.folderOn = true
+            model.messages = listOf(app.bridgelink.android.ui.SmsRow("1", "+15551212", "On my way", true))
+            model.rules = listOf(app.bridgelink.android.ui.RuleRow("connect-alert-1", "Phone connects", "Show an alert", true))
+            model.nowPlaying = "Playing Sunny - Ada"
+        }
         for (page in Page.entries) {
             compose.runOnIdle { compose.activity.model.page = page }
             compose.waitForIdle()

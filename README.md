@@ -59,19 +59,19 @@ Honest status of the **installable apps**. The demo is not counted. Status words
 | 6 | Find phone | Built – self-tested. Rings on the alarm stream so silent mode does not hide it. Either side can stop it |
 | 7 | OTP auto-copy | Built – self-tested. Codes from notifications and SMS, cleared on the Mac after 60 seconds |
 | 8 | Open a link on the other device | Built – self-tested. Both ways, with an always-open option |
-| 9 | Trackpad, keyboard, slides | Not started |
+| 9 | Trackpad, keyboard, slides | Built – self-tested. Drag, click, two-finger scroll, right-click, typing, slides, and a laser dot. The Mac needs Accessibility |
 | 10 | Clipboard sync | Built – self-tested. On or off, skips sensitive text, sends small pictures |
-| 11 | SMS | Not started |
+| 11 | SMS | Built – self-tested. Read, send, banners, and a SIM choice. Allow SMS on the phone |
 | 12 | Screen mirror | Not started |
 | 13 | Control the phone while mirroring | Not started |
 | 14 | Phone as webcam | Not started |
-| 15 | Shared folder | Not started |
+| 15 | Shared folder | Built – self-tested. Both ways, conflict copies, pause. Files over 32 MB are skipped |
 | 16 | Lock the Mac when you leave | Built – self-tested |
 | 17 | Away from home | Not started |
 | 18 | Unified inbox | Built – self-tested |
 | 19 | Clipboard history | Built – self-tested |
 | 20 | Scan to Mac | Built – self-tested |
-| 21 | Automations | Not started |
+| 21 | Automations | Built – self-tested. Up to eight when-this-then-that rules |
 | 22 | Quick drop | Built – self-tested. Quick Settings tile, menu-bar drop, and a floating drop zone |
 | 23 | Pairing | Built – self-tested. QR, several phones and Macs, rename, and forget |
 | 24 | End-to-end encryption | Built – self-tested. TLS on the local link. New features use that same link |

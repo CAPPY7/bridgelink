@@ -16,6 +16,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun HomePage(model: PhoneModel, actions: PhoneActions) {
@@ -61,14 +70,52 @@ fun HomePage(model: PhoneModel, actions: PhoneActions) {
 }
 
 @Composable
-fun MessagesPage() {
+fun MessagesPage(model: PhoneModel, actions: PhoneActions) {
     PageScroll {
         Text("Messages", style = MaterialTheme.typography.headlineMedium)
-        EmptyState(
-            Icons.Filled.Email,
-            "Text messages are not on this phone yet.",
-            "They arrive in a later update. You can still send a note from Send.",
+        Text(
+            "Read and reply from the Mac, or from this phone. Android may ask you to allow restricted settings before SMS works on a sideloaded app.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        BigButton(if (model.smsOn) "Texts are on" else "Turn texts on", "sms-on", actions::enableSms)
+        BigButton("Refresh texts", "sms-refresh", actions::refreshSms, tonal = true)
+        BigButton("Show SMS steps", "sms-steps", actions::smsSteps, tonal = true)
+        if (model.simCount > 1) {
+            OutlinedTextField(
+                value = model.sim,
+                onValueChange = { model.sim = it },
+                modifier = Modifier.fillMaxWidth().testTag("sms-sim"),
+                label = { Text("SIM, 0 or 1") },
+                singleLine = true,
+            )
+        }
+        OutlinedTextField(
+            value = model.smsTo,
+            onValueChange = { model.smsTo = it },
+            modifier = Modifier.fillMaxWidth().testTag("sms-to"),
+            label = { Text("Phone number") },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = model.smsBody,
+            onValueChange = { model.smsBody = it },
+            modifier = Modifier.fillMaxWidth().testTag("sms-body"),
+            label = { Text("Message") },
+            minLines = 2,
+        )
+        BigButton("Send text", "sms-send", actions::sendSms)
+        if (model.messages.isEmpty()) {
+            EmptyState(
+                Icons.Filled.Email,
+                "No texts yet.",
+                "Turn texts on, allow SMS, then tap Refresh. New texts also show on the Mac.",
+            )
+        } else {
+            model.messages.take(30).forEach { sms ->
+                Text((if (sms.incoming) "From " else "To ") + sms.address, style = MaterialTheme.typography.titleSmall)
+                Text(sms.body, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
@@ -93,11 +140,65 @@ fun RemotePage(model: PhoneModel, actions: PhoneActions) {
             singleLine = true,
         )
         BigButton("Set Mac volume", "media-volume", { actions.media("volume:" + model.volume) }, tonal = true)
-        EmptyState(
-            Icons.Filled.Smartphone,
-            "The trackpad is not on this phone yet.",
-            "Keyboard and slides arrive in a later update. Media buttons work now.",
+        Text("Trackpad", style = MaterialTheme.typography.titleMedium)
+        Text(
+            if (model.trackpadOn) "On. Drag to move the Mac pointer. Two fingers scroll." else "Off. The Mac must allow BridgeLink under Accessibility.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        BigButton(if (model.trackpadOn) "Turn trackpad off" else "Turn trackpad on", "trackpad", actions::toggleTrackpad)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .testTag("trackpad")
+                .pointerInput(model.trackpadOn, model.dragMode) {
+                    if (!model.trackpadOn) return@pointerInput
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var scrolling = false
+                        var moved = false
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) break
+                            if (pressed.size >= 2) {
+                                scrolling = true
+                                val delta = pressed[0].positionChange()
+                                actions.pointer("scroll", 0, -delta.y.toInt(), "")
+                            } else if (!scrolling) {
+                                val delta = pressed[0].positionChange()
+                                if (delta.x != 0f || delta.y != 0f) {
+                                    moved = true
+                                    val kind = if (model.dragMode) "drag" else "move"
+                                    actions.pointer(kind, delta.x.toInt(), delta.y.toInt(), "")
+                                }
+                            }
+                            pressed.forEach { it.consume() }
+                        }
+                        if (!scrolling && !moved) actions.pointer("tap", 0, 0, "")
+                    }
+                },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {
+            Box(Modifier.fillMaxWidth().height(180.dp).padding(12.dp)) {
+                Text("Drag here. A short press clicks. Two fingers scroll.")
+            }
+        }
+        BigButton("Right click", "right-click", { actions.pointer("right", 0, 0, "") }, tonal = true)
+        BigButton(if (model.dragMode) "Dragging is on" else "Next drag holds the click", "drag-mode", { model.dragMode = !model.dragMode }, tonal = true)
+        BigButton("Slide next", "slide-next", { actions.pointer("slide", 0, 0, "next") }, tonal = true)
+        BigButton("Slide previous", "slide-prev", { actions.pointer("slide", 0, 0, "prev") }, tonal = true)
+        BigButton("Laser pointer", "laser", { actions.pointer("laser", 1, 0, "") }, tonal = true)
+        BigButton("Laser off", "laser-off", { actions.pointer("laser", 0, 0, "") }, tonal = true)
+        OutlinedTextField(
+            value = model.typeText,
+            onValueChange = { model.typeText = it },
+            modifier = Modifier.fillMaxWidth().testTag("type-text"),
+            label = { Text("Type on the Mac") },
+            singleLine = true,
+        )
+        BigButton("Type", "type-send", { actions.pointer("key", 0, 0, model.typeText) })
     }
 }
 

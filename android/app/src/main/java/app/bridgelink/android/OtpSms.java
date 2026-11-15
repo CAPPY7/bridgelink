@@ -8,18 +8,31 @@ import android.telephony.SmsMessage;
 
 import app.bridgelink.android.protocol.Features;
 
-/** Copies a code from an SMS. The message text is not stored. */
+/** Forwards a new text, and copies a code when that is turned on. The activity list does not store the text. */
 public class OtpSms extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (context == null || intent == null) return;
         if (!Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) return;
-        if (!Features.enabled(Prefs.open(context).getString("flags", ""), "otp", false)) return;
         StringBuilder body = new StringBuilder();
+        String address = "";
         for (SmsMessage message : Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
-            if (message != null && message.getMessageBody() != null) body.append(message.getMessageBody());
+            if (message == null) continue;
+            if (address.isEmpty() && message.getOriginatingAddress() != null) address = message.getOriginatingAddress();
+            if (message.getMessageBody() != null) body.append(message.getMessageBody());
         }
-        String code = Features.otp(body.toString());
+        String text = body.toString();
+        String flags = Prefs.open(context).getString("flags", "");
+        if (Features.enabled(flags, "sms", false)) {
+            Intent send = new Intent(context, LinkService.class);
+            send.setAction(LinkService.ACTION_SEND);
+            send.putExtra(LinkService.EXTRA_KIND, "sms_in");
+            send.putExtra("address", address);
+            send.putExtra(LinkService.EXTRA_BODY, text);
+            LinkService.post(context, send);
+        }
+        if (!Features.enabled(flags, "otp", false)) return;
+        String code = Features.otp(text);
         if (code == null) return;
         Intent send = new Intent(context, LinkService.class);
         send.setAction(LinkService.ACTION_SEND);

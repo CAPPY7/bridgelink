@@ -43,6 +43,7 @@ extension LinkModel {
         inbox = InboxFile.load()
         beacon = LeaveBeacon()
         beacon?.start()
+        loadFive()
     }
 
     func rememberClip(_ text: String) {
@@ -152,6 +153,7 @@ extension LinkModel {
         case "lock":
             if StageFour.lockRequest(envelope.text("reason")) {
                 note(MacLock.lock())
+                fireAuto("leave", "")
             } else {
                 note("Ignored a request to unlock. BridgeLink never unlocks the Mac.")
             }

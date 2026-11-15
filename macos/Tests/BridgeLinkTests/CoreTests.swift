@@ -280,6 +280,53 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Features.streamLength(header), 20)
         XCTAssertEqual(otpRows.filter { Features.otp($0.1) == $0.0 }.count, otpRows.count)
     }
+
+    func testStageFiveRules() {
+        XCTAssertEqual(StageFive.simSlot(-1, 2), 0)
+        XCTAssertEqual(StageFive.simSlot(5, 2), 1)
+        XCTAssertTrue(StageFive.addressOk("+1 415 555 0100"))
+        XCTAssertFalse(StageFive.addressOk("hello"))
+        XCTAssertNil(StageFive.pointer("shutdown", 1, 1))
+        XCTAssertEqual(StageFive.pointer("move", 10, -3)?.x, 10)
+        XCTAssertEqual(StageFive.pointer("move", 10, -3)?.y, -3)
+        XCTAssertEqual(StageFive.pointer("laser", 5, 2)?.x, 1)
+        XCTAssertEqual(StageFive.slideKey("next"), "right")
+        XCTAssertEqual(StageFive.slideKey("prev"), "left")
+        XCTAssertEqual(StageFive.keyName("Return"), "return")
+        XCTAssertNil(StageFive.keyName("a\nb"))
+        XCTAssertEqual(StageFive.keyName(String(repeating: "a", count: 50))?.count, 40)
+        let sms = StageFive.Sms(id: "1", address: "+1555", body: "hello\nthere", incoming: true, sim: 0, at: 5)
+        XCTAssertEqual(StageFive.decodeSms(StageFive.encodeSms([sms])).first?.body, "hello\nthere")
+        XCTAssertEqual(StageFive.decide(paused: false, localExists: false, localSha: "", remoteDeleted: false, remoteSha: "abc"), .take)
+        XCTAssertEqual(StageFive.decide(paused: false, localExists: true, localSha: "old", remoteDeleted: false, remoteSha: "new"), .conflict)
+        XCTAssertEqual(StageFive.decide(paused: false, localExists: true, localSha: "abc", remoteDeleted: true, remoteSha: "abc"), .delete)
+        XCTAssertEqual(StageFive.decide(paused: false, localExists: true, localSha: "changed", remoteDeleted: true, remoteSha: "abc"), .keep)
+        XCTAssertEqual(StageFive.decide(paused: true, localExists: false, localSha: "", remoteDeleted: false, remoteSha: "abc"), .skip)
+        XCTAssertEqual(StageFive.conflictName("notes/a.txt"), "notes/a (BridgeLink conflict).txt")
+        XCTAssertFalse(StageFive.partOk("../x", 0, 1, 1))
+        XCTAssertTrue(StageFive.partOk("a.txt", 0, 4, 4))
+        let rules = StageFive.addRule([], "connect", "alert", "Hi")
+        XCTAssertEqual(StageFive.fire(rules, "connect", "").first?.thenAction, "alert")
+        XCTAssertTrue(StageFive.fire(StageFive.toggle(rules, rules[0].id, false), "connect", "").isEmpty)
+        var many: [StageFive.Rule] = []
+        for index in 0..<10 { many = StageFive.addRule(many, "connect", "note", "n\(index)") }
+        XCTAssertEqual(many.count, 8)
+        XCTAssertTrue(StageFive.addRule([], "explode", "alert", "").isEmpty)
+        XCTAssertTrue(StageFive.batteryLow(19, false))
+        XCTAssertFalse(StageFive.batteryLow(19, true))
+        XCTAssertFalse(StageFive.batteryLow(20, false))
+        XCTAssertTrue(StageFive.homeWifi("Home", ""))
+        XCTAssertTrue(StageFive.homeWifi("Home", "home"))
+        XCTAssertFalse(StageFive.homeWifi("<unknown ssid>", ""))
+        XCTAssertEqual(StageFive.appName("Notes.app"), "Notes")
+        XCTAssertNil(StageFive.appName("../Apps"))
+        XCTAssertTrue(StageFive.smsSteps.contains("Allow restricted settings"))
+        XCTAssertTrue(StageFive.smsSteps.contains("SMS"))
+        XCTAssertTrue(StageFive.pointerSteps.contains("Accessibility"))
+        let kept = StageFive.Entry(path: "a.txt", size: 1, mtime: 1, sha: "aa", deleted: false)
+        let gone = StageFive.Entry(path: "b.txt", size: 1, mtime: 1, sha: "bb", deleted: false)
+        XCTAssertEqual(StageFive.removed([kept, gone], [kept]).first?.path, "b.txt")
+    }
 }
 
 private let otpRows: [(String?, String)] = [

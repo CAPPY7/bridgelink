@@ -11,7 +11,7 @@
 
 ## What you cannot do yet
 
-Files, notification mirroring, media buttons, SMS, screen mirror, using the phone as a webcam, a shared folder, and connecting away from home. The browser preview can imitate some of those. It is not connected to your devices.
+Screen mirror, controlling the phone from that mirror, using the phone as a webcam, and connecting when the phone and Mac are on different networks. The browser preview can imitate some of those. It is not connected to your devices.
 
 ## Day to day
 

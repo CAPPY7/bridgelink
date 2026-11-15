@@ -1,4 +1,5 @@
 import SwiftUI
+import BridgeLinkCore
 
 struct DeskDetail: View {
     @EnvironmentObject private var model: LinkModel
@@ -22,17 +23,17 @@ struct DeskDetail: View {
         case .home: home
         case .notifications: notifications
         case .messages:
-            InboxPane()
+            MessagesPane()
         case .files: files
         case .clipboard: clipboard
         case .shared:
-            EmptyNote(symbol: "externaldrive", title: "No shared folder yet.", line: "A folder that stays in sync arrives in a later update.")
+            SharedPane()
         case .mirror:
             EmptyNote(symbol: "rectangle.on.rectangle", title: "Screen mirror is not ready.", line: "The phone picture arrives in a later update. Notification mirror is under Notifications.")
         case .webcam:
             EmptyNote(symbol: "video", title: "The phone camera is not a webcam yet.", line: "A live view inside BridgeLink arrives in a later update.")
         case .automations:
-            EmptyNote(symbol: "wand.and.stars", title: "No automations yet.", line: "Simple when-this-then-that rules arrive in a later update.")
+            AutomationsPane()
         case .devices: devices
         case .settings: settings
         }
@@ -78,6 +79,7 @@ struct DeskDetail: View {
             Toggle("Show notification text", isOn: Binding(get: { model.showNotificationText }, set: { model.setShowNotificationText($0) }))
             Text("Notification text is shown only while this Mac is unlocked and that switch is on. Otherwise only the app name is shown.")
                 .font(.callout).foregroundStyle(.secondary)
+            InboxPane()
             Button("Allow notifications") { model.notifications() }
             if model.canReply {
                 TextField("Reply", text: $model.replyDraft)
@@ -166,9 +168,13 @@ struct DeskDetail: View {
             Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { _ in model.toggleLogin() }))
             Button("Send diagnostics") { model.saveDiagnostics() }
             LockPane()
+            Text("Phone trackpad").font(.headline)
+            Text(StageFive.pointerSteps).font(.callout).foregroundStyle(.secondary)
+            Toggle("Let the phone move the pointer and type", isOn: Binding(get: { model.trackpadOn }, set: { model.setTrackpad($0) }))
+            Button("Show the Accessibility steps") { model.explainPointer() }
             Text("The first open needs one extra step because this app is not from the Mac App Store. macOS 13 or 14: right-click the app, choose Open, then Open. macOS 15 or newer: System Settings, Privacy and Security, Open Anyway.")
                 .font(.callout).foregroundStyle(.secondary)
-            Text("BridgeLink 0.11.0").font(.headline)
+            Text("BridgeLink 0.12.0").font(.headline)
             Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 .foregroundStyle(.secondary)
             Button("Quit") { model.quit() }

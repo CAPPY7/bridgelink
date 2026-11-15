@@ -115,6 +115,13 @@ fun FilesPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Send files", "files-send", actions::pickFile)
         BigButton("Scan to Mac", "scan-doc", actions::scanDoc)
         BigButton("Cancel send", "files-cancel", actions::cancelFile, tonal = true)
+        Text("Shared folder", style = MaterialTheme.typography.titleMedium)
+        Text(
+            if (model.folderPaused) "Paused. New files wait until you resume." else "One folder on this phone stays in sync with BridgeLink Shared on the Mac. A changed file is kept, and the other copy is saved beside it.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        BigButton("Turn shared folder on", "folder-on", actions::syncFolder)
+        BigButton(if (model.folderPaused) "Resume sync" else "Pause sync", "folder-pause", actions::pauseFolder, tonal = true)
         Text(
             "Scan makes a PDF when Google Play services can open the document scanner. Otherwise pick a photo. The Mac saves it and opens it.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,

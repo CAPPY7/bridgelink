@@ -40,9 +40,28 @@ class PhoneModel {
     var lockFar by mutableStateOf("70")
     var lockDelay by mutableStateOf("30")
     var volume by mutableStateOf("40")
+    var messages by mutableStateOf(listOf<SmsRow>())
+    var smsTo by mutableStateOf("")
+    var smsBody by mutableStateOf("")
+    var smsOn by mutableStateOf(false)
+    var sim by mutableStateOf("0")
+    var simCount by mutableStateOf(1)
+    var folderOn by mutableStateOf(false)
+    var folderPaused by mutableStateOf(false)
+    var rules by mutableStateOf(listOf<RuleRow>())
+    var ruleWhen by mutableStateOf("connect")
+    var ruleThen by mutableStateOf("alert")
+    var ruleExtra by mutableStateOf("")
+    var typeText by mutableStateOf("")
+    var trackpadOn by mutableStateOf(false)
+    var dragMode by mutableStateOf(false)
 }
 
 data class ClipRow(val id: String, val text: String, val pinned: Boolean)
+
+data class SmsRow(val id: String, val address: String, val body: String, val incoming: Boolean)
+
+data class RuleRow(val id: String, val whenLabel: String, val thenLabel: String, val enabled: Boolean)
 
 /** Buttons on the screen. MainActivity does the real work. */
 interface PhoneActions {
@@ -77,4 +96,15 @@ interface PhoneActions {
     fun toggleLock()
     fun toggleDesk()
     fun saveLock()
+    fun enableSms()
+    fun refreshSms()
+    fun sendSms()
+    fun smsSteps()
+    fun syncFolder()
+    fun pauseFolder()
+    fun addRule()
+    fun toggleRule(id: String)
+    fun deleteRule(id: String)
+    fun pointer(kind: String, x: Int, y: Int, text: String)
+    fun toggleTrackpad()
 }

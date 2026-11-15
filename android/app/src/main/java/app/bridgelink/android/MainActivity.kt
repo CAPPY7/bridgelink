@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     val model = PhoneModel()
     val work by lazy { PhoneWork(this) }
     val easy by lazy { EasyWork(this) }
+    val five by lazy { FiveWork(this) }
     var browser: MacBrowser? = null
 
     private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
             }
             if (!line.isNullOrEmpty()) work.remember(line)
             easy.refreshClips()
+            five.refresh()
         }
     }
 
@@ -75,6 +77,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         super.onCreate(savedInstanceState)
         work.load()
         easy.load()
+        five.refresh()
         setContent { BridgeApp(model, this) }
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -162,6 +165,17 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun toggleLock() = requestLock()
     override fun toggleDesk() = easy.toggleDesk()
     override fun saveLock() = easy.saveLock()
+    override fun enableSms() = five.enableSms()
+    override fun refreshSms() = five.refreshSms()
+    override fun sendSms() = five.sendSms()
+    override fun smsSteps() = five.smsSteps()
+    override fun syncFolder() = five.syncFolder()
+    override fun pauseFolder() = five.pauseFolder()
+    override fun addRule() = five.addRule()
+    override fun toggleRule(id: String) = five.toggleRule(id)
+    override fun deleteRule(id: String) = five.deleteRule(id)
+    override fun pointer(kind: String, x: Int, y: Int, text: String) = five.pointer(kind, x, y, text)
+    override fun toggleTrackpad() = five.toggleTrackpad()
 
     private fun startScan() {
         try {

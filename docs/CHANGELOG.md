@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0
+
+- Texts can be read and sent from the Mac. A new text shows a banner. If the phone has two SIMs, you can pick one. Allow SMS on the phone. A sideloaded app may need Allow restricted settings first.
+- One folder on the phone and BridgeLink Shared on the Mac stay in sync. New, changed, and deleted files are copied. If both sides changed a file, the original stays and the other copy is saved with BridgeLink conflict in the name. Sync can be paused. Files over 32 MB are skipped.
+- Automations are simple when-this-then-that rules, up to eight. Examples: the phone connects, the battery is under 20%, the phone joins home Wi-Fi, or a text has a code.
+- The phone can be a trackpad, keyboard, and slide remote. Drag moves the pointer, two fingers scroll, and a button right-clicks. Slide next and previous press the arrow keys. The laser is a red dot on the Mac. The Mac needs Accessibility the first time.
+
 ## 0.11.0
 
 - The phone can play, pause, skip, and set the volume of music on the Mac. The Mac can do the same for music on the phone, including the song name and a small picture when notification access is on.

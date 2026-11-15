@@ -125,6 +125,7 @@ public class LinkService extends Service {
     private volatile String macCommit = "";
     private volatile String lastNow = "";
     private LeaveWatch leave;
+    private PhoneFive five;
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -161,6 +162,17 @@ public class LinkService extends Service {
         ring.setBypassDnd(true);
         manager().createNotificationChannel(ring);
         files = new FileBridge(this);
+        five = new PhoneFive(this, new PhoneFive.Out() {
+            @Override
+            public void frame(String type, JsonObject payload) throws Exception {
+                writeEnvelope(Envelope.make(type, "android", payload));
+            }
+
+            @Override
+            public void status(String line) {
+                publish(line, null);
+            }
+        });
         running = this;
         watchNetwork();
         batteryWatch = new BroadcastReceiver() {
@@ -220,6 +232,18 @@ public class LinkService extends Service {
             else if ("notify".equals(kind)) sendNotify(intent);
             else if ("notify_dismiss".equals(kind)) sendDismiss(intent.getStringExtra("key"));
             else if ("otp".equals(kind)) sendOtp(intent.getStringExtra(EXTRA_BODY));
+            else if ("sms_in".equals(kind) && five != null) {
+                five.smsIn(safe(intent.getStringExtra("address")) + "\n" + safe(intent.getStringExtra(EXTRA_BODY)));
+            }
+            else if ("sms_local".equals(kind) && five != null) {
+                int sim = 0;
+                try {
+                    sim = Integer.parseInt(safe(intent.getStringExtra("sim")).trim());
+                } catch (NumberFormatException ignored) {
+                }
+                int chosen = sim;
+                five.sendLocalSms(intent.getStringExtra("address"), intent.getStringExtra(EXTRA_BODY), chosen);
+            }
             else if ("cancel-file".equals(kind)) fileCancel.set(true);
             else if ("lock-refresh".equals(kind) && leave != null) leave.start();
             else send(kind, intent.getStringExtra(EXTRA_BODY));
@@ -484,6 +508,7 @@ public class LinkService extends Service {
                     main.removeCallbacks(heartbeat);
                     main.postDelayed(heartbeat, 20_000);
                     sendBattery();
+                    if (five != null) five.onPaired();
                 }
                 case "sas" -> {
                     String commit = message.text("commit");
@@ -590,7 +615,10 @@ public class LinkService extends Service {
                 case "file_end" -> {
                     String saved = files.finish(message.text("id"), message.text("sha256"));
                     publish(saved, null);
-                    if (saved != null && saved.startsWith("Saved")) main.post(() -> files.openLast());
+                    if (saved != null && saved.startsWith("Saved")) {
+                        main.post(() -> files.openLast());
+                        if (five != null) five.fire("file_in", saved);
+                    }
                 }
                 case "file_cancel" -> {
                     files.cancel(message.text("id"));
@@ -614,6 +642,7 @@ public class LinkService extends Service {
                     }
                 }
                 default -> {
+                    if (five != null && five.handle(message)) break;
                     JsonObject payload = new JsonObject();
                     payload.addProperty("code", "unsupported_type");
                     payload.addProperty("body", "This phone does not handle " + message.type);
@@ -699,6 +728,7 @@ public class LinkService extends Service {
                     }
                     payload.addProperty("reason", "away");
                     writeEnvelope(Envelope.make("lock", "android", payload));
+                    if (five != null) five.fire("leave", "");
                     publish("Asked the Mac to lock", null);
                     return;
                 }
@@ -710,6 +740,11 @@ public class LinkService extends Service {
                     payload.addProperty("body", text);
                     writeEnvelope(Envelope.make("lock_setup", "android", payload));
                     publish("Sent lock settings", null);
+                    return;
+                }
+                if (five != null && ("pointer".equals(kind) || "sms_push".equals(kind) || "folder_sync".equals(kind)
+                        || "folder_pause".equals(kind) || "auto".equals(kind) || "wifi".equals(kind) || "input_on".equals(kind))) {
+                    five.command(kind, text);
                     return;
                 }
                 payload.addProperty("body", text);
@@ -735,6 +770,7 @@ public class LinkService extends Service {
                 payload.addProperty("reply", safe(intent.getStringExtra("reply")));
                 payload.addProperty("body", safe(intent.getStringExtra("detail")));
                 writeEnvelope(Envelope.make("notify", "android", payload));
+                if (five != null) five.fire("notify", safe(intent.getStringExtra("app")));
                 if ("1".equals(intent.getStringExtra("otp"))
                         && Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) {
                     String code = Features.otp(safe(intent.getStringExtra(EXTRA_BODY)) + "\n" + safe(intent.getStringExtra("detail")));
@@ -843,6 +879,7 @@ public class LinkService extends Service {
             lastBattery = percent;
             lastCharging = charging;
             if (leave != null) leave.setCharging(charging);
+            if (five != null) five.noteBattery(percent, charging);
             outbox.submit(() -> {
                 if (!paired) return;
                 try {
@@ -1121,6 +1158,7 @@ public class LinkService extends Service {
                 JsonObject payload = new JsonObject();
                 payload.addProperty("body", code);
                 writeEnvelope(Envelope.make("otp", "android", payload));
+                if (five != null) five.fire("sms_code", code);
                 publish("Copied a code to the Mac", null);
             } catch (Exception error) {
                 publish("Could not copy the code", null);
@@ -1146,6 +1184,7 @@ public class LinkService extends Service {
         if (clipboard != null) {
             clipboard.setPrimaryClip(ClipData.newPlainText("BridgeLink", text));
         }
+        if (five != null) five.fire("clip", "");
     }
 
     private void startRing(boolean flash, boolean vibrate) {
