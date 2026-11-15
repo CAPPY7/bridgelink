@@ -149,6 +149,8 @@ class MainActivity : AppCompatActivity(), PhoneActions {
 
     override fun scan() = work.scan()
     override fun applyLink() = work.applyLink()
+    override fun acceptPair() = work.acceptPair()
+    override fun cancelPair() = work.cancelPair()
     override fun findMac() = work.findMac()
     override fun connect() = work.connect()
     override fun confirm() = work.confirm()

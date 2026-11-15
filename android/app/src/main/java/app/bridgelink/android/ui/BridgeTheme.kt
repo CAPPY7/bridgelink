@@ -10,6 +10,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -94,21 +95,35 @@ private fun PhoneShell(model: PhoneModel, actions: PhoneActions) {
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = { BottomNav(model) },
     ) { padding ->
-        AnimatedContent(
-            targetState = model.page,
-            modifier = Modifier.padding(padding),
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "page",
-        ) { page ->
-            when (page) {
-                Page.Home -> if (model.setupDone) HomePage(model, actions) else SetupPage(actions)
-                Page.Send -> SendPage(model, actions)
-                Page.Notifications -> NotificationsPage(model, actions)
-                Page.Messages -> MessagesPage(model, actions)
-                Page.Files -> FilesPage(model, actions)
-                Page.Remote -> RemotePage(model, actions)
-                Page.Mirror -> MirrorPage(model, actions)
-                Page.Settings -> SettingsPage(model, actions)
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            AnimatedContent(
+                targetState = model.page,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "page",
+            ) { page ->
+                when (page) {
+                    Page.Home -> if (model.setupDone) HomePage(model, actions) else SetupPage(actions)
+                    Page.Send -> SendPage(model, actions)
+                    Page.Notifications -> NotificationsPage(model, actions)
+                    Page.Messages -> MessagesPage(model, actions)
+                    Page.Files -> FilesPage(model, actions)
+                    Page.Remote -> RemotePage(model, actions)
+                    Page.Mirror -> MirrorPage(model, actions)
+                    Page.Settings -> SettingsPage(model, actions)
+                }
+            }
+            if (model.askPair) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(model.pairTitle, style = MaterialTheme.typography.headlineMedium)
+                        Text(model.pairDetail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        BigButton(model.pairButton, "pair-accept", actions::acceptPair)
+                        BigButton("Cancel", "pair-cancel", actions::cancelPair, tonal = true)
+                    }
+                }
             }
         }
     }

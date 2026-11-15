@@ -45,7 +45,9 @@ import app.bridgelink.android.protocol.HelloPlan;
 import app.bridgelink.android.protocol.LinkFailure;
 import app.bridgelink.android.protocol.LinkState;
 import app.bridgelink.android.protocol.MacList;
+import app.bridgelink.android.protocol.MacTokens;
 import app.bridgelink.android.protocol.Outbox;
+import app.bridgelink.android.protocol.PairGate;
 import app.bridgelink.android.protocol.Sas;
 import app.bridgelink.android.protocol.ServiceDoor;
 import app.bridgelink.android.protocol.Transfers;
@@ -418,7 +420,7 @@ public class LinkService extends Service {
             StringBuilder nonce = new StringBuilder(nonceRaw.length * 2);
             for (byte value : nonceRaw) nonce.append(String.format("%02x", value));
             sasPhoneNonce = nonce.toString();
-            HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen, nonce.toString());
+            HelloPlan plan = HelloPlan.decide(Build.MODEL, code, PairGate.helloToken(pinned, savedToken, seen), pinned, seen, nonce.toString());
             if (plan.kind != null) {
                 next.close();
                 linkState.failFatal(plan.fatal);
@@ -528,6 +530,9 @@ public class LinkService extends Service {
                         if (!device.isEmpty()) editor.putString("deviceId", device);
                         String macs = prefs.getString("macs", "[]");
                         editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp));
+                        if (fp != null && !fp.isEmpty()) {
+                            editor.putString("macTokens", MacTokens.put(prefs.getString("macTokens", ""), fp, issued));
+                        }
                         editor.putString("host", lastHost);
                         editor.remove("pendingFp").remove("pin").commit();
                         if (prefs.getString("token", "").length() < 16) {

@@ -21,6 +21,7 @@ import app.bridgelink.android.protocol.SecretBox;
  */
 public final class Prefs {
     public static final String TOKEN = "token";
+    public static final String TOKENS = "macTokens";
     public static final String WARNING =
             "Android Keystore is unavailable. The pairing token will not be saved on this phone.";
 
@@ -93,9 +94,9 @@ public final class Prefs {
 
         @Override
         public String getString(String name, String def) {
-            if (!TOKEN.equals(name)) return raw.getString(name, def);
+            if (!secret(name)) return raw.getString(name, def);
             if (key == null) return def;
-            String stored = raw.getString(TOKEN, null);
+            String stored = raw.getString(name, null);
             if (stored == null || stored.isEmpty()) return def;
             try {
                 return SecretBox.open(key, stored);
@@ -162,7 +163,7 @@ public final class Prefs {
 
         @Override
         public SharedPreferences.Editor putString(String name, String value) {
-            if (TOKEN.equals(name)) {
+            if (secret(name)) {
                 pending.put(name, value);
                 return this;
             }
@@ -216,28 +217,34 @@ public final class Prefs {
 
         @Override
         public boolean commit() {
-            flushToken();
+            flushSecrets();
             return raw.commit();
         }
 
         @Override
         public void apply() {
-            flushToken();
+            flushSecrets();
             raw.apply();
         }
 
-        private void flushToken() {
-            if (!pending.containsKey(TOKEN)) return;
-            String value = pending.remove(TOKEN);
-            if (value == null || key == null) {
-                raw.remove(TOKEN);
-                return;
-            }
-            try {
-                raw.putString(TOKEN, SecretBox.seal(key, value));
-            } catch (Exception error) {
-                raw.remove(TOKEN);
+        private void flushSecrets() {
+            for (String name : new String[]{TOKEN, TOKENS}) {
+                if (!pending.containsKey(name)) continue;
+                String value = pending.remove(name);
+                if (value == null || value.isEmpty() || key == null) {
+                    raw.remove(name);
+                    continue;
+                }
+                try {
+                    raw.putString(name, SecretBox.seal(key, value));
+                } catch (Exception error) {
+                    raw.remove(name);
+                }
             }
         }
+    }
+
+    private static boolean secret(String name) {
+        return TOKEN.equals(name) || TOKENS.equals(name);
     }
 }

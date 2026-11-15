@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass, Step 1. C1 is done. Next is C2: a pairing link must ask before it replaces the saved Mac key.
+Fix-all pass, Step 1. C1 and C2 are done. Next is C3: the Mac must not open every received file by itself.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -32,6 +32,7 @@ Fix-all pass, Step 1. C1 is done. Next is C2: a pairing link must ask before it 
 
 ## Fix-all done
 - C1. Phone reconnects by itself after a clean disconnect. A bad key or a bad code does not.
+- C2. A pairing link asks before it connects, and a different Mac does not receive the old token.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

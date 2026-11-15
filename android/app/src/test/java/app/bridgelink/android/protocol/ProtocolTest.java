@@ -791,6 +791,34 @@ public class ProtocolTest {
         assertEquals("", ReleaseCheck.shortVersion("nope"));
     }
 
+    @Test
+    public void newFingerprintNeverSendsTheOldToken() {
+        String oldToken = "tokentokentoken1";
+        PairGate changed = PairGate.offer("aa11aa11aa11aa11", oldToken, "bb22bb22bb22bb22", "192.168.1.9");
+        assertTrue(changed.askFirst);
+        assertTrue(changed.differentMac);
+        assertEquals("", changed.tokenAfterAccept);
+        assertEquals("aa11aa11aa11aa11", changed.parkFingerprint);
+        assertEquals("Pair new Mac", changed.button);
+        HelloPlan leaked = HelloPlan.decide("Pixel", "123456", changed.tokenAfterAccept, "bb22bb22bb22bb22", "bb22bb22bb22bb22", "nonce");
+        assertNotNull(leaked.payload);
+        assertFalse(leaked.payload.has("token"));
+        assertEquals("", PairGate.helloToken("aa11aa11aa11aa11", oldToken, "bb22bb22bb22bb22"));
+        assertEquals("", PairGate.helloToken("bb22bb22bb22bb22", changed.tokenAfterAccept, "bb22bb22bb22bb22"));
+
+        PairGate same = PairGate.offer("aa11aa11aa11aa11", oldToken, "AA11AA11AA11AA11", "Office");
+        assertTrue(same.askFirst);
+        assertFalse(same.differentMac);
+        HelloPlan kept = HelloPlan.decide("Pixel", "", same.tokenAfterAccept, "aa11aa11aa11aa11", "aa11aa11aa11aa11", "nonce");
+        assertEquals(oldToken, kept.payload.get("token").getAsString());
+
+        String book = MacTokens.put("{}", "aa11aa11aa11aa11", oldToken);
+        book = MacTokens.put(book, "bb22bb22bb22bb22", "othertokentoken2");
+        assertEquals(oldToken, MacTokens.tokenFor(book, "AA11AA11AA11AA11"));
+        assertEquals("othertokentoken2", MacTokens.tokenFor(book, "bb22bb22bb22bb22"));
+        assertEquals("", MacTokens.tokenFor(MacTokens.remove(book, "aa11aa11aa11aa11"), "aa11aa11aa11aa11"));
+    }
+
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */
     public static final class ForegroundServiceStartNotAllowedException extends IllegalStateException {
         public ForegroundServiceStartNotAllowedException() {

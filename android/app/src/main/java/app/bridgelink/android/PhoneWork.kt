@@ -17,6 +17,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import app.bridgelink.android.protocol.Features
 import app.bridgelink.android.protocol.MacList
+import app.bridgelink.android.protocol.MacTokens
+import app.bridgelink.android.protocol.PairGate
 import app.bridgelink.android.protocol.PairingLink
 import app.bridgelink.android.protocol.RestrictedHelp
 import app.bridgelink.android.protocol.StageRules
@@ -27,6 +29,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.LinkedHashSet
 
 /** Pairing, send, and diagnostics. The service still moves the bytes. */
 class PhoneWork(private val activity: MainActivity) {
@@ -53,7 +56,7 @@ class PhoneWork(private val activity: MainActivity) {
         val data = intent?.data ?: return
         if (data.scheme != "bridgelink") return
         model.pair = data.toString()
-        applyLink()
+        stagePair()
     }
 
     fun connect() {
@@ -69,28 +72,75 @@ class PhoneWork(private val activity: MainActivity) {
     }
 
     fun applyLink() {
+        stagePair()
+    }
+
+    /** Show the pair question. Does not write the key and does not connect. */
+    fun stagePair() {
         val link = PairingLink.parse(model.pair)
         if (link == null) {
             model.status = activity.getString(R.string.bad_link)
             return
         }
+        val prefs = Prefs.open(activity)
+        val savedFp = prefs.getString("fp", "") ?: ""
+        val savedToken = prefs.getString("token", "") ?: ""
+        val offer = PairGate.offer(savedFp, savedToken, link.fingerprint, link.host)
         model.host = link.host
         model.port = link.port.toString()
         model.pin = link.pin
-        val editor = Prefs.open(activity).edit()
-            .putString("host", link.host)
-            .putString("hosts", link.hosts.joinToString(","))
-            .putString("port", link.port.toString())
+        model.pendingFp = link.fingerprint ?: ""
+        model.pendingHosts = link.hosts.joinToString(",")
+        model.pairTitle = offer.title
+        model.pairDetail = offer.detail
+        model.pairButton = offer.button
+        model.pairDifferent = offer.differentMac
+        model.askPair = true
+        model.status = offer.title
+    }
+
+    fun acceptPair() {
+        val prefs = Prefs.open(activity)
+        val savedFp = prefs.getString("fp", "") ?: ""
+        val savedToken = prefs.getString("token", "") ?: ""
+        val offer = PairGate.offer(savedFp, savedToken, model.pendingFp, model.host)
+        val editor = prefs.edit()
+            .putString("host", model.host.trim())
+            .putString("hosts", mergeHosts(prefs.getString("hosts", "") ?: "", model.pendingHosts))
+            .putString("port", model.port.trim())
             .remove("pin")
-        if (!link.fingerprint.isNullOrEmpty()) {
-            editor.putString("fp", link.fingerprint).remove("pendingFp")
+        if (offer.differentMac) {
+            var book = prefs.getString("macTokens", "") ?: ""
+            if (offer.parkFingerprint.isNotEmpty() && savedToken.length >= 16) {
+                book = MacTokens.put(book, offer.parkFingerprint, savedToken)
+            }
+            editor.putString("macTokens", book).remove("token")
+        }
+        if (model.pendingFp.isNotEmpty()) {
+            editor.putString("fp", model.pendingFp).remove("pendingFp")
         }
         if (!editor.commit()) {
             model.status = activity.getString(R.string.bad_link)
             return
         }
+        model.askPair = false
         model.status = activity.getString(R.string.link_saved)
-        connect()
+        startLink(LinkService.ACTION_CONNECT, null)
+    }
+
+    fun cancelPair() {
+        model.askPair = false
+        model.pin = ""
+        model.status = "Pairing cancelled. The saved Mac was not changed."
+    }
+
+    private fun mergeHosts(saved: String, extra: String): String {
+        val ordered = LinkedHashSet<String>()
+        for (part in (saved + "," + extra).split(",")) {
+            val host = part.trim()
+            if (host.isNotEmpty()) ordered.add(host)
+        }
+        return ordered.joinToString(",")
     }
 
     fun findMac() {

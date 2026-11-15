@@ -21,3 +21,4 @@ Each line is one problem. Fixed ones say Fixed and the idea of the change.
 ## v0.13 audit
 
 C1. The phone stayed Disconnected after the Mac closed the link with no error, until you tapped Connect. Fixed: a clean close with a saved token schedules the same backoff reconnect, and a bad key or a bad code does not.
+C2. A web page could open a pairing link, replace the saved Mac key, and the phone would send the old token to that fake Mac. Fixed: the link asks "Pair with this Mac?" first, a different key says "This is a different Mac", and the old token is removed before any hello.

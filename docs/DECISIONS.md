@@ -4,6 +4,8 @@ The current rules are docs/BUILD_PROMPT.md (master prompt v2). If an older parag
 
 The Mac app is sideloaded. There is no paid Apple Developer account. A self-signed certificate keeps the same signature across updates when the Mac signing secrets are set. Permissions can still be forgotten if a build is ad-hoc signed. The menu window explains the first open.
 
+A pairing link never connects by itself. A different Mac key drops the active token before any hello, and each Mac's token is sealed under its own fingerprint.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".

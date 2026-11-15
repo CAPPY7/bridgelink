@@ -64,6 +64,13 @@ class PhoneModel {
     var relayUrl by mutableStateOf("")
     var setupDone by mutableStateOf(true)
     var updateLine by mutableStateOf("")
+    var askPair by mutableStateOf(false)
+    var pairTitle by mutableStateOf("")
+    var pairDetail by mutableStateOf("")
+    var pairButton by mutableStateOf("Pair")
+    var pairDifferent by mutableStateOf(false)
+    var pendingFp by mutableStateOf("")
+    var pendingHosts by mutableStateOf("")
 }
 
 data class ClipRow(val id: String, val text: String, val pinned: Boolean)
@@ -76,6 +83,8 @@ data class RuleRow(val id: String, val whenLabel: String, val thenLabel: String,
 interface PhoneActions {
     fun scan()
     fun applyLink()
+    fun acceptPair()
+    fun cancelPair()
     fun findMac()
     fun connect()
     fun confirm()
