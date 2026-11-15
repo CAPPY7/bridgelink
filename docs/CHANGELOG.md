@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0
+
+- The phone can play, pause, skip, and set the volume of music on the Mac. The Mac can do the same for music on the phone, including the song name and a small picture when notification access is on.
+- If you turn it on, the phone watches the Mac over Bluetooth. When the signal stays weak, the Mac locks. It never unlocks. Charging the phone, or "I am at my desk", skips the lock.
+- The Mac has one inbox for notifications, text messages, and received files. You can search it and filter it. Passwords and codes are hidden.
+- Both apps keep the last 100 clipboard copies. You can pin, search, and delete them. Passwords, card numbers, and codes are not stored.
+- Scan a document on the phone. It is saved on the Mac and opened. If the document scanner is missing, pick a photo instead.
+
 ## 0.10.0
 
 - Files can be up to 4 GB. They still stream in small pieces, can resume, and can be cancelled. A folder is sent as a zip. Several files can be sent together. A received file opens when it is saved.

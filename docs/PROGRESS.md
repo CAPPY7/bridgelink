@@ -1,15 +1,15 @@
 # Progress
 
-Stage 4 code is in this commit. Version is still 0.10.0 until CI is green, then tag v0.11.0.
+v0.11.0 is the Stage 4 release. The code CI was green: https://github.com/CAPPY7/bridgelink/actions/runs/43696134332
 
 ## Done in code
 - Stage 1 bug fixes are in v0.8.0.
 - Stage 2 design is in v0.9.0.
 - Stage 3 half-done features are in v0.10.0.
-- Stage 4 easy features are in the working tree: media control both ways, lock the Mac when the phone leaves, a Mac inbox, clipboard history, and scan to Mac.
+- Stage 4 easy features are in v0.11.0. Media control works both ways. The Mac can lock when the phone leaves, and it never unlocks. The Mac has one inbox. Clipboard history keeps 100 items and skips secrets. A phone scan is saved on the Mac and opened.
 
 ## Next exact step
-Wait until CI is green. Then bump to 0.11.0, tag v0.11.0, and check the release has the signed APK and the DMG.
+Start Stage 5 (version 0.12.0). Medium features, in the order in docs/BUILD_PROMPT.md Part 4, Stage 5: SMS, shared folder, automations, then the phone as a trackpad and keyboard.
 
 ## Open problems
 - LinkService.java is still longer than 400 lines.
@@ -17,6 +17,6 @@ Wait until CI is green. Then bump to 0.11.0, tag v0.11.0, and check the release 
 - Sparkle, the first-run wizard, and the in-app updater are not built yet.
 - A free share extension can stay hidden until the app is opened once. Finder Services, Send to phone, is the backup.
 - The document scanner needs Google Play services. If it is missing, the phone asks you to pick a photo instead.
-- Leave-lock needs Bluetooth on the phone and a Mac that is allowed to lock the screen. The Mac is never unlocked by the phone.
-- Messages, remote trackpad, screen mirror, shared folder, webcam, and automations are still later stages.
+- Leave-lock needs Bluetooth on the phone and Accessibility on the Mac so the lock shortcut works. The Mac is never unlocked by the phone.
+- Screen mirror, shared folder, webcam, and automations are still later stages.
 - Do not create a new Android signing key. Do not print secrets.
