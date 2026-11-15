@@ -32,6 +32,10 @@ public final class ReleaseCheck {
         return xml.substring(start, end).trim();
     }
 
+    public static boolean tagMatches(String tag, String versionName) {
+        return tag != null && versionName != null && !versionName.isEmpty() && tag.equals("v" + versionName);
+    }
+
     private static int[] parts(String raw) {
         if (raw == null || raw.isEmpty()) return new int[] {0};
         String[] bits = raw.split("\\.");

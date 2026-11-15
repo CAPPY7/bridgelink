@@ -41,3 +41,4 @@ H11. The Mac share extension was a library, not a real extension, so it could no
 H12. Two phones on one Mac kept kicking each other off. Fixed: the Mac keeps the phone that is already connected and tells the other one to wait 5 minutes.
 H13. Pairing a second Mac forgot the first Mac's key. Fixed: each Mac keeps its own key. Switching to a saved name uses that key. A Mac you already paired is not treated as a changed key.
 H14. Phone automations only wrote a status line, and Home Wi-Fi fired for every network. Fixed: a code is copied, an alert is shown, and ring asks the Mac to ring. Open app still runs on the Mac. Home Wi-Fi fires only for the name you typed.
+H15. A release could ship an ad-hoc Mac app and skip version checks. Fixed: the release checks the version and the tag, checks the APK signature, writes SHA256SUMS, and refuses an ad-hoc Mac app when the Mac signing secrets are set.

@@ -26,6 +26,10 @@ public enum ReleaseCheck {
         return String(rest[..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    public static func tagMatches(_ tag: String, _ versionName: String) -> Bool {
+        !versionName.isEmpty && tag == "v" + versionName
+    }
+
     public static func fetchShortVersion() async -> String {
         guard let url = URL(string: feed) else { return "" }
         var request = URLRequest(url: url)

@@ -34,6 +34,12 @@ jobs:
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=$SDK" > local.properties
           chmod +x gradlew
+          python3 ../scripts/check-versions.py
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python3 ../scripts/check-versions.py "${{ github.event.inputs.tag }}"
+          else
+            python3 ../scripts/check-versions.py "${GITHUB_REF_NAME}"
+          fi
           ./gradlew test lint --no-daemon
           if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
             echo "::error::Missing Android signing secrets. Refusing to publish a debug APK."
@@ -47,6 +53,9 @@ jobs:
             -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/BridgeLink-android.apk"
           rm -f "$GITHUB_WORKSPACE/release.keystore"
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner | sort | tail -1)"
+          if [ -z "$APKSIGNER" ]; then echo "apksigner is missing"; exit 1; fi
+          "$APKSIGNER" verify --print-certs "$GITHUB_WORKSPACE/BridgeLink-android.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
@@ -65,7 +74,16 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          if [ -n "$MAC_SIGN_P12_BASE64" ] && [ -n "$MAC_SIGN_P12_PASSWORD" ]; then
+            export REQUIRE_MAC_SIGN=1
+          fi
           bash macos/build.sh
+          if [ -n "$MAC_SIGN_P12_BASE64" ]; then
+            if codesign -dv --verbose=4 macos/BridgeLink.app 2>&1 | grep -q "Signature=adhoc"; then
+              echo "Mac secrets were set but the app is still ad-hoc signed."
+              exit 1
+            fi
+          fi
           if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
             xcrun notarytool submit macos/BridgeLink.dmg --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
             xcrun stapler staple macos/BridgeLink.app || true
@@ -107,4 +125,6 @@ jobs:
           if [ -f mac-app/BridgeLink.dmg ]; then files+=(mac-app/BridgeLink.dmg); fi
           if [ -f appcast.xml ]; then files+=(appcast.xml); fi
           if [ "${#files[@]}" -ne 4 ]; then echo "Need the signed APK, the zip, the disk image, and appcast.xml"; exit 1; fi
+          sha256sum "${files[@]}" > SHA256SUMS
+          files+=(SHA256SUMS)
           gh release upload "$TAG" "${files[@]}" --repo "${GITHUB_REPOSITORY}" --clobber

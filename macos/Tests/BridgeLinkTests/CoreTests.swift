@@ -505,6 +505,8 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(ReleaseCheck.compare("1.0", "1.0.0"), 0)
         XCTAssertEqual(ReleaseCheck.shortVersion("<item sparkle:shortVersionString=\"1.0.0\" sparkle:version=\"13\">"), "1.0.0")
         XCTAssertEqual(ReleaseCheck.shortVersion("nope"), "")
+        XCTAssertTrue(ReleaseCheck.tagMatches("v1.0.0", "1.0.0"))
+        XCTAssertFalse(ReleaseCheck.tagMatches("v0.13.0", "1.0.0"))
     }
 }
 

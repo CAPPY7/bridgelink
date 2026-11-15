@@ -23,6 +23,8 @@ if code != bundle:
     errors.append(f"version code mismatch android={code} mac={bundle}")
 if f"BridgeLink {name}" not in about:
     errors.append(f"Mac About sheet does not say BridgeLink {name}")
+if len(sys.argv) > 1 and sys.argv[1] != "v" + name:
+    errors.append(f"tag {sys.argv[1]} is not v{name}")
 if errors:
     print("\n".join(errors))
     sys.exit(1)
