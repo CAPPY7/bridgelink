@@ -102,8 +102,6 @@ class SixWork(private val activity: MainActivity) {
 
     fun onAsk(status: String) {
         when (status) {
-            "Allow screen share" -> shareScreen()
-            "Allow the camera" -> startCamera()
             "The Mac closed the mirror." -> activity.stopService(Intent(activity, MirrorService::class.java))
             "The Mac closed the camera." -> activity.stopService(Intent(activity, CamService::class.java))
         }

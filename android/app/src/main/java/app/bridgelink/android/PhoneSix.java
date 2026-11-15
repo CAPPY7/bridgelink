@@ -1,7 +1,13 @@
 package app.bridgelink.android;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 
 import com.google.gson.JsonObject;
 
@@ -56,7 +62,7 @@ public final class PhoneSix {
     public boolean handle(Envelope message) {
         switch (message.type) {
             case "mirror_start" -> {
-                want = "mirror:" + StageSix.qualityName(message.text("quality"));
+                ask("mirror", StageSix.qualityName(message.text("quality")), "back", 1, false, false);
                 out.status("Allow screen share");
                 return true;
             }
@@ -72,9 +78,8 @@ public final class PhoneSix {
                     zoom = Integer.parseInt(message.text("zoom"));
                 } catch (NumberFormatException ignored) {
                 }
-                want = "cam:" + StageSix.facing(message.text("facing")) + ":" + StageSix.zoom(zoom)
-                        + ":" + ("1".equals(message.text("flash")) ? "1" : "0")
-                        + ":" + ("1".equals(message.text("mic")) ? "1" : "0");
+                ask("cam", "medium", StageSix.facing(message.text("facing")), StageSix.zoom(zoom),
+                        "1".equals(message.text("flash")), "1".equals(message.text("mic")));
                 out.status("Allow the camera");
                 return true;
             }
@@ -121,6 +126,37 @@ public final class PhoneSix {
             default -> {
                 return false;
             }
+        }
+    }
+
+    private void ask(String kind, String quality, String facing, int zoom, boolean flash, boolean mic) {
+        Intent open = new Intent(context, ConsentActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        open.putExtra("kind", kind);
+        open.putExtra("quality", quality);
+        open.putExtra("facing", facing);
+        open.putExtra("zoom", zoom);
+        open.putExtra("flash", flash);
+        open.putExtra("mic", mic);
+        PendingIntent pending = PendingIntent.getActivity(
+                context, kind.hashCode(), open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null && Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = new NotificationChannel("bridgelink.ask", "BridgeLink asks", NotificationManager.IMPORTANCE_HIGH);
+            manager.createNotificationChannel(channel);
+        }
+        Notification note = new Notification.Builder(context, "bridgelink.ask")
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle("mirror".equals(kind) ? "Mac wants to see your screen" : "Mac wants the camera")
+                .setContentText("Tap to allow")
+                .setContentIntent(pending)
+                .setFullScreenIntent(pending, true)
+                .setAutoCancel(true)
+                .build();
+        if (manager != null) manager.notify(40 + kind.hashCode(), note);
+        try {
+            context.startActivity(open);
+        } catch (Exception ignored) {
         }
     }
 
