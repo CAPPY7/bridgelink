@@ -103,6 +103,7 @@ interface PhoneActions {
     fun toggleClipboard()
     fun toggleLinks()
     fun renameMac()
+    fun useSavedMac()
     fun blockNotify()
     fun repair()
     fun dndAccess()

@@ -8,7 +8,27 @@ import com.google.gson.JsonParser;
 public final class MacList {
     private MacList() {}
 
+    public static final class Saved {
+        public final String name;
+        public final String host;
+        public final int port;
+        public final String fp;
+        public final String deviceId;
+
+        public Saved(String name, String host, int port, String fp, String deviceId) {
+            this.name = name;
+            this.host = host;
+            this.port = port;
+            this.fp = fp;
+            this.deviceId = deviceId;
+        }
+    }
+
     public static String add(String existing, String name, String host, int port, String fingerprint) {
+        return add(existing, name, host, port, fingerprint, "");
+    }
+
+    public static String add(String existing, String name, String host, int port, String fingerprint, String deviceId) {
         JsonArray array = parse(existing);
         JsonArray next = new JsonArray();
         for (int i = 0; i < array.size(); i++) {
@@ -20,8 +40,26 @@ public final class MacList {
         row.addProperty("host", host);
         row.addProperty("port", port);
         row.addProperty("fp", fingerprint == null ? "" : fingerprint);
+        row.addProperty("deviceId", deviceId == null ? "" : deviceId);
         next.add(row);
         return next.toString();
+    }
+
+    public static Saved findByName(String existing, String name) {
+        if (name == null || name.isBlank()) return null;
+        JsonArray array = parse(existing);
+        for (int i = 0; i < array.size(); i++) {
+            JsonObject row = array.get(i).getAsJsonObject();
+            if (name.trim().equalsIgnoreCase(text(row, "name"))) {
+                int port = 8787;
+                try {
+                    port = row.has("port") ? row.get("port").getAsInt() : 8787;
+                } catch (Exception ignored) {
+                }
+                return new Saved(text(row, "name"), text(row, "host"), port, text(row, "fp"), text(row, "deviceId"));
+            }
+        }
+        return null;
     }
 
     public static String rename(String existing, String host, String name) {

@@ -169,6 +169,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun toggleClipboard() = work.toggleClipboard()
     override fun toggleLinks() = work.toggleLinks()
     override fun renameMac() = work.renameMac()
+    override fun useSavedMac() = work.useSavedMac()
     override fun blockNotify() = work.blockNotify()
     override fun repair() = work.repair()
     override fun dndAccess() = work.dndAccess()

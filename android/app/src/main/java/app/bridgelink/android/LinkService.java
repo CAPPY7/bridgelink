@@ -46,6 +46,7 @@ import app.bridgelink.android.protocol.FrameChannel;
 import app.bridgelink.android.protocol.HelloPlan;
 import app.bridgelink.android.protocol.LinkFailure;
 import app.bridgelink.android.protocol.LinkState;
+import app.bridgelink.android.protocol.MacBook;
 import app.bridgelink.android.protocol.MacList;
 import app.bridgelink.android.protocol.MacTokens;
 import app.bridgelink.android.protocol.Outbox;
@@ -561,7 +562,7 @@ public class LinkService extends Service {
                         String device = message.text("deviceId");
                         if (!device.isEmpty()) editor.putString("deviceId", device);
                         String macs = prefs.getString("macs", "[]");
-                        editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp));
+                        editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp, device));
                         if (fp != null && !fp.isEmpty()) {
                             editor.putString("macTokens", MacTokens.put(prefs.getString("macTokens", ""), fp, issued));
                         }
@@ -1526,6 +1527,13 @@ public class LinkService extends Service {
             String fp = fingerprint(chain[0]);
             android.content.SharedPreferences prefs = Prefs.open(context);
             String pinned = prefs.getString("fp", "");
+            if (MacBook.known(prefs.getString("macTokens", ""), fp)) {
+                if (pinned == null || !pinned.equalsIgnoreCase(fp)) {
+                    String token = MacTokens.tokenFor(prefs.getString("macTokens", ""), fp);
+                    prefs.edit().putString("fp", fp).putString("token", token).apply();
+                }
+                return;
+            }
             if (pinned == null || pinned.isEmpty()) {
                 return;
             }

@@ -56,6 +56,7 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
             singleLine = true,
         )
         BigButton("Rename this Mac", "rename-mac", actions::renameMac, tonal = true)
+        BigButton("Switch to this saved Mac", "use-saved-mac", actions::useSavedMac, tonal = true)
         Text("Sharing", style = MaterialTheme.typography.titleMedium)
         BigButton("Clipboard sync on or off", "clip-sync", actions::toggleClipboard, tonal = true)
         BigButton("Always open links", "links-always", actions::toggleLinks, tonal = true)

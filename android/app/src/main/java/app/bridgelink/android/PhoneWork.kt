@@ -268,6 +268,32 @@ class PhoneWork(private val activity: MainActivity) {
         model.status = "Renamed this Mac"
     }
 
+    fun useSavedMac() {
+        val prefs = Prefs.open(activity)
+        val saved = MacList.findByName(prefs.getString("macs", "[]"), model.macName)
+        if (saved == null) {
+            model.status = "No saved Mac with that name"
+            return
+        }
+        val token = MacTokens.tokenFor(prefs.getString("macTokens", ""), saved.fp)
+        if (token.length < 16) {
+            model.status = "That Mac needs to be paired again"
+            return
+        }
+        prefs.edit()
+            .putString("host", saved.host)
+            .putString("hosts", saved.host)
+            .putString("port", saved.port.toString())
+            .putString("fp", saved.fp)
+            .putString("token", token)
+            .putString("deviceId", saved.deviceId)
+            .apply()
+        model.host = saved.host
+        model.port = saved.port.toString()
+        model.status = "Switching to ${saved.name}"
+        startLink(LinkService.ACTION_CONNECT, null)
+    }
+
     fun blockNotify() {
         val name = model.blockApp.trim()
         if (name.isEmpty()) {
