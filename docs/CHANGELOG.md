@@ -9,7 +9,7 @@
 - Notification text is shown on the Mac only when the Mac is unlocked and Show notification text is on. Otherwise the Mac shows the app name. The text is not written into the activity log.
 - Android 13 and newer shows the restricted-settings steps before notification access, and detects when that setting is still blocked.
 - Clipboard history, leave-lock, rate-limit, and replay helpers that were not used by either app were removed.
-- The Mac build is still ad-hoc signed. After an update, macOS can forget permissions. The app says so.
+- The Mac app stays sideloaded and ad-hoc signed. No Apple Developer ID.
 
 ## 0.6.0
 

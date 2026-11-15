@@ -11,7 +11,7 @@ v0.7.0 is tagged on b6d3588. CI was green, including the emulator: https://githu
 Stage 2. Rebuild the Android UI in Kotlin and Jetpack Compose with Material 3, light and dark mode, an adaptive icon, and a Mac icon. Keep the service and protocol. Do not mark any feature Done until the owner replies "worked".
 
 ## Open problems
-- Apple Developer ID is not decided. The Mac app stays ad-hoc signed until the owner answers. Permissions can reset after each update.
+- The Mac app is sideloaded. No Apple Developer ID. Permissions can reset after each update.
 - Theme is still hard-coded dark on Android. No adaptive icon. No Mac app icon. That is Stage 2.
 - Features 4, 9, 11-21 are not in the apps.
 - The owner has not run the manual tests yet, so nothing is Done.

@@ -884,7 +884,7 @@ struct DeskView: View {
             Text("Notification text is shown only while this Mac is unlocked and that switch is on. Otherwise only the app name is shown.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("This copy is not signed with an Apple Developer ID. After an update, macOS may forget Accessibility, Screen Recording, and Bluetooth. Open System Settings and allow BridgeLink again.")
+            Text("This copy is sideloaded, not notarized. After you replace the app, macOS may forget Accessibility, Screen Recording, and Bluetooth. Allow BridgeLink again in System Settings.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Picker("Clipboard from phone", selection: Binding(

@@ -8,7 +8,7 @@ Link errors use a kind. Fatal kinds do not retry. The wording of an exception is
 
 Notification text crosses the link only so the Mac can show it when asked. The Mac shows the full text only if the screen is unlocked and Show notification text is on. The activity list stores "Notification from the phone" and never the text.
 
-The Mac app is still ad-hoc signed. Developer ID signing was not chosen yet. Until it is, each update can drop Accessibility, Screen Recording, and Bluetooth, and the app tells the owner to allow them again in System Settings.
+The Mac app stays ad-hoc signed (`codesign --sign -`). The owner will sideload it. There will be no Apple Developer ID and no notarization. The $99 program is not required. Each update can drop Accessibility, Screen Recording, and Bluetooth, and the menu window tells the owner to allow them again in System Settings. Hardened runtime stays off so the keychain identity keeps working.
 
 Clipboard history, leave-lock, rate limit, and replay classes were deleted because nothing in the apps called them. They come back only when those features are wired in.
 

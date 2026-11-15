@@ -25,4 +25,4 @@ Not requested, because the feature is not built: SMS, contacts, notification lis
 | Login item | Launch at login | Toggle in the menu window. Put the app in Applications |
 | Accessibility, screen recording, camera, microphone | Not used in 0.3.0 | Not requested |
 
-There is no Apple Developer certificate, so the app is ad-hoc signed and not notarized.
+The owner sideloads this app. There is no Apple Developer certificate and no notarization, on purpose.

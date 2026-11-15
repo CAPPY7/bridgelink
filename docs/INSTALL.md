@@ -2,7 +2,7 @@
 
 0.3.0 is the first pair that uses TLS, a saved pairing, and a real QR link. It is still not the full 25-feature desk. Read the status table in the README before expecting a feature.
 
-These are not Play Store or Mac App Store builds. The Mac app is ad-hoc signed. The Android APK is signed with the project key when the GitHub secrets are set. If the release file is named `BridgeLink-android-debug.apk`, it will not update an older install. Uninstall first, then install it.
+These are not Play Store or Mac App Store builds. The Mac app is sideloaded and ad-hoc signed. No Apple Developer account is required. The Android APK is signed with the project key when the GitHub secrets are set. If the release file is named `BridgeLink-android-debug.apk`, it will not update an older install. Uninstall first, then install it.
 
 ## Android
 
@@ -14,9 +14,11 @@ These are not Play Store or Mac App Store builds. The Mac app is ad-hoc signed. 
 ## Mac
 
 1. Download `BridgeLink-mac.zip` and unzip it.
-2. Move `BridgeLink.app` to Applications.
-3. First launch: right-click the app, choose Open, then Open again. macOS blocks an unsigned app on the first double-click.
-4. A link icon appears in the menu bar. Click it. Quit is in that window. Launch at login is the toggle in the same window.
+2. Move `BridgeLink.app` to Applications. Replace the old app when you update.
+3. First launch: right-click the app, choose Open, then Open again. A normal double-click is blocked because the app is not notarized.
+4. If macOS still refuses, open Terminal and run `xattr -dr com.apple.quarantine /Applications/BridgeLink.app`, then right-click Open again.
+5. A link icon appears in the menu bar. Click it. Quit is in that window. Launch at login is the toggle in the same window.
+6. After you replace the app, macOS can forget Accessibility, Screen Recording, and Bluetooth. Allow BridgeLink again in System Settings. The menu window says this.
 
 ## Pair
 
