@@ -232,8 +232,8 @@ final class AwayLink {
         }
     }
 
-    func sendJson(_ json: Data) {
-        sendFramed(encodeFrame(json: json))
+    func sendJson(_ json: Data, done: (() -> Void)? = nil) {
+        sendFramed(encodeFrame(json: json), done: done)
     }
 
     func stop() {
@@ -244,20 +244,33 @@ final class AwayLink {
         session = nil
     }
 
-    private func sendFramed(_ framed: Data) {
-        guard isLive, sendKey.count == 32 else { return }
+    private func sendFramed(_ framed: Data, done: (() -> Void)? = nil) {
+        guard isLive, sendKey.count == 32 else {
+            done?()
+            return
+        }
         var nonce = Data(count: 12)
         nonce.withUnsafeMutableBytes { raw in
             _ = SecRandomCopyBytes(kSecRandomDefault, 12, raw.baseAddress!)
         }
         counter += 1
-        guard let sealed = try? Features.seal(key: sendKey, counter: counter, nonce: nonce, plaintext: framed) else { return }
+        guard let sealed = try? Features.seal(key: sendKey, counter: counter, nonce: nonce, plaintext: framed) else {
+            done?()
+            return
+        }
         var packet = Data()
         var sid = sessionId.bigEndian
         withUnsafeBytes(of: &sid) { packet.append(contentsOf: $0) }
         packet.append(sealed)
-        if packet.count > 512 * 1024 { return }
-        task?.send(.data(packet)) { _ in }
+        if packet.count > 512 * 1024 {
+            done?()
+            return
+        }
+        guard let task else {
+            done?()
+            return
+        }
+        task.send(.data(packet)) { _ in done?() }
     }
 
     private func listen() {

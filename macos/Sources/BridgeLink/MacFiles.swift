@@ -7,6 +7,8 @@ import Foundation
 /// Saves received files under Downloads/BridgeLink and reads files the user picked.
 final class MacFiles {
     private let queue = DispatchQueue(label: "app.bridgelink.files")
+    private let sendQueue = DispatchQueue(label: "app.bridgelink.files.send")
+    private let window = SendWindow()
     private var incoming: [String: IncomingFile] = [:]
     private var handles: [String: FileHandle] = [:]
     private var partials: [String: URL] = [:]
@@ -47,8 +49,8 @@ final class MacFiles {
         queue.async { self.cancelNow(id) }
     }
 
-    func send(url: URL, emit: @escaping (String, [String: String]) -> Void, wait: @escaping (String, Int) -> Int, progress: @escaping (String) -> Void, cancelled: @escaping () -> Bool, done: @escaping (String) -> Void) {
-        queue.async {
+    func send(url: URL, emit: @escaping (String, [String: String], @escaping () -> Void) -> Void, wait: @escaping (String, Int) -> Int, progress: @escaping (String) -> Void, cancelled: @escaping () -> Bool, done: @escaping (String) -> Void) {
+        sendQueue.async {
             var cleanup: URL?
             let source: URL
             if let zip = self.zipped(url) {
@@ -67,7 +69,7 @@ final class MacFiles {
                 let display = source == url ? Transfers.sanitizeName(url.lastPathComponent) : StageRules.bundleName(url.lastPathComponent)
                 let name = Transfers.sanitizeName(display)
                 let id = String(Transfers.sha256Hex(Data("\(source.path)\n\(size)".utf8)).prefix(32))
-                self.hop(emit, "file_begin", ["id": id, "name": name, "size": String(size), "from": "0"])
+                self.deliver(emit, "file_begin", ["id": id, "name": name, "size": String(size), "from": "0"], flush: true)
                 let remote = wait(id, 0)
                 let start = remote >= 0 && remote <= size ? remote : 0
                 let handle = try FileHandle(forReadingFrom: source)
@@ -77,7 +79,7 @@ final class MacFiles {
                 var lastPercent = -1
                 while offset < start {
                     if cancelled() {
-                        self.hop(emit, "file_cancel", ["id": id])
+                        self.deliver(emit, "file_cancel", ["id": id], flush: true)
                         done("File send cancelled.")
                         return
                     }
@@ -89,14 +91,14 @@ final class MacFiles {
                 }
                 while true {
                     if cancelled() {
-                        self.hop(emit, "file_cancel", ["id": id])
+                        self.deliver(emit, "file_cancel", ["id": id], flush: true)
                         done("File send cancelled.")
                         return
                     }
                     let chunk = try handle.read(upToCount: Transfers.chunk) ?? Data()
                     if chunk.isEmpty { break }
                     hasher.update(data: chunk)
-                    self.hop(emit, "file_chunk", ["id": id, "offset": String(offset), "data": chunk.base64EncodedString()])
+                    self.deliver(emit, "file_chunk", ["id": id, "offset": String(offset), "data": chunk.base64EncodedString()], flush: false)
                     offset += chunk.count
                     let percent = StageRules.progressPercent(written: Int64(offset), size: Int64(size))
                     if percent == 100 || percent >= lastPercent + 10 {
@@ -110,7 +112,7 @@ final class MacFiles {
                     return
                 }
                 let sha = hasher.finalize().map { String(format: "%02x", $0) }.joined()
-                self.hop(emit, "file_end", ["id": id, "sha256": sha])
+                self.deliver(emit, "file_end", ["id": id, "sha256": sha], flush: true)
                 done("Sent \(name)")
             } catch {
                 done("Could not send the file.")
@@ -135,13 +137,23 @@ final class MacFiles {
         return dest
     }
 
-    private func hop(_ emit: @escaping (String, [String: String]) -> Void, _ type: String, _ payload: [String: String]) {
+    private func deliver(_ emit: @escaping (String, [String: String], @escaping () -> Void) -> Void, _ type: String, _ payload: [String: String], flush: Bool) {
+        window.acquire()
         let gate = DispatchSemaphore(value: 0)
-        DispatchQueue.main.async {
-            emit(type, payload)
-            gate.signal()
+        let once = NSLock()
+        var fired = false
+        emit(type, payload) {
+            once.lock()
+            if fired {
+                once.unlock()
+                return
+            }
+            fired = true
+            once.unlock()
+            self.window.release()
+            if flush { gate.signal() }
         }
-        gate.wait()
+        if flush { gate.wait() }
     }
 
     private func beginNow(id: String, name: String, size: Int) -> (status: String, have: Int) {

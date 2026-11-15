@@ -30,3 +30,4 @@ C7. The Mac could only start the screen or the camera while the phone app was op
 H1. Stopping the screen mirror could release the encoder while the drain thread was still using it, which crashed the phone. Fixed: the drain thread is waited on first, and every encoder call is inside a try so a late call cannot kill the app.
 H2. Video and camera frames piled up with no limit on a slow link. Fixed: only 3 picture frames wait. Extra non-key frames are dropped, and the phone asks the encoder for a new key frame.
 H3. Every frame started a new watchdog thread. Fixed: one deadline thread watches the current write for the life of the connection.
+H4. The Mac queued a whole file in memory before the network finished each chunk. Fixed: at most 6 chunks are in flight, and the next chunk waits until a send finishes. Incoming files use a separate queue.

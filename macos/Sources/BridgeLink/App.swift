@@ -310,8 +310,14 @@ final class LinkModel: ObservableObject {
         }
         fileCancel.on = false
         let flag = fileCancel
-        files.send(url: url, emit: { [weak self] type, payload in
-            Task { @MainActor in self?.send(type: type, payload: payload, on: self?.live) }
+        files.send(url: url, emit: { [weak self] type, payload, finished in
+            Task { @MainActor in
+                guard let self else {
+                    finished()
+                    return
+                }
+                self.send(type: type, payload: payload, on: self.live, done: finished)
+            }
         }, wait: { [weak self] id, fallback in
             let gate = DispatchSemaphore(value: 0)
             var value = fallback

@@ -3,6 +3,18 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testSendWindowStopsTheSeventhChunk() {
+        let window = SendWindow()
+        for _ in 0..<SendWindow.maxInFlight {
+            XCTAssertTrue(window.tryAcquire())
+        }
+        XCTAssertEqual(window.inFlight(), SendWindow.maxInFlight)
+        XCTAssertFalse(window.tryAcquire())
+        window.release()
+        XCTAssertTrue(window.tryAcquire())
+        XCTAssertEqual(window.inFlight(), SendWindow.maxInFlight)
+    }
+
     func testGoldenEnvelope() throws {
         let url = Bundle.module.url(forResource: "text", withExtension: "json", subdirectory: "Fixtures")
             ?? Bundle.module.url(forResource: "text", withExtension: "json")
