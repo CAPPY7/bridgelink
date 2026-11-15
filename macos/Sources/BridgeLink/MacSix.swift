@@ -6,20 +6,27 @@ import Security
 
 extension LinkModel {
     func ensureRelayKey() {
-        var secret = UserDefaults.standard.string(forKey: "relaySecret") ?? ""
+        let id = liveDeviceId.isEmpty ? awayDeviceId : liveDeviceId
+        guard !id.isEmpty else { return }
+        var secret = RelayVault.load(id) ?? ""
         if secret.count < 16 {
-            let left = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            let right = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            secret = left + right
-            UserDefaults.standard.set(secret, forKey: "relaySecret")
+            secret = RelayVault.make()
+            RelayVault.save(secret, deviceId: id)
         }
-        send(type: "relay_key", payload: ["body": secret], on: live)
+        UserDefaults.standard.removeObject(forKey: "relaySecret")
+        awayDeviceId = id
+        send(type: "relay_key", payload: ["body": secret, "deviceId": id], on: live)
     }
 
     func tryRelay() {
         if live != nil { return }
+        let id = awayDeviceId.isEmpty ? liveDeviceId : awayDeviceId
         let url = UserDefaults.standard.string(forKey: "relayUrl") ?? six.relayUrl
-        let secret = UserDefaults.standard.string(forKey: "relaySecret") ?? ""
+        let secret = RelayVault.load(id) ?? ""
+        guard secret.count >= 16 else {
+            note("Pair on Wi-Fi once so this phone gets its own away secret.")
+            return
+        }
         if away == nil {
             away = AwayLink(
                 onFrames: { [weak self] data in

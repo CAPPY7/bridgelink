@@ -827,6 +827,17 @@ public class ProtocolTest {
     }
 
     @Test
+    public void forgottenPhoneLosesOnlyItsRelaySecret() {
+        String book = RelaySecrets.put("{}", "phone-a", "phone-a-secret-ok1");
+        book = RelaySecrets.put(book, "phone-b", "phone-b-secret-ok2");
+        assertTrue(RelaySecrets.allowed(book, "phone-a", "phone-a-secret-ok1"));
+        String left = RelaySecrets.drop(book, "phone-a");
+        assertEquals("", RelaySecrets.of(left, "phone-a"));
+        assertFalse(RelaySecrets.allowed(left, "phone-a", "phone-a-secret-ok1"));
+        assertTrue(RelaySecrets.allowed(left, "phone-b", "phone-b-secret-ok2"));
+    }
+
+    @Test
     public void relayRestartsAndRejectsAReflectedFrame() throws Exception {
         String secret = "pairing-secret-value";
         long now = 1_700_000_000L;

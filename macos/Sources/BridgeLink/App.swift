@@ -124,6 +124,7 @@ final class LinkModel: ObservableObject {
     var pendingGate = PendingGate()
     var pendingCount = 0
     var liveDeviceId = ""
+    var awayDeviceId = ""
     var sasConnectionID: UUID?
     var sasPhoneCommit = ""
     var sasPhoneNonce = ""

@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import com.google.gson.JsonObject;
 
 import app.bridgelink.android.protocol.Envelope;
+import app.bridgelink.android.protocol.RelaySecrets;
 import app.bridgelink.android.protocol.StageSix;
 
 /** Screen mirror, camera, touches, and the away relay. The link service only forwards. */
@@ -97,8 +98,12 @@ public final class PhoneSix {
             }
             case "relay_key" -> {
                 String secret = message.text("body");
-                if (secret.length() >= 16) {
-                    Prefs.open(context).edit().putString("relaySecret", secret).apply();
+                String device = message.text("deviceId");
+                SharedPreferences prefs = Prefs.open(context);
+                if (device.isEmpty()) device = prefs.getString("deviceId", "");
+                if (secret.length() >= 16 && device != null && !device.isEmpty()) {
+                    String book = RelaySecrets.put(prefs.getString("relayBook", ""), device, secret);
+                    prefs.edit().putString("relayBook", book).putString("relaySecret", secret).apply();
                     out.status("Away from home is ready after you save the relay address.");
                 }
                 return true;

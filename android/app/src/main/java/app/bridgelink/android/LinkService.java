@@ -734,7 +734,10 @@ public class LinkService extends Service {
         }
         SharedPreferences prefs = Prefs.open(this);
         String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
+        String device = prefs.getString("deviceId", "");
+        String book = app.bridgelink.android.protocol.RelaySecrets.drop(prefs.getString("relayBook", ""), device);
         prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").remove("pin")
+                .remove("relaySecret").putString("relayBook", book)
                 .putString("macs", macs).commit();
         linkState.stop();
         generation.incrementAndGet();

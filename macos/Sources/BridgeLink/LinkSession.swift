@@ -258,16 +258,18 @@ extension LinkModel {
             }
         case "forget":
             let device = envelope.text("deviceId")
-            if !device.isEmpty {
-                book.forget(id: device)
-            } else if !liveDeviceId.isEmpty {
-                book.forget(id: liveDeviceId)
+            let forgotten = device.isEmpty ? (liveDeviceId.isEmpty ? awayDeviceId : liveDeviceId) : device
+            if !forgotten.isEmpty {
+                book.forget(id: forgotten)
+                RelayVault.delete(forgotten)
             }
             saveBook()
             live?.cancel()
             live = nil
             liveDeviceId = ""
+            awayDeviceId = ""
             relayTrusted = false
+            away?.stop()
             phase = .listening
             note("The phone forgot this Mac")
         default:
@@ -285,6 +287,7 @@ extension LinkModel {
         liveID = id
         live = connection
         liveDeviceId = deviceId
+        awayDeviceId = deviceId
         pending = nil
         pendingCount = max(0, pendingCount - 1)
         away?.stop()
