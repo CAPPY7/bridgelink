@@ -33,7 +33,7 @@ if [ -f AppIcon.png ]; then
   iconutil -c icns "$ICONSET" -o build/AppIcon.icns
   cp build/AppIcon.icns BridgeLink.app/Contents/Resources/AppIcon.icns
 fi
-bash "$(dirname "$0")/sign.sh" BridgeLink.app
+bash sign.sh BridgeLink.app
 ditto -c -k --keepParent BridgeLink.app BridgeLink-mac.zip
-bash "$(dirname "$0")/make-dmg.sh"
+bash make-dmg.sh
 echo "Built universal BridgeLink-mac.zip and BridgeLink.dmg"
