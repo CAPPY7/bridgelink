@@ -35,7 +35,20 @@ The Mac certificate is not the one the phone pinned. This happens if the Mac ide
 
 The file is `BridgeLink-android-debug.apk`, or it was signed with a different key. Uninstall the old app, then install. A release signed with the saved keystore updates in place. See `docs/SETUP_FOR_OWNER.md`.
 
-## The Mac app will not open
+## The Mac icon is there, but a click does nothing
+
+BridgeLink has no Dock icon. The chain-link at the top of the screen is the app.
+
+The copy you already installed only opens from the keyboard after you allow it once:
+
+1. Leave BridgeLink running.
+2. Open System Settings, Privacy & Security, Accessibility.
+3. Press the +, choose Applications, then BridgeLink, and turn it on.
+4. Quit BridgeLink. If Terminal is still running it, click that window and press Control-C.
+5. Open BridgeLink again from Applications.
+6. Press Command-Shift-D.
+
+Also swipe up with three fingers. A window named Set up BridgeLink may already be sitting on another space.
 
 macOS 13 or 14: right-click BridgeLink in Applications, choose Open, then Open.
 

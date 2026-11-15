@@ -28,9 +28,10 @@ final class MenuHost: NSObject, NSWindowDelegate {
             let image = NSImage(systemSymbolName: "link", accessibilityDescription: "BridgeLink")
             image?.isTemplate = true
             button.image = image
+            button.target = self
+            button.action = #selector(toggleFromButton)
             let cover = DropCover(frame: button.bounds)
             cover.autoresizingMask = [.width, .height]
-            cover.onClick = { [weak self] in self?.toggle() }
             cover.onFiles = { [weak self] urls in
                 self?.model.sendDropped(urls)
             }
@@ -55,6 +56,10 @@ final class MenuHost: NSObject, NSWindowDelegate {
         }
     }
 
+    @objc func toggleFromButton() {
+        toggle()
+    }
+
     func toggle() {
         guard let button = item.button else { return }
         if popover.isShown {
@@ -77,6 +82,8 @@ final class MenuHost: NSObject, NSWindowDelegate {
             window.setContentSize(NSSize(width: 480, height: 340))
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
+            window.level = .floating
+            window.center()
             setup = window
         }
         NSApp.setActivationPolicy(.regular)
@@ -113,7 +120,6 @@ final class MenuHost: NSObject, NSWindowDelegate {
 
 /// Covers the status icon so dropped files go to the paired phone.
 final class DropCover: NSView {
-    var onClick: (() -> Void)?
     var onFiles: (([URL]) -> Void)?
 
     override init(frame frameRect: NSRect) {
@@ -127,15 +133,15 @@ final class DropCover: NSView {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
 
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] ?? []
         if urls.isEmpty { return false }
         onFiles?(urls)
         return true
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        onClick?()
     }
 }
 
