@@ -10,6 +10,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UserNotifications
 
+func savedLockInt(_ key: String, _ fallback: Int) -> Int {
+    if UserDefaults.standard.object(forKey: key) == nil { return fallback }
+    let value = UserDefaults.standard.integer(forKey: key)
+    return value == 0 ? fallback : value
+}
+
 enum Phase: Equatable {
     case idle
     case listening
@@ -60,8 +66,8 @@ final class LinkModel: ObservableObject {
     @Published var inboxFilter = "all"
     @Published var lockOn = UserDefaults.standard.bool(forKey: "lockOn")
     @Published var atDesk = UserDefaults.standard.bool(forKey: "atDesk")
-    @Published var lockFar = Self.savedInt("lockFar", 70)
-    @Published var lockDelay = Self.savedInt("lockDelay", 30)
+    @Published var lockFar = savedLockInt("lockFar", 70)
+    @Published var lockDelay = savedLockInt("lockDelay", 30)
     @Published var volumeText = "40"
     var beacon: LeaveBeacon?
     var lastMacNow = ""
@@ -107,12 +113,6 @@ final class LinkModel: ObservableObject {
     var sasFails = 0
     var gate: PairingGate
     var gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
-
-    static func savedInt(_ key: String, _ fallback: Int) -> Int {
-        if UserDefaults.standard.object(forKey: key) == nil { return fallback }
-        let value = UserDefaults.standard.integer(forKey: key)
-        return value == 0 ? fallback : value
-    }
 
     init() {
         let token = PairingGate.newToken()
