@@ -70,7 +70,7 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         }
         BigButton("Show setup again", "show-setup", actions::showSetup, tonal = true)
         BigButton("Reset BridgeLink", "reset-app", actions::resetApp, tonal = true)
-        BigButton("Stop ringing", "stop-ring", actions::stopRing, tonal = true)
+        BigButton("Stop Mac ringing", "stop-ring", actions::stopRing, tonal = true)
         Text("Lock the Mac when you leave", style = MaterialTheme.typography.titleMedium)
         Text(
             if (model.lockOn) "On. The phone watches the Mac Bluetooth signal." else "Off.",

@@ -302,6 +302,7 @@ public class LinkService extends Service {
             else send(kind, intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
+            send("find_stop", "");
         } else if (ACTION_CONFIRM.equals(action)) {
             new Thread(this::confirmSas, "bridgelink-confirm").start();
         } else if (ACTION_FORGET.equals(action)) {

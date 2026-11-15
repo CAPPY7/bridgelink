@@ -97,7 +97,14 @@ extension LinkModel {
         note("The phone is ringing this Mac")
         let clock = DispatchSource.makeTimerSource(queue: .main)
         clock.schedule(deadline: .now(), repeating: .seconds(1))
-        clock.setEventHandler { NSSound.beep() }
+        clock.setEventHandler {
+            if let sound = NSSound(named: "Sosumi") {
+                sound.volume = 1
+                sound.play()
+            } else {
+                NSSound.beep()
+            }
+        }
         clock.resume()
         macFinder = clock
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in self?.stopFindMac() }
