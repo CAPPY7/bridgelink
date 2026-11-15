@@ -21,6 +21,7 @@ public final class FrameChannel implements AutoCloseable {
     private final int deadlineMs;
     private final ArrayBlockingQueue<Write> queue = new ArrayBlockingQueue<>(QUEUE);
     private final Thread writer;
+    private final Thread watchdog;
     private final AtomicBoolean closed = new AtomicBoolean();
     private volatile boolean writeInProgress;
     private volatile long writeStartedNanos;
@@ -36,6 +37,9 @@ public final class FrameChannel implements AutoCloseable {
         this.writer = new Thread(this::writeLoop, "bridgelink-write");
         this.writer.setDaemon(true);
         this.writer.start();
+        this.watchdog = new Thread(this::watchLoop, "bridgelink-write-deadline");
+        this.watchdog.setDaemon(true);
+        this.watchdog.start();
     }
 
     public boolean isWriteInProgress() {
@@ -77,6 +81,7 @@ public final class FrameChannel implements AutoCloseable {
             } catch (IOException ignored) {
             }
             writer.interrupt();
+            watchdog.interrupt();
             drain(new IOException("not connected"));
         }, "bridgelink-close");
         closer.setDaemon(true);
@@ -98,9 +103,9 @@ public final class FrameChannel implements AutoCloseable {
                 continue;
             }
             if (write == null) continue;
-            Thread watchdog = startWatchdog();
             writeStartedNanos = System.nanoTime();
             writeInProgress = true;
+            deadlineHit = false;
             try {
                 OutputStream out = socket.getOutputStream();
                 out.write(write.frame);
@@ -117,30 +122,37 @@ public final class FrameChannel implements AutoCloseable {
             } finally {
                 writeInProgress = false;
                 writeStartedNanos = 0;
-                watchdog.interrupt();
             }
         }
     }
 
-    private Thread startWatchdog() {
-        deadlineHit = false;
-        Thread watchdog = new Thread(() -> {
+    private void watchLoop() {
+        while (!closed.get()) {
             try {
-                Thread.sleep(deadlineMs);
+                Thread.sleep(Math.min(Math.max(deadlineMs, 50), 250));
             } catch (InterruptedException error) {
-                return;
+                if (closed.get()) return;
+                continue;
             }
-            if (writeInProgress && !closed.get()) {
+            if (!writeInProgress || writeStartedNanos == 0 || closed.get()) continue;
+            long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - writeStartedNanos);
+            if (elapsed >= deadlineMs) {
                 deadlineHit = true;
                 try {
                     socket.close();
                 } catch (IOException ignored) {
                 }
             }
-        }, "bridgelink-write-deadline");
-        watchdog.setDaemon(true);
-        watchdog.start();
-        return watchdog;
+        }
+    }
+
+    /** How many deadline threads this process still has. One channel keeps one. */
+    public static int deadlineThreads() {
+        int count = 0;
+        for (Thread thread : Thread.getAllStackTraces().keySet()) {
+            if (thread.isAlive() && "bridgelink-write-deadline".equals(thread.getName())) count++;
+        }
+        return count;
     }
 
     private static void refuseMainThread() {

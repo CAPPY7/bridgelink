@@ -3,11 +3,13 @@ package app.bridgelink.android.protocol;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -72,6 +74,38 @@ public class StallWriteTest {
                     assertTrue(LinkFailure.classify(expected) == LinkFailure.Kind.TIMEOUT);
                 }
                 assertTrue(System.currentTimeMillis() - start < 8_000);
+            } finally {
+                channel.close();
+                peer.close();
+                client.close();
+            }
+        }
+    }
+
+    @Test
+    public void oneWatchdogServesEveryWrite() throws Exception {
+        try (ServerSocket server = new ServerSocket()) {
+            server.bind(new InetSocketAddress("127.0.0.1", 0));
+            Socket client = new Socket();
+            client.connect(server.getLocalSocketAddress(), 3000);
+            Socket peer = server.accept();
+            Thread reader = new Thread(() -> {
+                try {
+                    InputStream in = peer.getInputStream();
+                    byte[] buf = new byte[1024];
+                    while (in.read(buf) >= 0) {
+                        // drain so the client writes finish
+                    }
+                } catch (IOException ignored) {
+                }
+            }, "stall-reader");
+            reader.setDaemon(true);
+            reader.start();
+            FrameChannel channel = new FrameChannel(client, 2_000);
+            try {
+                for (int i = 0; i < 6; i++) channel.write(new byte[]{1, 2, 3, 4});
+                Thread.sleep(80);
+                assertEquals(1, FrameChannel.deadlineThreads());
             } finally {
                 channel.close();
                 peer.close();

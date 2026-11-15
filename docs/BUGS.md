@@ -29,3 +29,4 @@ C6. Finished features were marked self-tested even when the test only checked a 
 C7. The Mac could only start the screen or the camera while the phone app was open, and it ignored the Mac's quality and camera choices. Fixed: a high-priority "Tap to allow" notice opens the allow screen with the Mac's choices, even if BridgeLink is in the background.
 H1. Stopping the screen mirror could release the encoder while the drain thread was still using it, which crashed the phone. Fixed: the drain thread is waited on first, and every encoder call is inside a try so a late call cannot kill the app.
 H2. Video and camera frames piled up with no limit on a slow link. Fixed: only 3 picture frames wait. Extra non-key frames are dropped, and the phone asks the encoder for a new key frame.
+H3. Every frame started a new watchdog thread. Fixed: one deadline thread watches the current write for the life of the connection.

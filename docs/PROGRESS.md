@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass. H2 is done. Next is H3: one write watchdog, not a new thread for every frame.
+Fix-all pass. H3 is done. Next is H4: the Mac must not load a whole file into memory.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -40,6 +40,7 @@ Fix-all pass. H2 is done. Next is H3: one write watchdog, not a new thread for e
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.
+- H3. One write deadline thread serves every frame on a connection.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
