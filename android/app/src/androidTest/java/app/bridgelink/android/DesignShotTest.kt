@@ -25,7 +25,7 @@ class DesignShotTest {
 
     @Test(timeout = 180_000)
     fun captureScreens() {
-        val dir = compose.activity.getExternalFilesDir("shots") ?: compose.activity.cacheDir
+        val dir = java.io.File(compose.activity.filesDir, "shots")
         dir.mkdirs()
         for (page in Page.entries) {
             compose.runOnIdle { compose.activity.model.page = page }

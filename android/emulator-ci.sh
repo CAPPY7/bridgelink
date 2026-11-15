@@ -36,10 +36,14 @@ run_tests() {
 
 pull_shots() {
   mkdir -p ../docs/screenshots
-  rm -rf /tmp/bl-shots
-  mkdir -p /tmp/bl-shots
-  adb pull /sdcard/Android/data/app.bridgelink.android/files/shots /tmp/bl-shots || true
-  find /tmp/bl-shots -name 'android-*.png' -exec cp {} ../docs/screenshots/ \;
+  adb shell run-as app.bridgelink.android ls files/shots > /tmp/bl-shot-names.txt 2>/dev/null || true
+  while IFS= read -r name; do
+    name=$(printf '%s' "$name" | tr -d '\r')
+    if [ -z "$name" ]; then
+      continue
+    fi
+    adb exec-out run-as app.bridgelink.android cat "files/shots/$name" > "../docs/screenshots/$name" || true
+  done < /tmp/bl-shot-names.txt
 }
 
 if ! run_tests; then

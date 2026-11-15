@@ -26,27 +26,68 @@ enum ShotBook {
         model.pairedSummary = "Pixel"
         model.launchAtLogin = false
         model.mirrorOn = true
-        try save(PopoverView().environmentObject(model).frame(width: 360), "mac-popover.png", folder, .light)
-        try save(PopoverView().environmentObject(model).frame(width: 360), "mac-popover-dark.png", folder, .dark)
+        try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover.png", folder, .light)
+        try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover-dark.png", folder, .dark)
         for tab in DeskTab.allCases {
-            let view = DeskWindow(tab: tab).environmentObject(model).frame(width: 980, height: 640)
-            try save(view, "mac-\(tab.rawValue).png", folder, .light)
+            try saveWindow(model, tab, "mac-\(tab.rawValue).png", folder, .light)
         }
-        let darkHome = DeskWindow(tab: .home).environmentObject(model).frame(width: 980, height: 640)
-        try save(darkHome, "mac-home-dark.png", folder, .dark)
+        try saveWindow(model, .home, "mac-home-dark.png", folder, .dark)
     }
 
     @MainActor
-    private static func save<V: View>(_ view: V, _ name: String, _ folder: URL, _ scheme: ColorScheme) throws {
+    private static func saveImage<V: View>(_ view: V, _ name: String, _ folder: URL, _ scheme: ColorScheme) throws {
         let renderer = ImageRenderer(content: view.environment(\.colorScheme, scheme))
         renderer.scale = 2
-        guard let image = renderer.nsImage,
-              let tiff = image.tiffRepresentation,
+        guard let image = renderer.nsImage else { throw CocoaError(.fileWriteUnknown) }
+        try writePNG(image, folder.appendingPathComponent(name))
+    }
+
+    /// NavigationSplitView does not draw in ImageRenderer, so the window is shown off to the side.
+    @MainActor
+    private static func saveWindow(_ model: LinkModel, _ tab: DeskTab, _ name: String, _ folder: URL, _ scheme: ColorScheme) throws {
+        let view = DeskWindow(tab: tab)
+            .environmentObject(model)
+            .environment(\.colorScheme, scheme)
+            .frame(width: 980, height: 640)
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(x: 0, y: 0, width: 980, height: 640)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 980, height: 640),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "BridgeLink"
+        window.appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
+        window.contentView = host
+        window.setFrameOrigin(NSPoint(x: -4000, y: -4000))
+        window.orderFrontRegardless()
+        host.layoutSubtreeIfNeeded()
+        for _ in 0..<8 {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+        }
+        host.layoutSubtreeIfNeeded()
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else {
+            window.close()
+            throw CocoaError(.fileWriteUnknown)
+        }
+        host.cacheDisplay(in: host.bounds, to: rep)
+        guard let png = rep.representation(using: .png, properties: [:]), !png.isEmpty else {
+            window.close()
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try png.write(to: folder.appendingPathComponent(name))
+        window.close()
+    }
+
+    @MainActor
+    private static func writePNG(_ image: NSImage, _ url: URL) throws {
+        guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),
               let png = rep.representation(using: .png, properties: [:]),
               !png.isEmpty else {
             throw CocoaError(.fileWriteUnknown)
         }
-        try png.write(to: folder.appendingPathComponent(name))
+        try png.write(to: url)
     }
 }
