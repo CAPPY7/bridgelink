@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass. H15 is done. Next is H16: first-run and update check are in, Sparkle itself is not linked.
+Fix-all pass. H16 is partly done. Next is M1: after two failed tries, look for the Mac by name on the network.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -26,7 +26,7 @@ Fix-all pass. H15 is done. Next is H16: first-run and update check are in, Spark
 - Shared folder files over 32 MB are skipped on purpose.
 - Screen mirror needs the phone to allow screen share each time Android asks. Control needs the accessibility service, including Allow restricted settings on Android 13 and newer.
 - The phone camera inside BridgeLink is the free webcam. A system camera for Zoom needs a paid Apple Developer ID. That extension is in the repo and stays off.
-- Away from home is not reliable yet (see C4 and C5 in the audit).
+- Away from home returns to Wi-Fi and each phone has its own secret. The relay worker still has to be deployed by the owner. The relay cannot read the frames.
 - The signed downloads are produced by the Release workflow. This environment cannot sign them or upload them.
 - Do not create a new Android signing key. Do not print secrets.
 
@@ -53,6 +53,7 @@ Fix-all pass. H15 is done. Next is H16: first-run and update check are in, Spark
 - H13. Each saved Mac keeps its own key. Switch to this saved Mac uses that key.
 - H14. Phone automations copy, alert, or ask the Mac to ring. Home Wi-Fi needs the network name.
 - H15. A release checks the version, the tag, and the APK signature, and writes SHA256SUMS.
+- H16 partly. First-run, Check for update, and Reset are in. Sparkle is not linked, so the update opens the release page.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

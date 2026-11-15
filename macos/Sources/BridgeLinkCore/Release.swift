@@ -30,6 +30,9 @@ public enum ReleaseCheck {
         !versionName.isEmpty && tag == "v" + versionName
     }
 
+    /// Sparkle.framework is not linked. Check for update opens the release page.
+    public static func installsWithSparkle() -> Bool { false }
+
     public static func fetchShortVersion() async -> String {
         guard let url = URL(string: feed) else { return "" }
         var request = URLRequest(url: url)

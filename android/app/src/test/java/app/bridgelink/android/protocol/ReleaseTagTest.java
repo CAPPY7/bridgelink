@@ -11,5 +11,6 @@ public class ReleaseTagTest {
         assertTrue(ReleaseCheck.tagMatches("v1.0.0", "1.0.0"));
         assertFalse(ReleaseCheck.tagMatches("v0.13.0", "1.0.0"));
         assertFalse(ReleaseCheck.tagMatches("1.0.0", "1.0.0"));
+        assertFalse(ReleaseCheck.installsWithSparkle());
     }
 }

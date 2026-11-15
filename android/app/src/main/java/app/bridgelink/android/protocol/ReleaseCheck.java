@@ -36,6 +36,11 @@ public final class ReleaseCheck {
         return tag != null && versionName != null && !versionName.isEmpty() && tag.equals("v" + versionName);
     }
 
+    /** Sparkle.framework is not linked. Check for update opens the release page. */
+    public static boolean installsWithSparkle() {
+        return false;
+    }
+
     private static int[] parts(String raw) {
         if (raw == null || raw.isEmpty()) return new int[] {0};
         String[] bits = raw.split("\\.");
