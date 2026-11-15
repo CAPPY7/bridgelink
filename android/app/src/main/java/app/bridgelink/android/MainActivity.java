@@ -24,6 +24,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -32,9 +33,15 @@ import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
+import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.MacList;
 import app.bridgelink.android.protocol.PairingLink;
 import app.bridgelink.android.protocol.RestrictedHelp;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private EditText host;
@@ -79,14 +86,15 @@ public class MainActivity extends AppCompatActivity {
         link = findViewById(R.id.link);
         status = findViewById(R.id.status);
         log = findViewById(R.id.log);
+        showHistory(HistoryDatabase.get(this).history().latest(200));
 
         SharedPreferences prefs = Prefs.open(this);
         host.setText(prefs.getString("host", ""));
         port.setText(prefs.getString("port", "8787"));
         pin.setText("");
-        if (Prefs.keystoreFailed()) append(Prefs.WARNING);
+        if (Prefs.keystoreFailed()) appendOnce(Prefs.WARNING);
         String macs = MacList.names(prefs.getString("macs", "[]"));
-        if (!macs.isEmpty()) append(getString(R.string.saved_macs, macs));
+        if (!macs.isEmpty()) appendOnce(getString(R.string.saved_macs, macs));
 
         if (Build.VERSION.SDK_INT >= 33
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -136,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
             Intent settings = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
             startActivity(settings);
         });
+        findViewById(R.id.diagnostics).setOnClickListener(v -> saveDiagnostics());
         findViewById(R.id.mirror).setOnClickListener(v -> {
             Prefs.open(this).edit().putString("flags", "notify=1,otp=1").apply();
             if (restrictedBlocked()) {
@@ -216,6 +225,7 @@ public class MainActivity extends AppCompatActivity {
     private void connect() {
         Prefs.open(this).edit()
                 .putString("host", host.getText().toString().trim())
+                .putString("hosts", host.getText().toString().trim())
                 .putString("port", port.getText().toString().trim())
                 .remove("pin")
                 .apply();
@@ -233,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
         pin.setText(link.pin);
         SharedPreferences.Editor editor = Prefs.open(this).edit()
                 .putString("host", link.host)
+                .putString("hosts", String.join(",", link.hosts))
                 .putString("port", Integer.toString(link.port))
                 .remove("pin");
         if (link.fingerprint != null && !link.fingerprint.isEmpty()) {
@@ -329,10 +340,68 @@ public class MainActivity extends AppCompatActivity {
         ContextCompat.startForegroundService(this, intent);
     }
 
-    private void append(String line) {
-        if (history.length() > 0) history.insert(0, "\n");
-        history.insert(0, line);
-        if (history.length() > 2000) history.setLength(2000);
+    private void appendOnce(String line) {
+        if (history.indexOf(line) >= 0) return;
+        append(line);
+    }
+
+    private void showHistory(List<String> lines) {
+        history.setLength(0);
+        for (int i = 0; i < lines.size(); i++) {
+            if (i > 0) history.append('\n');
+            if (lines.get(i) != null) history.append(lines.get(i));
+        }
         log.setText(history.toString());
+    }
+
+    private void saveDiagnostics() {
+        int number = 8787;
+        try {
+            number = Integer.parseInt(port.getText().toString().trim());
+        } catch (NumberFormatException ignored) {
+        }
+        String version = "0.8.0";
+        try {
+            version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception ignored) {
+        }
+        String text = Features.diagnostics(
+                version,
+                "Android " + Build.VERSION.RELEASE,
+                status.getText().toString().startsWith("Paired"),
+                !host.getText().toString().trim().isEmpty(),
+                number,
+                status.getText().toString()
+        );
+        try {
+            File dir = new File(getExternalFilesDir(null), "diagnostics");
+            if (!dir.mkdirs() && !dir.isDirectory()) {
+                status.setText("Could not save the diagnostics file.");
+                return;
+            }
+            File file = new File(dir, "bridgelink-diagnostics.txt");
+            Files.write(file.toPath(), text.getBytes(StandardCharsets.UTF_8));
+            android.net.Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".files", file);
+            Intent share = new Intent(Intent.ACTION_SEND);
+            share.setType("text/plain");
+            share.putExtra(Intent.EXTRA_STREAM, uri);
+            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(share, "Send diagnostics"));
+        } catch (Exception error) {
+            status.setText("Could not save the diagnostics file.");
+        }
+    }
+
+    private void append(String line) {
+        try {
+            HistoryDao dao = HistoryDatabase.get(this).history();
+            dao.insert(new HistoryEntry(0, line));
+            dao.trim(200);
+            showHistory(dao.latest(200));
+        } catch (Exception error) {
+            if (history.length() > 0) history.insert(0, "\n");
+            history.insert(0, line);
+            log.setText(history.toString());
+        }
     }
 }

@@ -13,12 +13,13 @@ These are not Play Store or Mac App Store builds. The Mac app is sideloaded and 
 
 ## Mac
 
-1. Download `BridgeLink-mac.zip` and unzip it.
-2. Move `BridgeLink.app` to Applications. Replace the old app when you update.
-3. First launch: right-click the app, choose Open, then Open again. A normal double-click is blocked because the app is not notarized.
-4. If macOS still refuses, open Terminal and run `xattr -dr com.apple.quarantine /Applications/BridgeLink.app`, then right-click Open again.
-5. A link icon appears in the menu bar. Click it. Quit is in that window. Launch at login is the toggle in the same window.
-6. After you replace the app, macOS can forget Accessibility, Screen Recording, and Bluetooth. Allow BridgeLink again in System Settings. The menu window says this.
+1. Download `BridgeLink.dmg` from the latest GitHub release. `BridgeLink-mac.zip` is the backup if the disk image will not open.
+2. Open the disk image. Drag BridgeLink onto the Applications folder.
+3. Eject the disk image.
+4. First open, macOS 13 or 14: in Applications, right-click BridgeLink, choose Open, then Open again.
+5. First open, macOS 15 or newer: double-click BridgeLink, press Done on the warning, open System Settings, Privacy & Security, scroll down, press Open Anyway, enter your password, then press Open.
+6. If macOS still refuses, open Terminal and run `xattr -dr com.apple.quarantine /Applications/BridgeLink.app`, then open the app again.
+7. A link icon appears in the menu bar. Click it. Quit is in that window. Launch at login is the toggle in the same window.
 
 ## Pair
 

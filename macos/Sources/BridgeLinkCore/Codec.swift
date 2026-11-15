@@ -149,13 +149,19 @@ public func nextBackoffMs(_ attempt: Int) -> Int64 {
     return min(30_000, Int64(500) << shift)
 }
 
-public func pairingLink(host: String, port: Int, fingerprint: String, pin: String) -> String {
+public func pairingLink(host: String, port: Int, fingerprint: String, pin: String, hosts: [String] = []) -> String {
     func enc(_ value: String) -> String {
         var allowed = CharacterSet.urlQueryAllowed
         allowed.remove(charactersIn: "&+=?#")
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
-    return "bridgelink://pair?v=1&host=\(enc(host))&port=\(port)&fp=\(enc(fingerprint))&pin=\(enc(pin))"
+    let ordered = Features.addressOrder(primary: host, extra: hosts.joined(separator: ","))
+    let first = ordered.first ?? host
+    var text = "bridgelink://pair?v=1&host=\(enc(first))&port=\(port)&fp=\(enc(fingerprint))&pin=\(enc(pin))"
+    if ordered.count > 1 {
+        text += "&hosts=\(enc(ordered.joined(separator: ",")))"
+    }
+    return text
 }
 
 public func pairingProof(pin: String, fingerprint: String) -> String {

@@ -36,35 +36,49 @@ jobs:
           chmod +x gradlew
           ./gradlew test lint --no-daemon
           if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
-            echo "::error::Missing Android signing secrets. The APK will be labeled debug and cannot update an installed build. See docs/SETUP_FOR_OWNER.md."
-            ./gradlew assembleDebug --no-daemon
-            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/BridgeLink-android-debug.apk"
-          else
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
-            ./gradlew assembleRelease --no-daemon \
-              -PRELEASE_STORE_FILE="$GITHUB_WORKSPACE/release.keystore" \
-              -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
-              -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
-              -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
-            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/BridgeLink-android.apk"
+            echo "::error::Missing Android signing secrets. Refusing to publish a debug APK."
+            exit 1
           fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
+          ./gradlew assembleRelease --no-daemon \
+            -PRELEASE_STORE_FILE="$GITHUB_WORKSPACE/release.keystore" \
+            -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+            -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/BridgeLink-android.apk"
+          rm -f "$GITHUB_WORKSPACE/release.keystore"
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: |
-            BridgeLink-android.apk
-            BridgeLink-android-debug.apk
+          path: BridgeLink-android.apk
           if-no-files-found: error
 
   mac:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - run: bash macos/build.sh
+      - name: Build, sign, and make the disk image
+        env:
+          MAC_SIGN_P12_BASE64: ${{ secrets.MAC_SIGN_P12_BASE64 }}
+          MAC_SIGN_P12_PASSWORD: ${{ secrets.MAC_SIGN_P12_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          bash macos/build.sh
+          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            xcrun notarytool submit macos/BridgeLink.dmg --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+            xcrun stapler staple macos/BridgeLink.app || true
+          else
+            echo "Skipping notarization. No paid Apple account is configured."
+          fi
+          cp macos/BridgeLink-mac.zip macos/BridgeLink.dmg "$GITHUB_WORKSPACE/"
       - uses: actions/upload-artifact@v4
         with:
           name: mac-app
-          path: macos/BridgeLink-mac.zip
+          path: |
+            BridgeLink-mac.zip
+            BridgeLink.dmg
 
   publish:
     needs: [android, mac]
@@ -88,7 +102,7 @@ jobs:
             || gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --title "$TAG" --generate-notes
           files=()
           if [ -f android-apk/BridgeLink-android.apk ]; then files+=(android-apk/BridgeLink-android.apk); fi
-          if [ -f android-apk/BridgeLink-android-debug.apk ]; then files+=(android-apk/BridgeLink-android-debug.apk); fi
           if [ -f mac-app/BridgeLink-mac.zip ]; then files+=(mac-app/BridgeLink-mac.zip); fi
-          if [ "${#files[@]}" -eq 0 ]; then echo "No artifacts"; exit 1; fi
+          if [ -f mac-app/BridgeLink.dmg ]; then files+=(mac-app/BridgeLink.dmg); fi
+          if [ "${#files[@]}" -ne 3 ]; then echo "Need the signed APK, the zip, and the disk image"; exit 1; fi
           gh release upload "$TAG" "${files[@]}" --repo "${GITHUB_REPOSITORY}" --clobber

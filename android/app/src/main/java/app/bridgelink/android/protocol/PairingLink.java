@@ -2,20 +2,27 @@ package app.bridgelink.android.protocol;
 
 import java.net.URLDecoder;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-/** `bridgelink://pair?v=1&host=&port=&fp=&pin=` from the Mac QR code. */
+/** `bridgelink://pair?v=1&host=&port=&fp=&pin=` from the Mac QR code. Extra addresses use `hosts`. */
 public final class PairingLink {
     public final String host;
     public final int port;
     public final String fingerprint;
     public final String pin;
+    public final List<String> hosts;
 
     public PairingLink(String host, int port, String fingerprint, String pin) {
+        this(host, port, fingerprint, pin, Features.addressOrder(host, ""));
+    }
+
+    public PairingLink(String host, int port, String fingerprint, String pin, List<String> hosts) {
         this.host = host;
         this.port = port;
         this.fingerprint = fingerprint;
         this.pin = pin;
+        this.hosts = hosts;
     }
 
     public static PairingLink parse(String raw) {
@@ -41,7 +48,8 @@ public final class PairingLink {
         if (port < 1 || port > 65535) return null;
         String pin = fields.getOrDefault("pin", "");
         String fingerprint = fields.getOrDefault("fp", "");
-        return new PairingLink(host, port, fingerprint, pin);
+        List<String> hosts = Features.addressOrder(host, fields.getOrDefault("hosts", ""));
+        return new PairingLink(host, port, fingerprint, pin, hosts);
     }
 
     private static String decode(String value) {

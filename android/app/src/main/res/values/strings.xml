@@ -3,9 +3,9 @@
     <string name="app_name">BridgeLink</string>
     <string name="subtitle">Phone. Same Wi-Fi as the Mac.</string>
     <string name="not_connected">Not connected</string>
-    <string name="pair_hint">Paste the pairing link from the Mac QR</string>
+    <string name="pair_hint">Or paste the pairing link</string>
     <string name="use_link">Use pairing link</string>
-    <string name="scan_qr">Scan QR</string>
+    <string name="scan_qr">Scan the Mac QR</string>
     <string name="find_mac">Find Mac on Wi-Fi</string>
     <string name="host_hint">Mac address, for example 192.168.1.20</string>
     <string name="port_hint">Port</string>
@@ -27,6 +27,7 @@
     <string name="restricted_help">Notification access help</string>
     <string name="forget_mac">Forget this Mac</string>
     <string name="keep_connected">Keep me connected</string>
+    <string name="diagnostics">Send diagnostics</string>
     <string name="forgot_mac">Forgot this Mac. Pair again with a new PIN.</string>
     <string name="link_saved">Connecting with this pairing link.</string>
     <string name="bad_link">That is not a BridgeLink pairing link</string>

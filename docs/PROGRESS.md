@@ -1,18 +1,17 @@
 # Progress
 
-v0.7.0 is tagged on b6d3588. CI was green, including the emulator: https://github.com/CAPPY7/bridgelink/actions/runs/43677930845
+Stage 1 code is on the way to v0.8.0. Do not tag until CI is green.
 
 ## Done in code
-- Pairing with commit-then-reveal, emulator test, signed v0.4.0, v0.6.0, and v0.7.0.
-- Files both ways, resume, links, share sheet, Quick Settings tile, menu-bar drop, find, clipboard echo, battery, notification and OTP hooks.
-- v0.7.0: connection threads, close off the main thread, 20 second write deadline, typed link errors, background-start queue, notification privacy, restricted-settings help, dead helper removal, feature matrix gate.
+- Bug list is in docs/BUGS.md. The install docs, disk image, icon, history, battery, several addresses, diagnostics, and release signing check are in the tree.
+- Android unit tests passed locally.
+- The Mac signing certificate could not be stored. GitHub returned 403 for secret writes.
 
 ## Next exact step
-Stage 2. Rebuild the Android UI in Kotlin and Jetpack Compose with Material 3, light and dark mode, an adaptive icon, and a Mac icon. Keep the service and protocol. Do not mark any feature Done until the owner replies "worked".
+Push, wait for CI, fix whatever is red, then tag v0.8.0.
 
 ## Open problems
-- The Mac app is sideloaded. No Apple Developer ID. Permissions can reset after each update.
-- Theme is still hard-coded dark on Android. No adaptive icon. No Mac app icon. That is Stage 2.
-- Features 4, 9, 11-21 are not in the apps.
-- The owner has not run the manual tests yet, so nothing is Done.
-- Do not create a new signing key. Do not print secrets. The release keystore stays outside the repo, in the owner's own backup of bridgelink-release.keystore.
+- LinkService.java is still longer than 400 lines.
+- Mac signing secrets are not in GitHub yet, so the signature is still ad-hoc.
+- Sparkle, the first-run wizard, and the in-app updater are after this tag.
+- Do not create a new Android signing key. Do not print secrets.

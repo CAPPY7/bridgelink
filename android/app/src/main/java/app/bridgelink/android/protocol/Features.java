@@ -140,6 +140,51 @@ public final class Features {
         return level != previousLevel || charging != previousCharging;
     }
 
+    /** First address is the one to try first. Empty and junk tokens are dropped. */
+    public static List<String> addressOrder(String primary, String extra) {
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        addHost(ordered, primary);
+        if (extra != null) {
+            for (String part : extra.split(",")) addHost(ordered, part);
+        }
+        return new ArrayList<>(ordered);
+    }
+
+    private static void addHost(java.util.Set<String> ordered, String raw) {
+        if (raw == null) return;
+        String item = raw.trim();
+        if (item.isEmpty() || item.indexOf(' ') >= 0 || item.indexOf('/') >= 0) return;
+        ordered.add(item);
+    }
+
+    /** Newest line first. The cap is the number of lines kept. */
+    public static List<String> rememberLine(List<String> existing, String line, int cap) {
+        int limit = Math.max(1, cap);
+        ArrayList<String> next = new ArrayList<>();
+        if (line != null && !line.isBlank()) next.add(line);
+        if (existing != null) {
+            for (String item : existing) {
+                if (next.size() >= limit) break;
+                if (item != null) next.add(item);
+            }
+        }
+        return next;
+    }
+
+    /** A log the owner can send. It must not contain keys, tokens, or message text. */
+    public static String diagnostics(String version, String os, boolean paired, boolean hostSaved, int port, String status) {
+        String safe = status == null ? "" : status.replace('\n', ' ').replace('\r', ' ');
+        if (safe.length() > 160) safe = safe.substring(0, 160);
+        return "BridgeLink diagnostics\n"
+                + "version=" + (version == null ? "" : version) + "\n"
+                + "os=" + (os == null ? "" : os) + "\n"
+                + "paired=" + (paired ? "yes" : "no") + "\n"
+                + "hostSaved=" + (hostSaved ? "yes" : "no") + "\n"
+                + "port=" + port + "\n"
+                + "status=" + safe + "\n"
+                + "secrets=none\n";
+    }
+
     public static boolean lowBattery(int level, boolean charging, boolean alreadyAlerted) {
         return level >= 0 && level <= 15 && !charging && !alreadyAlerted;
     }

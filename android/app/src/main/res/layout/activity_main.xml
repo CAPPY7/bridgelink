@@ -35,11 +35,19 @@
             android:textColor="@color/accent"
             android:textSize="15sp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/scan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:minHeight="48dp"
+            android:text="@string/scan_qr" />
+
         <EditText
             android:id="@+id/pair"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:background="@color/panel"
             android:hint="@string/pair_hint"
             android:importantForAutofill="no"
@@ -47,15 +55,6 @@
             android:minHeight="48dp"
             android:padding="14dp"
             android:textColor="@color/text" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/scan"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/scan_qr" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/applyLink"
@@ -257,6 +256,15 @@
             android:layout_marginTop="8dp"
             android:minHeight="48dp"
             android:text="@string/keep_connected" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/diagnostics"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/diagnostics" />
 
         <TextView
             android:id="@+id/log"

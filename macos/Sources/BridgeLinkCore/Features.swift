@@ -104,6 +104,42 @@ public enum Features {
         return level != previousLevel || charging != previousCharging
     }
 
+    public static func addressOrder(primary: String, extra: String) -> [String] {
+        var ordered: [String] = []
+        func add(_ raw: String) {
+            let item = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if item.isEmpty || item.contains(" ") || item.contains("/") || ordered.contains(item) { return }
+            ordered.append(item)
+        }
+        add(primary)
+        for part in extra.split(separator: ",") { add(String(part)) }
+        return ordered
+    }
+
+    public static func rememberLine(existing: [String], line: String, cap: Int) -> [String] {
+        let limit = max(1, cap)
+        var next: [String] = []
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { next.append(trimmed) }
+        for item in existing where next.count < limit { next.append(item) }
+        return next
+    }
+
+    public static func diagnostics(version: String, os: String, paired: Bool, hostSaved: Bool, port: Int, status: String) -> String {
+        var safe = status.replacingOccurrences(of: "\n", with: " ")
+        if safe.count > 160 { safe = String(safe.prefix(160)) }
+        return """
+        BridgeLink diagnostics
+        version=\(version)
+        os=\(os)
+        paired=\(paired ? "yes" : "no")
+        hostSaved=\(hostSaved ? "yes" : "no")
+        port=\(port)
+        status=\(safe)
+        secrets=none
+        """
+    }
+
     public static func lowBattery(level: Int, charging: Bool, alreadyAlerted: Bool) -> Bool {
         level >= 0 && level <= 15 && !charging && !alreadyAlerted
     }
@@ -378,12 +414,13 @@ public enum LinkKind: Equatable {
     case timeout
     case refused
     case networkLost
+    case firewall
 
     public var fatal: Bool {
         switch self {
         case .keyChanged, .wrongCode, .tokenRejected, .versionMismatch:
             return true
-        case .timeout, .refused, .networkLost:
+        case .timeout, .refused, .networkLost, .firewall:
             return false
         }
     }
@@ -391,12 +428,13 @@ public enum LinkKind: Equatable {
     public var message: String {
         switch self {
         case .keyChanged: return "This Mac key changed. Forget the phone, then pair again."
-        case .wrongCode: return "The match code was wrong. Connect again."
-        case .tokenRejected: return "This Mac rejected the phone. Pair again."
-        case .versionMismatch: return "This phone and Mac need the same BridgeLink version."
-        case .timeout: return "The phone did not answer in time."
-        case .refused: return "The phone refused the connection."
-        case .networkLost: return "The Wi-Fi link dropped."
+        case .wrongCode: return "The match code was wrong. Connect again from the phone."
+        case .tokenRejected: return "This Mac rejected the phone. Scan the QR to pair again."
+        case .versionMismatch: return "Update BridgeLink on the phone and the Mac so both copies match."
+        case .timeout: return "The phone did not answer in time. Check that both are on the same Wi-Fi."
+        case .refused: return "The phone refused the connection. Leave BridgeLink open on the phone and try again."
+        case .networkLost: return "The Wi-Fi link dropped. Stay on the same Wi-Fi. BridgeLink will try again."
+        case .firewall: return "BridgeLink cannot accept connections. Open System Settings, Network, Firewall, and allow incoming connections for BridgeLink. Then open BridgeLink again."
         }
     }
 
@@ -411,8 +449,9 @@ public enum LinkKind: Equatable {
     }
 
     public static func fromErrno(_ errno: Int32) -> LinkKind {
+        if errno == EPERM || errno == EACCES { return .firewall }
         if errno == ECONNREFUSED || errno == ECONNRESET { return .refused }
-        if errno == ETIMEDOUT { return .timeout }
+        if errno == ETIMEDOUT || errno == EADDRINUSE { return .timeout }
         return .networkLost
     }
 }

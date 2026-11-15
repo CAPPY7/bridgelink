@@ -46,6 +46,18 @@ final class CoreTests: XCTestCase {
     func testPairingLink() {
         let link = pairingLink(host: "192.168.1.20", port: 8787, fingerprint: "ab", pin: "123456")
         XCTAssertEqual(link, "bridgelink://pair?v=1&host=192.168.1.20&port=8787&fp=ab&pin=123456")
+        let many = pairingLink(host: "10.0.0.2", port: 8787, fingerprint: "ab", pin: "123456", hosts: ["10.0.0.8", "10.0.0.2"])
+        XCTAssertTrue(many.contains("host=10.0.0.2"))
+        XCTAssertTrue(many.contains("hosts=10.0.0.2,10.0.0.8"))
+        XCTAssertEqual(Features.addressOrder(primary: "10.0.0.2", extra: "10.0.0.8,10.0.0.2"), ["10.0.0.2", "10.0.0.8"])
+        XCTAssertEqual(Features.rememberLine(existing: ["a"], line: "b", cap: 2), ["b", "a"])
+        let report = Features.diagnostics(version: "0.8.0", os: "macOS", paired: true, hostSaved: true, port: 8787, status: "Paired")
+        XCTAssertTrue(report.contains("secrets=none"))
+        XCTAssertFalse(report.contains("token"))
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("bridgelink-history-test.json")
+        try? FileManager.default.removeItem(at: folder)
+        XCTAssertEqual(HistoryFile.append(line: "one", url: folder), ["one"])
+        XCTAssertEqual(HistoryFile.load(from: folder), ["one"])
     }
 
     func testSensitiveClipboard() {
@@ -179,6 +191,8 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(LinkKind.from(code: "bad_token"), .tokenRejected)
         XCTAssertTrue(LinkKind.tokenRejected.fatal)
         XCTAssertEqual(LinkKind.fromErrno(ECONNREFUSED), .refused)
+        XCTAssertEqual(LinkKind.fromErrno(EPERM), .firewall)
+        XCTAssertTrue(LinkKind.firewall.message.contains("Firewall"))
         XCTAssertFalse(LinkKind.refused.fatal)
         XCTAssertFalse(LinkKind.timeout.message.contains("ETIMEDOUT"))
         XCTAssertEqual(Features.roomId("pairing-secret-value"), "f507aed2ed2149bbb78e8dccbe166a53")

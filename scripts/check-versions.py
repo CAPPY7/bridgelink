@@ -8,7 +8,7 @@ root = pathlib.Path(__file__).resolve().parents[1]
 gradle = (root / "android/app/build.gradle").read_text()
 plist = (root / "macos/Info.plist").read_text()
 package = (root / "package.json").read_text()
-about = (root / "macos/Sources/BridgeLink/App.swift").read_text()
+about = "\n".join(path.read_text() for path in (root / "macos/Sources").rglob("*.swift"))
 
 name = re.search(r'versionName "([^"]+)"', gradle).group(1)
 code = re.search(r'versionCode (\d+)', gradle).group(1)

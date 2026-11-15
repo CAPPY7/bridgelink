@@ -50,13 +50,13 @@ public final class LinkFailure extends IOException {
     /** What the person sees. The raw exception stays out of this sentence. */
     public static String message(Kind kind) {
         return switch (kind) {
-            case KEY_CHANGED -> "This Mac key changed. Forget the Mac, then pair again.";
-            case WRONG_CODE -> "The match code was wrong. Connect again.";
-            case TOKEN_REJECTED -> "The Mac rejected this phone. Pair again.";
-            case VERSION_MISMATCH -> "This phone and Mac need the same BridgeLink version.";
-            case TIMEOUT -> "The Mac did not answer in time.";
-            case REFUSED -> "The Mac refused the connection.";
-            case NETWORK_LOST -> "The Wi-Fi link dropped.";
+            case KEY_CHANGED -> "This Mac key changed. Tap Forget this Mac, then scan the Mac QR again.";
+            case WRONG_CODE -> "The match code was wrong. Tap Connect to try again.";
+            case TOKEN_REJECTED -> "The Mac rejected this phone. Scan the Mac QR to pair again.";
+            case VERSION_MISMATCH -> "Update BridgeLink on the phone and the Mac so both copies match.";
+            case TIMEOUT -> "The Mac did not answer in time. Check that both are on the same Wi-Fi and the Mac app is open.";
+            case REFUSED -> "The Mac refused the connection. On the Mac, open System Settings, Network, Firewall, and allow BridgeLink.";
+            case NETWORK_LOST -> "The Wi-Fi link dropped. Stay on the same Wi-Fi. BridgeLink will try again.";
         };
     }
 

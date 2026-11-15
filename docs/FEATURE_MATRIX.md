@@ -1,19 +1,19 @@
 # Feature matrix
 
-Status is Done only when the code is in the real apps, unit and integration tests pass in CI, and the owner has replied "worked" on a real phone and Mac. None of the rows are Done yet.
+Status words are only: Not started, Building, Built – self-tested, Final – owner tested. Only the owner can set Final. Built – self-tested means the code is in both apps, tests exist, and CI is green. Half-finished work stays Building.
 
 | # | Feature | Status | Android unit | Mac unit | Integration | Manual |
 |---|---|---|---|---|---|---|
-| 1 | Files, links, and text | Partial | ProtocolTest.fileNamesAndLinksRejectTricks | CoreTests.testFileNamesAndLinksRejectTricks | none | M1 |
-| 2 | Share sheet and drag-drop | Partial | ProtocolTest.fileNamesAndLinksRejectTricks | CoreTests.testFileNamesAndLinksRejectTricks | none | M2 |
-| 3 | Notification mirroring | Partial | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M3 |
+| 1 | Files, links, and text | Building | ProtocolTest.fileNamesAndLinksRejectTricks | CoreTests.testFileNamesAndLinksRejectTricks | none | M1 |
+| 2 | Share sheet and drag-drop | Building | ProtocolTest.fileNamesAndLinksRejectTricks | CoreTests.testFileNamesAndLinksRejectTricks | none | M2 |
+| 3 | Notification mirroring | Building | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M3 |
 | 4 | Media control | Not started | none | none | none | M4 |
-| 5 | Battery | Partial | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M5 |
-| 6 | Find phone and Mac | Partial | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M6 |
-| 7 | OTP auto-copy | Partial | ProtocolTest.otpTableRejectsPricesDatesAndLongNumbers | CoreTests.testFeaturesMatchThePhoneRules | none | M7 |
-| 8 | Open a link | Partial | ProtocolTest.fileNamesAndLinksRejectTricks | CoreTests.testFileNamesAndLinksRejectTricks | none | M8 |
+| 5 | Battery | Building | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M5 |
+| 6 | Find phone and Mac | Building | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M6 |
+| 7 | OTP auto-copy | Building | ProtocolTest.otpTableRejectsPricesDatesAndLongNumbers | CoreTests.testFeaturesMatchThePhoneRules | none | M7 |
+| 8 | Open a link | Building | ProtocolTest.fileNamesAndLinksRejectTricks | CoreTests.testFileNamesAndLinksRejectTricks | none | M8 |
 | 9 | Trackpad and keyboard | Not started | none | none | none | M9 |
-| 10 | Clipboard sync | Partial | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testSensitiveClipboard | none | M10 |
+| 10 | Clipboard sync | Building | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testSensitiveClipboard | none | M10 |
 | 11 | SMS | Not started | none | none | none | M11 |
 | 12 | Screen mirror | Not started | none | none | none | M12 |
 | 13 | Control the phone | Not started | none | none | none | M13 |
@@ -25,10 +25,10 @@ Status is Done only when the code is in the real apps, unit and integration test
 | 19 | Clipboard history | Not started | none | none | none | M19 |
 | 20 | Scan to Mac | Not started | none | none | none | M20 |
 | 21 | Automations | Not started | none | none | none | M21 |
-| 22 | Quick drop | Partial | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M22 |
-| 23 | Pairing | Partial | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testRelayCannotReuseAMatchCode | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M23 |
-| 24 | End-to-end encryption | Partial | ProtocolTest.proofHidesThePin | CoreTests.testProofDevicesAndPendingCap | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M24 |
-| 25 | Key pin | Partial | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testIdentityFingerprintStaysAndKeychainDoesNotGrow | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M25 |
+| 22 | Quick drop | Building | ProtocolTest.featuresAgreeOnResumeClipboardOtpAndLock | CoreTests.testFeaturesMatchThePhoneRules | none | M22 |
+| 23 | Pairing | Building | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testRelayCannotReuseAMatchCode | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M23 |
+| 24 | End-to-end encryption | Building | ProtocolTest.proofHidesThePin | CoreTests.testProofDevicesAndPendingCap | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M24 |
+| 25 | Key pin | Building | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testIdentityFingerprintStaysAndKeychainDoesNotGrow | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M25 |
 
 Link bugs fixed in 0.7.0, with tests:
 

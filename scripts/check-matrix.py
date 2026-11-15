@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Fail if a Done feature has no real tests, or a named test is missing."""
+"""Fail if a finished feature has no real tests, or a named test is missing."""
 import pathlib
 import sys
 
@@ -20,6 +19,15 @@ missing = [str(number) for number in range(1, 26) if number not in ids]
 if missing:
     errors.append("missing feature rows: " + ", ".join(missing))
 
+allowed = (
+    "not started",
+    "building",
+    "built – self-tested",
+    "built - self-tested",
+    "final – owner tested",
+    "final - owner tested",
+)
+
 sources = []
 for path in root.rglob("*"):
     if path.suffix in {".java", ".swift", ".kt"} and "build" not in path.parts:
@@ -33,16 +41,18 @@ for row in rows:
     if len(row) < 7:
         errors.append(f"row {row[0]} needs 7 columns")
         continue
-    status = row[2].split(".")[0].strip().lower()
+    status = row[2].strip().lower()
+    if status not in allowed:
+        errors.append(f"feature {row[0]} status must be Not started, Building, Built – self-tested, or Final – owner tested")
     named = []
     for cell in row[3:6]:
         if cell.lower() in {"", "—", "-", "none", "n/a"}:
             continue
         named.append(cell.split()[0])
     manual = row[6]
-    if status == "done":
+    if status.startswith("built") or status.startswith("final"):
         if len(named) < 3 or manual.lower() in {"", "—", "-", "none", "n/a"}:
-            errors.append(f"feature {row[0]} says Done without unit, integration, and manual ids")
+            errors.append(f"feature {row[0]} says finished without unit, integration, and manual ids")
     for item in named:
         name = item.split(".")[-1]
         if name not in blob:

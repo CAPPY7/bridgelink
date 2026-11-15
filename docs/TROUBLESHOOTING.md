@@ -28,7 +28,19 @@ The file is `BridgeLink-android-debug.apk`, or it was signed with a different ke
 
 ## The Mac app will not open
 
-Right-click, Open, Open. If macOS still refuses, run `xattr -dr com.apple.quarantine` on the app in Terminal, then open it again. The app is not notarized.
+macOS 13 or 14: right-click BridgeLink in Applications, choose Open, then Open.
+
+macOS 15 or newer: double-click it, press Done, open System Settings, Privacy & Security, scroll down, press Open Anyway, enter your password, then press Open.
+
+If it still refuses, run this in Terminal and open the app again:
+
+`xattr -dr com.apple.quarantine /Applications/BridgeLink.app`
+
+The app is sideloaded, so Apple shows that warning once. A paid Developer ID is not required.
+
+## The Mac firewall blocks the phone
+
+Open System Settings, Network, Firewall. If the firewall is on, allow incoming connections for BridgeLink, or turn the firewall off and try again. Then open BridgeLink from the menu bar.
 
 ## Notifications do not appear on the Mac
 

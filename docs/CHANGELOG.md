@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0
+
+- The Mac app is a disk image with an icon. The first-open steps are correct for macOS 13, 14, and 15.
+- Builds are signed with one self-signed certificate when the Mac signing secrets are set, so macOS can keep permissions across updates.
+- The QR code lists every local Mac address. The phone tries each one.
+- Scan the Mac QR is the first pairing button.
+- Activity history is saved on the phone and the Mac.
+- Battery is sent both ways when it changes.
+- If Android restarts the link, the phone reconnects to the saved Mac.
+- A release with missing Android signing secrets fails instead of shipping a debug APK.
+- Link errors say what to do next. The Mac firewall has its own message.
+- Both apps can save a diagnostics file with no keys and no message text.
+
 ## 0.7.0
 
 - A stalled file send can no longer freeze the phone. Socket open, close, read, and write run on connection threads. Closing the link does not wait on a blocked write. A write that makes no progress for 20 seconds closes the socket.

@@ -1,5 +1,9 @@
 # Decisions
 
+The current rules are docs/BUILD_PROMPT.md (master prompt v2). If an older paragraph below disagrees with that file, the prompt wins.
+
+The Mac app is sideloaded. There is no paid Apple Developer account. A self-signed certificate keeps the same signature across updates when the Mac signing secrets are set. Permissions can still be forgotten if a build is ad-hoc signed. The menu window explains the first open.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".
@@ -8,7 +12,7 @@ Link errors use a kind. Fatal kinds do not retry. The wording of an exception is
 
 Notification text crosses the link only so the Mac can show it when asked. The Mac shows the full text only if the screen is unlocked and Show notification text is on. The activity list stores "Notification from the phone" and never the text.
 
-The Mac app stays ad-hoc signed (`codesign --sign -`). The owner will sideload it. There will be no Apple Developer ID and no notarization. The $99 program is not required. Each update can drop Accessibility, Screen Recording, and Bluetooth, and the menu window tells the owner to allow them again in System Settings. Hardened runtime stays off so the keychain identity keeps working.
+The Mac app is sideloaded with one self-signed certificate when CI has the Mac signing secrets. There is no Apple Developer ID. Each ad-hoc build can drop Accessibility, Screen Recording, and Bluetooth. The menu window tells the owner how to open the app the first time.
 
 Clipboard history, leave-lock, rate limit, and replay classes were deleted because nothing in the apps called them. They come back only when those features are wired in.
 

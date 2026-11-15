@@ -72,6 +72,11 @@ public class ProtocolTest {
         assertEquals(8787, link.port);
         assertEquals("ab", link.fingerprint);
         assertEquals("123456", link.pin);
+        assertEquals(1, link.hosts.size());
+        PairingLink many = PairingLink.parse("bridgelink://pair?v=1&host=10.0.0.2&port=8787&fp=ab&pin=123456&hosts=10.0.0.8,10.0.0.2");
+        assertEquals("10.0.0.2", many.hosts.get(0));
+        assertEquals("10.0.0.8", many.hosts.get(1));
+        assertEquals(2, many.hosts.size());
         assertEquals(null, PairingLink.parse("not a link"));
         assertEquals(null, PairingLink.parse("bridgelink://pair?v=1&host=&port=8787&fp=ab&pin=123456"));
     }
@@ -300,6 +305,11 @@ public class ProtocolTest {
         assertFalse(Features.looksSensitive("hello from the phone"));
         assertTrue(Features.batteryChanged(0, false, false, 80, false));
         assertFalse(Features.batteryChanged(80, true, true, 80, true));
+        assertEquals(List.of("10.0.0.2", "10.0.0.8"), Features.addressOrder("10.0.0.2", "10.0.0.8,10.0.0.2"));
+        assertEquals(List.of("b", "a"), Features.rememberLine(List.of("a"), "b", 2));
+        String report = Features.diagnostics("0.8.0", "Android 14", true, true, 8787, "Paired");
+        assertTrue(report.contains("secrets=none"));
+        assertFalse(report.contains("token"));
         assertTrue(Features.lowBattery(10, false, false));
         assertFalse(Features.lowBattery(10, true, false));
         assertEquals("pause", Features.mediaAction("pause"));

@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -105,6 +106,8 @@ public class LinkService extends Service {
     private final LinkState linkState = new LinkState();
     private FileBridge files;
     private ConnectivityManager.NetworkCallback networkCallback;
+    private BroadcastReceiver batteryWatch;
+    private final List<String> pendingHosts = new ArrayList<>();
     private volatile long lastRx;
     private volatile String sessionFp = "";
     private volatile String matchCode = "";
@@ -143,6 +146,13 @@ public class LinkService extends Service {
         files = new FileBridge(this);
         running = this;
         watchNetwork();
+        batteryWatch = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (paired) sendBattery();
+            }
+        };
+        registerReceiver(batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         flushParked();
     }
 
@@ -156,7 +166,10 @@ public class LinkService extends Service {
         startInForeground(paired ? "Paired with the Mac" : "Not connected");
         running = this;
         flushParked();
-        if (intent == null) return START_STICKY;
+        if (intent == null) {
+            reconnectSaved();
+            return START_STICKY;
+        }
         handleCommand(intent);
         return START_STICKY;
     }
@@ -240,6 +253,13 @@ public class LinkService extends Service {
             }
             networkCallback = null;
         }
+        if (batteryWatch != null) {
+            try {
+                unregisterReceiver(batteryWatch);
+            } catch (Exception ignored) {
+            }
+            batteryWatch = null;
+        }
         main.removeCallbacksAndMessages(null);
         linkState.stop();
         generation.incrementAndGet();
@@ -250,6 +270,17 @@ public class LinkService extends Service {
     }
 
     private void connect(String host, int port, String pin) {
+        String extra = Prefs.open(this).getString("hosts", "");
+        String first;
+        synchronized (pendingHosts) {
+            pendingHosts.clear();
+            pendingHosts.addAll(Features.addressOrder(host, extra));
+            first = pendingHosts.isEmpty() ? (host == null ? "" : host.trim()) : pendingHosts.remove(0);
+        }
+        openAttempt(first, port, pin);
+    }
+
+    private void openAttempt(String host, int port, String pin) {
         final String address = host == null ? "" : host.trim();
         final String code = pin == null ? "" : pin.trim();
         lastHost = address;
@@ -331,16 +362,25 @@ public class LinkService extends Service {
         } catch (Exception error) {
             if (generation.get() == mine.gen && linkState.phase != LinkState.Phase.FATAL) {
                 LinkFailure.Kind kind = LinkFailure.classify(error);
-                String message = LinkFailure.message(kind);
-                if (kind.fatal) {
-                    linkState.failFatal(message);
-                    if (kind == LinkFailure.Kind.KEY_CHANGED || kind == LinkFailure.Kind.TOKEN_REJECTED) {
-                        Prefs.open(this).edit().remove("token").apply();
-                    }
-                    publish(message, null);
+                String next = "";
+                synchronized (pendingHosts) {
+                    if (!kind.fatal && !pendingHosts.isEmpty() && !paired) next = pendingHosts.remove(0);
+                }
+                if (!next.isEmpty()) {
+                    mine.hopTo = next;
+                    publish("Could not reach " + address + ". Trying the next Mac address.", null);
                 } else {
-                    linkState.retryable(message);
-                    publish(message, null);
+                    String message = LinkFailure.message(kind);
+                    if (kind.fatal) {
+                        linkState.failFatal(message);
+                        if (kind == LinkFailure.Kind.KEY_CHANGED || kind == LinkFailure.Kind.TOKEN_REJECTED) {
+                            Prefs.open(this).edit().remove("token").apply();
+                        }
+                        publish(message, null);
+                    } else {
+                        linkState.retryable(message);
+                        publish(message, null);
+                    }
                 }
             }
         } finally {
@@ -349,7 +389,10 @@ public class LinkService extends Service {
             if (attempt == mine) {
                 attempt = null;
                 paired = false;
-                if (linkState.retryScheduled && !address.isEmpty()) {
+                String next = mine.hopTo;
+                if (next != null && !next.isEmpty()) {
+                    main.post(() -> openAttempt(next, port, code));
+                } else if (linkState.retryScheduled && !address.isEmpty()) {
                     long delay = linkState.delayMs();
                     publish("Reconnecting…", null);
                     main.postDelayed(() -> connect(address, port, code), delay);
@@ -358,6 +401,19 @@ public class LinkService extends Service {
                 }
             }
         }
+    }
+
+    private void reconnectSaved() {
+        SharedPreferences prefs = Prefs.open(this);
+        String host = prefs.getString("host", "");
+        String token = prefs.getString("token", "");
+        if (host == null || host.isEmpty() || token == null || token.length() < 16) return;
+        int port = 8787;
+        try {
+            port = Integer.parseInt(prefs.getString("port", "8787"));
+        } catch (Exception ignored) {
+        }
+        connect(host, port, "");
     }
 
     private void onLine(String line) {
@@ -379,6 +435,7 @@ public class LinkService extends Service {
                         if (!device.isEmpty()) editor.putString("deviceId", device);
                         String macs = prefs.getString("macs", "[]");
                         editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp));
+                        editor.putString("host", lastHost);
                         editor.remove("pendingFp").remove("pin").commit();
                         if (prefs.getString("token", "").length() < 16) {
                             paired = false;
@@ -420,6 +477,11 @@ public class LinkService extends Service {
                     }
                 }
                 case "pong" -> lastRx = System.currentTimeMillis();
+                case "battery" -> {
+                    if ("mac".equals(message.text("label"))) {
+                        publish("Mac battery " + message.text("level") + "%", null);
+                    }
+                }
                 case "forget" -> {
                     SharedPreferences prefs = Prefs.open(this);
                     String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
@@ -640,6 +702,7 @@ public class LinkService extends Service {
                     JsonObject payload = new JsonObject();
                     payload.addProperty("level", Integer.toString(percent));
                     payload.addProperty("charging", charging ? "1" : "0");
+                    payload.addProperty("label", "phone");
                     writeEnvelope(Envelope.make("battery", "android", payload));
                 } catch (Exception ignored) {
                 }
@@ -953,6 +1016,7 @@ public class LinkService extends Service {
         volatile SSLSocket socket;
         volatile FrameChannel channel;
         volatile boolean closed;
+        volatile String hopTo;
 
         Attempt(int gen) {
             this.gen = gen;

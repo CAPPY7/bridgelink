@@ -13,9 +13,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.7.0</string>
+    <string>0.8.0</string>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -28,6 +28,16 @@
     <array>
         <string>_bridgelink._tcp</string>
     </array>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>NSCameraUsageDescription</key>
+    <string>BridgeLink uses the camera only while you are showing the phone as a webcam.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>BridgeLink uses the microphone only while the webcam is on and you asked for sound.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>BridgeLink uses Bluetooth to notice when the phone leaves, if you turn on lock-when-away.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>BridgeLink controls media and the pointer only after you turn those features on.</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright 2026 CAPPY7</string>
 </dict>
