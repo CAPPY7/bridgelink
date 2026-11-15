@@ -34,6 +34,8 @@ import androidx.core.content.ContextCompat;
 
 import com.google.gson.JsonObject;
 
+import app.bridgelink.android.protocol.Backoff;
+import app.bridgelink.android.protocol.BrowseAgain;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
@@ -136,6 +138,7 @@ public class LinkService extends Service {
     private LeaveWatch leave;
     private PhoneFive five;
     private PhoneSix six;
+    private MacBrowser browser;
     private volatile boolean onRelay;
     private final Runnable heartbeat = new Runnable() {
         @Override
@@ -375,6 +378,7 @@ public class LinkService extends Service {
         if (running == this) running = null;
         closeSocket();
         if (six != null) six.stopRelay();
+        if (browser != null) browser.stop();
         outbox.close();
         super.onDestroy();
     }
@@ -517,6 +521,7 @@ public class LinkService extends Service {
                     } else {
                         publish("Reconnecting…", null);
                     }
+                    if (BrowseAgain.shouldBrowse(linkState.attempt)) browseSaved();
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (!userStopped && linkState.phase != LinkState.Phase.FATAL) {
                     if (six != null && six.tryRelay()) {
@@ -527,6 +532,27 @@ public class LinkService extends Service {
                 }
             }
         }
+    }
+
+    private void browseSaved() {
+        if (browser != null) return;
+        String pinned = Prefs.open(this).getString("fp", "");
+        browser = new MacBrowser(this, new MacBrowser.Callback() {
+            @Override
+            public void onHost(String host) {
+                if (host == null || host.isEmpty()) return;
+                Prefs.open(LinkService.this).edit().putString("host", host).putString("hosts", host).apply();
+                lastHost = host;
+                publish("Found the Mac at " + host, null);
+                main.post(() -> connect(host, lastPort, ""));
+            }
+
+            @Override
+            public void onStatus(String status) {
+                if (status != null) publish(status, null);
+            }
+        }, pinned);
+        browser.start();
     }
 
     private void reconnectSaved() {

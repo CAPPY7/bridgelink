@@ -5,6 +5,10 @@ import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.WifiManager;
 
+import java.nio.charset.StandardCharsets;
+
+import app.bridgelink.android.protocol.BrowseAgain;
+
 /** Looks for the Mac's `_bridgelink._tcp` advertisement and reports its address. */
 public final class MacBrowser {
     public interface Callback {
@@ -18,12 +22,19 @@ public final class MacBrowser {
     private NsdManager.DiscoveryListener listener;
     private boolean running;
 
+    private final String expectedFp;
+
     public MacBrowser(Context context, Callback callback) {
+        this(context, callback, "");
+    }
+
+    public MacBrowser(Context context, Callback callback, String expectedFp) {
         this.nsd = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         WifiManager wifi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         this.lock = wifi == null ? null : wifi.createMulticastLock("bridgelink");
         if (this.lock != null) this.lock.setReferenceCounted(false);
         this.callback = callback;
+        this.expectedFp = expectedFp == null ? "" : expectedFp;
     }
 
     public void start() {
@@ -89,6 +100,9 @@ public final class MacBrowser {
                 if (info.getHost() == null) return;
                 String host = info.getHost().getHostAddress();
                 if (host == null || host.isEmpty()) return;
+                byte[] raw = info.getAttributes() == null ? null : info.getAttributes().get("fp");
+                String seen = raw == null ? "" : new String(raw, StandardCharsets.UTF_8);
+                if (!expectedFp.isEmpty() && !BrowseAgain.sameMac(expectedFp, seen)) return;
                 callback.onHost(host);
                 callback.onStatus("Found " + host);
                 stop();

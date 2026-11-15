@@ -35,7 +35,8 @@ extension LinkModel {
             let params = NWParameters(tls: tls)
             params.allowLocalEndpointReuse = true
             let listener = try NWListener(using: params, on: port)
-            listener.service = NWListener.Service(name: "BridgeLink", type: "_bridgelink._tcp")
+            let txt = NWTXTRecord(["fp": fingerprint])
+            listener.service = NWListener.Service(name: "BridgeLink", type: "_bridgelink._tcp", domain: nil, txtRecord: txt)
             listener.newConnectionHandler = { [weak self] connection in
                 Task { @MainActor in self?.accept(connection) }
             }
