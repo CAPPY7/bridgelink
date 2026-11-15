@@ -81,7 +81,7 @@ A waiting connection must send hello within 10 seconds. A fifth waiting connecti
 | file_cancel | `id` | Either side |
 | file_have | `id`, `offset` bytes already stored | Receiver, after `file_begin` |
 
-A sender waits up to one second for `file_have`. It skips that many bytes and continues. The same file keeps the same id, so a dropped link can resume. The receiver keeps the partial until the hash matches. A file name is the last path segment, with control characters removed. `..` is not a name. The receiver checks the SHA-256 and deletes the file if it does not match. Files over 100 MB are refused. A link that is not http or https is refused.
+A sender waits up to one second for `file_have`. It skips that many bytes and continues. The same file keeps the same id, so a dropped link can resume. The receiver keeps the partial until the hash matches. A file name is the last path segment, with control characters removed. `..` is not a name. The receiver checks the SHA-256 and deletes the file if it does not match. Files over 4 GB are refused. A folder is zipped first. `file_cancel` drops the partial. A link that is not http or https is refused. Clipboard images use `clipboard_image` and must fit in one frame.
 
 ## Pairing
 

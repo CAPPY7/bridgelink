@@ -30,6 +30,8 @@ class PhoneModel {
     var macBattery by mutableStateOf("—")
     var restricted by mutableStateOf(false)
     var version by mutableStateOf("")
+    var macName by mutableStateOf("")
+    var blockApp by mutableStateOf("")
 }
 
 /** Buttons on the screen. MainActivity does the real work. */
@@ -50,4 +52,11 @@ interface PhoneActions {
     fun diagnostics()
     fun mirror()
     fun restrictedHelp()
+    fun cancelFile()
+    fun toggleClipboard()
+    fun toggleLinks()
+    fun renameMac()
+    fun blockNotify()
+    fun repair()
+    fun dndAccess()
 }

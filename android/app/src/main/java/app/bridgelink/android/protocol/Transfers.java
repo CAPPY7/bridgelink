@@ -8,7 +8,7 @@ import java.util.Locale;
 /** File names, link checks, and one incoming file. No Android APIs, so unit tests can run it. */
 public final class Transfers {
     public static final int CHUNK = 32 * 1024;
-    public static final long MAX_BYTES = 100L * 1024 * 1024;
+    public static final long MAX_BYTES = 4L * 1024 * 1024 * 1024;
 
     private Transfers() {}
 

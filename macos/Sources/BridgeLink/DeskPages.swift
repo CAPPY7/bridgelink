@@ -78,15 +78,23 @@ struct DeskDetail: View {
             Text("Notification text is shown only while this Mac is unlocked and that switch is on. Otherwise only the app name is shown.")
                 .font(.callout).foregroundStyle(.secondary)
             Button("Allow notifications") { model.notifications() }
+            if model.canReply {
+                TextField("Reply", text: $model.replyDraft)
+                Button("Send reply") { model.replyToNotification() }
+            }
+            Button("Dismiss on the phone") { model.dismissNotification() }
+            Toggle("Quiet while the phone is in Do Not Disturb", isOn: Binding(get: { model.dndSync }, set: { model.setDndSync($0) }))
             EmptyNote(symbol: "bell", title: "Banners show above, not in a stored list.", line: "Message text is not written into the activity log.")
         }
     }
 
     private var files: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Drop files anywhere on this window, or on the menu-bar icon.")
+            Text("Drop files anywhere on this window, on the menu-bar icon, or in the drop zone. A folder is sent as a zip. Files can be up to 4 GB.")
                 .foregroundStyle(.secondary)
-            Button("Send file") { model.pickFile() }
+            Button("Send files") { model.pickFile() }
+            Button("Show drop zone") { model.showDropZone() }
+            Button("Cancel send") { model.cancelSend() }
             recentFiltered("file")
         }
     }
@@ -100,6 +108,9 @@ struct DeskDetail: View {
             }
             .frame(maxWidth: 280)
             Button("Send clipboard") { model.sendClipboard() }
+            Text("Auto sends text and pictures. Passwords and card numbers are skipped.")
+                .font(.callout).foregroundStyle(.secondary)
+            Toggle("Open links from the phone right away", isOn: Binding(get: { model.linksAlways }, set: { model.setLinksAlways($0) }))
             if !model.pendingClipboard.isEmpty {
                 Button("Use phone clipboard") { model.acceptClipboard() }
             }
@@ -122,6 +133,10 @@ struct DeskDetail: View {
             if !model.pairedSummary.isEmpty {
                 Text("Paired phones: \(model.pairedSummary)")
             }
+            TextField("Rename the paired phone", text: $model.renameDraft)
+            Button("Rename phone") { model.renamePhone() }
+            Text("If this Mac key changed, forget the phone and scan the QR again. That is the safe re-pair.")
+                .font(.callout).foregroundStyle(.secondary)
             if let image = qrCode(pairingText(model)) {
                 Image(nsImage: image)
                     .interpolation(.none)
@@ -150,7 +165,7 @@ struct DeskDetail: View {
             Button("Send diagnostics") { model.saveDiagnostics() }
             Text("The first open needs one extra step because this app is not from the Mac App Store. macOS 13 or 14: right-click the app, choose Open, then Open. macOS 15 or newer: System Settings, Privacy and Security, Open Anyway.")
                 .font(.callout).foregroundStyle(.secondary)
-            Text("BridgeLink 0.9.0").font(.headline)
+            Text("BridgeLink 0.10.0").font(.headline)
             Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 .foregroundStyle(.secondary)
             Button("Quit") { model.quit() }

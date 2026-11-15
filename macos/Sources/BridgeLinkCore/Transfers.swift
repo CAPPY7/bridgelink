@@ -3,7 +3,7 @@ import Foundation
 
 public enum Transfers {
     public static let chunk = 32 * 1024
-    public static let maxBytes = 100 * 1024 * 1024
+    public static let maxBytes = 4 * 1024 * 1024 * 1024
 
     public static func sanitizeName(_ raw: String) -> String {
         var name = raw.replacingOccurrences(of: "\\", with: "/")

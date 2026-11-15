@@ -26,8 +26,8 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     val work by lazy { PhoneWork(this) }
     var browser: MacBrowser? = null
 
-    private val picker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) work.sendPicked(uri)
+    private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (!uris.isNullOrEmpty()) work.sendMany(uris)
     }
 
     private val events = object : BroadcastReceiver() {
@@ -120,6 +120,13 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun diagnostics() = work.diagnostics()
     override fun mirror() = work.mirror()
     override fun restrictedHelp() = work.restrictedHelp()
+    override fun cancelFile() = work.cancelFile()
+    override fun toggleClipboard() = work.toggleClipboard()
+    override fun toggleLinks() = work.toggleLinks()
+    override fun renameMac() = work.renameMac()
+    override fun blockNotify() = work.blockNotify()
+    override fun repair() = work.repair()
+    override fun dndAccess() = work.dndAccess()
 
     private fun readBattery(intent: Intent?) {
         if (intent == null) return

@@ -131,5 +131,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             exit(0)
         }
         menu = MenuHost(model: model)
+        NSApp.servicesProvider = self
+        NSUpdateDynamicServices()
+        model.startClipboardWatch()
+        model.drainShareInbox()
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        model.drainShareInbox()
+    }
+
+    @objc func sendToPhone(_ pboard: NSPasteboard, userData: String, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
+        let urls = pboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        if urls.isEmpty {
+            error.pointee = "Choose a file" as NSString
+            return
+        }
+        model.fileCancel.on = false
+        for url in urls { model.sendFile(url) }
     }
 }

@@ -44,10 +44,25 @@ final class LinkModel: ObservableObject {
     var sawMacBattery = false
     @Published var mirrorOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "notify", fallback: false)
     @Published var showNotificationText = UserDefaults.standard.bool(forKey: "showNotificationText")
+    @Published var linksAlways = UserDefaults.standard.bool(forKey: "linksAlways")
+    @Published var dndSync = UserDefaults.standard.bool(forKey: "dndSync")
+    @Published var phoneQuiet = false
+    @Published var lastNotifyKey = ""
+    @Published var canReply = false
+    @Published var replyDraft = ""
+    @Published var renameDraft = ""
+    let fileCancel = CancelFlag()
+    var phoneLowAlerted = false
+    var phoneFullAlerted = false
+    var dropPanel: DropPanel?
     var haves: [String: Int] = [:]
     var haveWaiters: [String: (Int) -> Void] = [:]
     var lastEcho = ""
     var macFinder: DispatchSourceTimer?
+    var pasteCount = 0
+    var focusTicks = 0
+    var sawFocus = false
+    var lastFocus = false
 
     let files = MacFiles()
 
@@ -237,10 +252,10 @@ final class LinkModel: ObservableObject {
     func pickFile() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        sendFile(url)
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        for url in panel.urls { sendFile(url) }
     }
 
     func sendFile(_ url: URL) {
@@ -248,6 +263,8 @@ final class LinkModel: ObservableObject {
             note("Connect and pair before sending")
             return
         }
+        fileCancel.on = false
+        let flag = fileCancel
         files.send(url: url, emit: { [weak self] type, payload in
             Task { @MainActor in self?.send(type: type, payload: payload, on: self?.live) }
         }, wait: { [weak self] id, fallback in
@@ -261,6 +278,10 @@ final class LinkModel: ObservableObject {
             }
             gate.wait()
             return value
+        }, progress: { [weak self] line in
+            Task { @MainActor in self?.note(line) }
+        }, cancelled: {
+            flag.on
         }, done: { [weak self] line in
             Task { @MainActor in self?.note(line) }
         })
@@ -287,13 +308,25 @@ final class LinkModel: ObservableObject {
     }
 
     func sendClipboard() {
-        let text = NSPasteboard.general.string(forType: .string) ?? ""
-        if Features.isEcho(lastEcho, text) {
-            note("Skipped a clipboard echo")
+        let board = NSPasteboard.general
+        let text = board.string(forType: .string) ?? ""
+        if !text.isEmpty && Features.sensitiveText(text) {
+            note("Skipped sensitive clipboard")
             return
         }
+        if text.isEmpty {
+            if let image = board.data(forType: .png) ?? board.data(forType: .tiff), StageRules.imageFits(image.count) {
+                let key = Features.echoKey(image.base64EncodedString())
+                if lastEcho == key { return }
+                lastEcho = key
+                send(type: "clipboard_image", payload: ["data": image.base64EncodedString()], on: live)
+                note("Sent a clipboard image")
+            }
+            return
+        }
+        if Features.isEcho(lastEcho, text) { return }
         send(type: "clipboard", payload: ["body": text], on: live)
-        note(text.isEmpty ? "Clipboard was empty" : "Sent clipboard")
+        note("Sent clipboard")
     }
 
     func ring() {

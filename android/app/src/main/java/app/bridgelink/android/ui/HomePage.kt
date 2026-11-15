@@ -36,6 +36,9 @@ fun HomePage(model: PhoneModel, actions: PhoneActions) {
             BatteryCard("This phone", model.phoneBattery, Modifier.weight(1f))
             BatteryCard("Mac", model.macBattery, Modifier.weight(1f))
         }
+        if (model.status.contains("key changed", ignoreCase = true)) {
+            BigButton("Forget this Mac and scan again", "repair", actions::repair)
+        }
         if (model.status.contains("code", ignoreCase = true)) {
             BigButton("Codes match", "confirm", actions::confirm)
         }

@@ -24,6 +24,7 @@ struct PopoverView: View {
                 Button("Send file") { model.pickFile() }
                 Button("Send clipboard") { model.sendClipboard() }
                 Button("Ring phone") { model.ring() }
+                Button("Stop ring") { model.stopRing() }
                 Button("Mirror screen") { model.mirrorLater() }
             }
             .buttonStyle(.bordered)

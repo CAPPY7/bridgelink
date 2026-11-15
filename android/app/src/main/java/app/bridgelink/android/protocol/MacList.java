@@ -24,6 +24,16 @@ public final class MacList {
         return next.toString();
     }
 
+    public static String rename(String existing, String host, String name) {
+        JsonArray array = parse(existing);
+        String clean = StageRules.tidyName(name, "Mac");
+        for (int i = 0; i < array.size(); i++) {
+            JsonObject row = array.get(i).getAsJsonObject();
+            if (host.equals(text(row, "host"))) row.addProperty("name", clean);
+        }
+        return array.toString();
+    }
+
     public static String removeHost(String existing, String host) {
         JsonArray array = parse(existing);
         JsonArray next = new JsonArray();

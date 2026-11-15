@@ -1,3 +1,4 @@
+import AppKit
 import BridgeLinkCore
 import CryptoKit
 import Foundation
@@ -42,24 +43,40 @@ final class MacFiles {
         queue.async { self.cancelNow(id) }
     }
 
-    func send(url: URL, emit: @escaping (String, [String: String]) -> Void, wait: @escaping (String, Int) -> Int, done: @escaping (String) -> Void) {
+    func send(url: URL, emit: @escaping (String, [String: String]) -> Void, wait: @escaping (String, Int) -> Int, progress: @escaping (String) -> Void, cancelled: @escaping () -> Bool, done: @escaping (String) -> Void) {
         queue.async {
+            var cleanup: URL?
+            let source: URL
+            if let zip = self.zipped(url) {
+                cleanup = zip
+                source = zip
+            } else {
+                source = url
+            }
+            defer { if let cleanup { try? FileManager.default.removeItem(at: cleanup) } }
             do {
-                let size = (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                let size = (try source.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
                 if size > Transfers.maxBytes {
-                    done("That file is over 100 MB.")
+                    done("That file is over 4 GB.")
                     return
                 }
-                let name = Transfers.sanitizeName(url.lastPathComponent)
-                let id = String(Transfers.sha256Hex(Data("\(url.path)\n\(size)".utf8)).prefix(32))
+                let display = source == url ? Transfers.sanitizeName(url.lastPathComponent) : StageRules.bundleName(url.lastPathComponent)
+                let name = Transfers.sanitizeName(display)
+                let id = String(Transfers.sha256Hex(Data("\(source.path)\n\(size)".utf8)).prefix(32))
                 self.hop(emit, "file_begin", ["id": id, "name": name, "size": String(size), "from": "0"])
                 let remote = wait(id, 0)
                 let start = remote >= 0 && remote <= size ? remote : 0
-                let handle = try FileHandle(forReadingFrom: url)
+                let handle = try FileHandle(forReadingFrom: source)
                 defer { try? handle.close() }
                 var hasher = SHA256()
                 var offset = 0
+                var lastPercent = -1
                 while offset < start {
+                    if cancelled() {
+                        self.hop(emit, "file_cancel", ["id": id])
+                        done("File send cancelled.")
+                        return
+                    }
                     let want = min(Transfers.chunk, start - offset)
                     let chunk = try handle.read(upToCount: want) ?? Data()
                     if chunk.isEmpty { done("The file changed while it was sending."); return }
@@ -67,11 +84,22 @@ final class MacFiles {
                     offset += chunk.count
                 }
                 while true {
+                    if cancelled() {
+                        self.hop(emit, "file_cancel", ["id": id])
+                        done("File send cancelled.")
+                        return
+                    }
                     let chunk = try handle.read(upToCount: Transfers.chunk) ?? Data()
                     if chunk.isEmpty { break }
                     hasher.update(data: chunk)
                     self.hop(emit, "file_chunk", ["id": id, "offset": String(offset), "data": chunk.base64EncodedString()])
                     offset += chunk.count
+                    let percent = StageRules.progressPercent(written: Int64(offset), size: Int64(size))
+                    if percent == 100 || percent >= lastPercent + 10 {
+                        lastPercent = percent
+                        let line = "Sending \(name) — \(percent)%"
+                        DispatchQueue.main.async { progress(line) }
+                    }
                 }
                 if offset != size {
                     done("The file changed while it was sending.")
@@ -84,6 +112,23 @@ final class MacFiles {
                 done("Could not send the file.")
             }
         }
+    }
+
+    private func zipped(_ url: URL) -> URL? {
+        let directory = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+        if !directory { return nil }
+        let dest = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-\(UUID().uuidString).zip")
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        task.arguments = ["-c", "-k", "--keepParent", url.path, dest.path]
+        do {
+            try task.run()
+            task.waitUntilExit()
+        } catch {
+            return nil
+        }
+        if task.terminationStatus != 0 { return nil }
+        return dest
     }
 
     private func hop(_ emit: @escaping (String, [String: String]) -> Void, _ type: String, _ payload: [String: String]) {
@@ -157,6 +202,7 @@ final class MacFiles {
                 dest = folder.appendingPathComponent("\(UUID().uuidString.prefix(8))-\(file.name)")
             }
             try FileManager.default.moveItem(at: partial, to: dest)
+            NSWorkspace.shared.open(dest)
             return "Saved \(dest.lastPathComponent) in Downloads/BridgeLink"
         } catch {
             try? FileManager.default.removeItem(at: partial)

@@ -5,7 +5,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.core.app.ActivityCompat
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
@@ -16,6 +19,7 @@ import app.bridgelink.android.protocol.Features
 import app.bridgelink.android.protocol.MacList
 import app.bridgelink.android.protocol.PairingLink
 import app.bridgelink.android.protocol.RestrictedHelp
+import app.bridgelink.android.protocol.StageRules
 import app.bridgelink.android.ui.StatusText
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
@@ -161,15 +165,84 @@ class PhoneWork(private val activity: MainActivity) {
     }
 
     fun sendPicked(uri: Uri) {
-        try {
-            activity.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        } catch (_: Exception) {
+        sendMany(listOf(uri))
+    }
+
+    fun sendMany(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        for (uri in uris) {
+            try {
+                activity.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: Exception) {
+            }
         }
         val intent = Intent(activity, LinkService::class.java)
         intent.action = LinkService.ACTION_SEND
-        intent.putExtra(LinkService.EXTRA_KIND, "file")
-        intent.putExtra(LinkService.EXTRA_BODY, uri.toString())
+        intent.putExtra(LinkService.EXTRA_KIND, if (uris.size == 1) "file" else "files")
+        intent.putExtra(LinkService.EXTRA_BODY, uris.joinToString("\n") { it.toString() })
         ContextCompat.startForegroundService(activity, intent)
+    }
+
+    fun cancelFile() {
+        val intent = Intent(activity, LinkService::class.java)
+        intent.action = LinkService.ACTION_SEND
+        intent.putExtra(LinkService.EXTRA_KIND, "cancel-file")
+        ContextCompat.startForegroundService(activity, intent)
+        model.status = "Cancelling the file send"
+    }
+
+    fun toggleClipboard() {
+        val prefs = Prefs.open(activity)
+        val flags = prefs.getString("flags", "") ?: ""
+        val on = Features.enabled(flags, "clipboard", false)
+        prefs.edit().putString("flags", StageRules.setFlag(flags, "clipboard", !on)).apply()
+        model.status = if (on) "Clipboard sync is off" else "Clipboard sync is on. Sensitive text is skipped."
+    }
+
+    fun toggleLinks() {
+        val prefs = Prefs.open(activity)
+        val on = prefs.getString("linksAlways", "0") == "1"
+        prefs.edit().putString("linksAlways", if (on) "0" else "1").apply()
+        model.status = if (on) "Links open only while the screen is on" else "Links from the Mac open right away"
+    }
+
+    fun renameMac() {
+        val prefs = Prefs.open(activity)
+        val host = model.host.trim()
+        if (host.isEmpty()) {
+            model.status = "Connect a Mac before renaming it"
+            return
+        }
+        val next = MacList.rename(prefs.getString("macs", "[]"), host, model.macName)
+        prefs.edit().putString("macs", next).apply()
+        model.status = "Renamed this Mac"
+    }
+
+    fun blockNotify() {
+        val name = model.blockApp.trim()
+        if (name.isEmpty()) {
+            model.status = "Type the app package name to block"
+            return
+        }
+        val prefs = Prefs.open(activity)
+        val current = prefs.getString("notifyOff", "") ?: ""
+        val next = if (current.isEmpty()) name else "$current,$name"
+        prefs.edit().putString("notifyOff", next).apply()
+        model.blockApp = ""
+        model.status = "That app will not be mirrored"
+    }
+
+    fun repair() {
+        forget()
+        scan()
+    }
+
+    fun dndAccess() {
+        val prefs = Prefs.open(activity)
+        val flags = prefs.getString("flags", "") ?: ""
+        prefs.edit().putString("flags", StageRules.setFlag(flags, "dnd", true)).apply()
+        activity.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        model.status = "Allow Do Not Disturb access, then come back"
     }
 
     fun ringMac() {
@@ -196,7 +269,14 @@ class PhoneWork(private val activity: MainActivity) {
     }
 
     fun mirror() {
-        Prefs.open(activity).edit().putString("flags", "notify=1,otp=1").apply()
+        val prefs = Prefs.open(activity)
+        var flags = prefs.getString("flags", "") ?: ""
+        flags = StageRules.setFlag(flags, "notify", true)
+        flags = StageRules.setFlag(flags, "otp", true)
+        prefs.edit().putString("flags", flags).apply()
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.RECEIVE_SMS), 2)
+        }
         if (restrictedBlocked()) {
             restrictedHelp()
             return

@@ -210,6 +210,11 @@ public struct DeviceBook {
     public mutating func forget(id: String) {
         devices.removeAll { $0.id == id }
     }
+
+    public mutating func rename(id: String, name: String) {
+        guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
+        devices[index].name = StageRules.tidyName(name, "Phone")
+    }
 }
 
 public struct PendingGate {

@@ -256,26 +256,54 @@ public class ProtocolTest {
         assertNull(gap.accept(0, Base64.getEncoder().encodeToString(new byte[]{1})));
         assertNotNull(gap.accept(1, Base64.getEncoder().encodeToString(new byte[]{2})));
         assertNull(Transfers.Incoming.begin("4", "d.txt", Transfers.MAX_BYTES + 1));
+        assertNotNull(Transfers.Incoming.begin("cap", "big.bin", Transfers.MAX_BYTES));
     }
 
     @Test
-    public void hundredMegabyteFileStaysInChunks() throws Exception {
+    public void fourGigabyteCapStaysChunked() throws Exception {
+        assertEquals(4L * 1024 * 1024 * 1024, Transfers.MAX_BYTES);
         byte[] zeros = new byte[Transfers.CHUNK];
         String encoded = Base64.getEncoder().encodeToString(zeros);
-        Transfers.Incoming incoming = Transfers.Incoming.begin("big", "big.bin", Transfers.MAX_BYTES);
-        for (long offset = 0; offset < Transfers.MAX_BYTES; offset += Transfers.CHUNK) {
+        long size = Transfers.CHUNK * 3L;
+        Transfers.Incoming incoming = Transfers.Incoming.begin("big", "big.bin", size);
+        assertNotNull(incoming);
+        for (long offset = 0; offset < size; offset += Transfers.CHUNK) {
             assertNotNull(incoming.accept(offset, encoded));
         }
         java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-        long left = Transfers.MAX_BYTES;
-        while (left > 0) {
-            digest.update(zeros);
-            left -= zeros.length;
-        }
+        digest.update(zeros);
+        digest.update(zeros);
+        digest.update(zeros);
         StringBuilder builder = new StringBuilder();
         for (byte value : digest.digest()) builder.append(String.format("%02x", value));
         assertTrue(incoming.matches(builder.toString()));
-        assertNull(incoming.accept(Transfers.MAX_BYTES, encoded));
+        assertNull(incoming.accept(size, encoded));
+    }
+
+    @Test
+    public void stageThreeRules() {
+        assertEquals(50, StageRules.progressPercent(5, 10));
+        assertEquals(100, StageRules.progressPercent(10, 10));
+        assertEquals(0, StageRules.progressPercent(1, 0));
+        assertTrue(StageRules.fullBattery(100, false));
+        assertFalse(StageRules.fullBattery(100, true));
+        assertFalse(StageRules.fullBattery(99, false));
+        assertTrue(StageRules.appBlocked("com.a, com.b", "com.b"));
+        assertFalse(StageRules.appBlocked("com.a", "com.b"));
+        assertFalse(StageRules.openLinkNow(false, false));
+        assertTrue(StageRules.openLinkNow(false, true));
+        assertEquals("skip", StageRules.clipKind(true, true, true));
+        assertEquals("text", StageRules.clipKind(true, true, false));
+        assertEquals("image", StageRules.clipKind(false, true, false));
+        assertFalse(StageRules.imageFits(StageRules.IMAGE_CAP + 1));
+        assertTrue(StageRules.imageFits(32));
+        assertEquals("Photos.zip", StageRules.bundleName("Photos"));
+        assertTrue(StageRules.findUsesAlarmStream());
+        assertEquals(60_000L, StageRules.OTP_CLEAR_MS);
+        assertEquals("notify=1,clipboard=1", StageRules.setFlag("notify=1,clipboard=0", "clipboard", true));
+        assertEquals("Desk", StageRules.tidyName("  Desk  ", "Mac"));
+        String list = MacList.add("[]", "Office", "10.0.0.4", 8787, "aa");
+        assertEquals("Desk", MacList.names(MacList.rename(list, "10.0.0.4", "Desk")));
     }
 
     @Test

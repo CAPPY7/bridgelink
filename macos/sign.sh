@@ -21,6 +21,11 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
     echo "The Mac signing certificate did not import."
     exit 1
   fi
+  if [ -d "$APP/Contents/PlugIns" ]; then
+    find "$APP/Contents/PlugIns" -name '*.appex' -print0 | while IFS= read -r -d '' plugin; do
+      codesign --force --sign "$IDENTITY" --options runtime --timestamp=none "$plugin"
+    done
+  fi
   codesign --force --sign "$IDENTITY" --options runtime --timestamp=none --entitlements entitlements.plist "$APP"
   codesign --verify --verbose=2 "$APP"
   rm -f "$WORK/sign.p12"
@@ -29,6 +34,11 @@ else
   if [ "${REQUIRE_MAC_SIGN:-}" = "1" ]; then
     echo "Mac signing secrets MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD are missing."
     exit 1
+  fi
+  if [ -d "$APP/Contents/PlugIns" ]; then
+    find "$APP/Contents/PlugIns" -name '*.appex' -print0 | while IFS= read -r -d '' plugin; do
+      codesign --force --sign - "$plugin"
+    done
   fi
   codesign --force --sign - "$APP"
   echo "Ad-hoc signature. Permissions can reset after an update."

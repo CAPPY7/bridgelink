@@ -48,6 +48,18 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Connect", "connect", actions::connect)
         BigButton("Codes match", "confirm-settings", actions::confirm, tonal = true)
         BigButton("Forget this Mac", "forget", actions::forget, tonal = true)
+        OutlinedTextField(
+            value = model.macName,
+            onValueChange = { model.macName = it },
+            modifier = Modifier.fillMaxWidth().testTag("mac-name"),
+            label = { Text("Name for this Mac") },
+            singleLine = true,
+        )
+        BigButton("Rename this Mac", "rename-mac", actions::renameMac, tonal = true)
+        Text("Sharing", style = MaterialTheme.typography.titleMedium)
+        BigButton("Clipboard sync on or off", "clip-sync", actions::toggleClipboard, tonal = true)
+        BigButton("Always open links", "links-always", actions::toggleLinks, tonal = true)
+        BigButton("Sync Do Not Disturb", "dnd", actions::dndAccess, tonal = true)
         Text("Phone", style = MaterialTheme.typography.titleMedium)
         BigButton("Keep me connected", "battery", actions::batterySettings, tonal = true)
         BigButton("Send diagnostics", "diagnostics", actions::diagnostics, tonal = true)

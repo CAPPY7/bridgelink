@@ -154,6 +154,28 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(gap?.accept(offset: 0, base64: Data([1]).base64EncodedString()))
         XCTAssertNotNil(gap?.accept(offset: 1, base64: Data([2]).base64EncodedString()))
         XCTAssertNil(IncomingFile(id: "4", name: "d.txt", size: Transfers.maxBytes + 1))
+        XCTAssertNotNil(IncomingFile(id: "cap", name: "big.bin", size: Transfers.maxBytes))
+    }
+
+    func testStageThreeRules() {
+        XCTAssertEqual(Transfers.maxBytes, 4 * 1024 * 1024 * 1024)
+        XCTAssertEqual(StageRules.progressPercent(written: 5, size: 10), 50)
+        XCTAssertEqual(StageRules.progressPercent(written: 10, size: 10), 100)
+        XCTAssertTrue(StageRules.fullBattery(level: 100, alreadyAlerted: false))
+        XCTAssertFalse(StageRules.fullBattery(level: 99, alreadyAlerted: false))
+        XCTAssertTrue(StageRules.appBlocked("com.a, com.b", "com.b"))
+        XCTAssertFalse(StageRules.openLinkNow(screenOn: false, alwaysAllow: false))
+        XCTAssertTrue(StageRules.openLinkNow(screenOn: false, alwaysAllow: true))
+        XCTAssertEqual(StageRules.clipKind(hasText: true, hasImage: false, sensitive: true), "skip")
+        XCTAssertEqual(StageRules.clipKind(hasText: false, hasImage: true, sensitive: false), "image")
+        XCTAssertFalse(StageRules.imageFits(StageRules.imageCap + 1))
+        XCTAssertEqual(StageRules.bundleName("Photos"), "Photos.zip")
+        XCTAssertTrue(StageRules.findUsesAlarmStream())
+        XCTAssertEqual(StageRules.setFlag("notify=1,clipboard=0", "clipboard", true), "notify=1,clipboard=1")
+        var book = DeviceBook()
+        let device = book.remember(name: "Pixel", token: "token-1", now: 10)
+        book.rename(id: device.id, name: "Kitchen phone")
+        XCTAssertEqual(book.devices.first?.name, "Kitchen phone")
     }
 
     func testFeaturesMatchThePhoneRules() throws {

@@ -115,11 +115,37 @@ extension LinkModel {
             send(type: "pong", payload: [:], on: connection)
         case "link":
             if let url = Transfers.acceptUrl(envelope.text("url")) {
-                pendingLink = url
-                note("Link from the phone. Open it only if you trust it.")
-                notify("Link from the phone", "Open BridgeLink to open it")
+                if linksAlways, let open = URL(string: url) {
+                    NSWorkspace.shared.open(open)
+                    note("Opened a link from the phone")
+                } else {
+                    pendingLink = url
+                    note("Link from the phone. Open it only if you trust it.")
+                    notify("Link from the phone", "Open BridgeLink to open it")
+                }
             } else {
                 note("Refused a link that is not http or https")
+            }
+        case "clipboard_image":
+            if clipboardMode == "off" {
+                note("Ignored clipboard from the phone")
+                break
+            }
+            guard let data = Data(base64Encoded: envelope.text("data")), StageRules.imageFits(data.count) else {
+                note("Skipped a clipboard image")
+                break
+            }
+            let board = NSPasteboard.general
+            board.clearContents()
+            board.setData(data, forType: .png)
+            note("Clipboard image updated")
+        case "notify_dismiss":
+            note("The phone dismissed a notification")
+        case "dnd":
+            if envelope.text("label") == "mac" { break }
+            phoneQuiet = envelope.text("on") == "1"
+            if dndSync {
+                note(phoneQuiet ? "Phone is in Do Not Disturb. Banners stay quiet." : "Phone left Do Not Disturb")
             }
         case "file_begin":
             let fileId = envelope.text("id")
@@ -154,6 +180,14 @@ extension LinkModel {
         case "notify":
             let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
             guard Features.enabled(flags, "notify", fallback: false) else { return }
+            if phoneQuiet && dndSync {
+                note("Notification held while the phone is in Do Not Disturb")
+                return
+            }
+            let app = envelope.text("app")
+            if StageRules.appBlocked(UserDefaults.standard.string(forKey: "notifyOff") ?? "", app) { return }
+            lastNotifyKey = envelope.text("key")
+            canReply = envelope.text("reply") == "1"
             let shown = Features.notificationShown(
                 app: envelope.text("app"),
                 title: envelope.text("title"),
@@ -171,11 +205,23 @@ extension LinkModel {
         case "battery":
             if envelope.text("label") == "mac" { break }
             let level = envelope.text("level")
+            let levelInt = Int(level) ?? -1
+            let charging = envelope.text("charging") == "1"
+            if StageRules.fullBattery(level: levelInt, alreadyAlerted: phoneFullAlerted) {
+                phoneFullAlerted = true
+                notify("Phone is fully charged", "The phone battery is at 100%.")
+            }
+            if levelInt < 100 { phoneFullAlerted = false }
+            if Features.lowBattery(level: levelInt, charging: charging, alreadyAlerted: phoneLowAlerted) {
+                phoneLowAlerted = true
+                notify("Phone battery is low", "The phone battery is at \(level)%.")
+            }
+            if levelInt > 15 || charging { phoneLowAlerted = false }
             if level.isEmpty {
                 phoneBattery = ""
             } else {
-                let charging = envelope.text("charging") == "1" ? ", charging" : ""
-                phoneBattery = "Phone battery \(level)%\(charging)"
+                let chargingText = charging ? ", charging" : ""
+                phoneBattery = "Phone battery \(level)%\(chargingText)"
             }
         case "forget":
             let device = envelope.text("deviceId")

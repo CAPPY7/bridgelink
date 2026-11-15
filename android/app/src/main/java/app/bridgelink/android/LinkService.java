@@ -37,6 +37,7 @@ import com.google.gson.JsonObject;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
+import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Frame;
 import app.bridgelink.android.protocol.FrameChannel;
 import app.bridgelink.android.protocol.HelloPlan;
@@ -59,6 +60,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLContext;
@@ -83,6 +85,7 @@ public class LinkService extends Service {
     public static final String EXTRA_LINE = "line";
 
     private static final String CHANNEL = "link";
+    private static final String RING_CHANNEL = "find";
     private static final int NOTE_ID = 1;
     private static final int RING_ID = 2;
 
@@ -112,6 +115,11 @@ public class LinkService extends Service {
     private volatile String sessionFp = "";
     private volatile String matchCode = "";
     private volatile String lastEcho = "";
+    private final AtomicBoolean fileCancel = new AtomicBoolean();
+    private boolean macLowAlerted;
+    private boolean macFullAlerted;
+    private boolean sawDnd;
+    private boolean lastDnd;
     private volatile String sasPhoneNonce = "";
     private volatile String macCommit = "";
     private final Runnable heartbeat = new Runnable() {
@@ -143,6 +151,10 @@ public class LinkService extends Service {
         NotificationChannel channel = new NotificationChannel(CHANNEL, "BridgeLink", NotificationManager.IMPORTANCE_LOW);
         channel.setDescription("Phone to Mac link");
         manager().createNotificationChannel(channel);
+        NotificationChannel ring = new NotificationChannel(RING_CHANNEL, "Find my phone", NotificationManager.IMPORTANCE_HIGH);
+        ring.setDescription("Rings even when the phone is on silent");
+        ring.setBypassDnd(true);
+        manager().createNotificationChannel(ring);
         files = new FileBridge(this);
         running = this;
         watchNetwork();
@@ -153,6 +165,7 @@ public class LinkService extends Service {
             }
         };
         registerReceiver(batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        watchClipboard();
         flushParked();
     }
 
@@ -185,8 +198,12 @@ public class LinkService extends Service {
         } else if (ACTION_SEND.equals(action)) {
             String kind = intent.getStringExtra(EXTRA_KIND);
             if ("file".equals(kind)) sendFile(intent.getStringExtra(EXTRA_BODY));
+            else if ("files".equals(kind)) sendFiles(intent.getStringExtra(EXTRA_BODY));
             else if ("link".equals(kind)) sendLink(intent.getStringExtra(EXTRA_BODY));
             else if ("notify".equals(kind)) sendNotify(intent);
+            else if ("notify_dismiss".equals(kind)) sendDismiss(intent.getStringExtra("key"));
+            else if ("otp".equals(kind)) sendOtp(intent.getStringExtra(EXTRA_BODY));
+            else if ("cancel-file".equals(kind)) fileCancel.set(true);
             else send(kind, intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
@@ -479,7 +496,7 @@ public class LinkService extends Service {
                 case "pong" -> lastRx = System.currentTimeMillis();
                 case "battery" -> {
                     if ("mac".equals(message.text("label"))) {
-                        publish("Mac battery " + message.text("level") + "%", null);
+                        noteMacBattery(message.text("level"), "1".equals(message.text("charging")));
                     }
                 }
                 case "forget" -> {
@@ -512,10 +529,21 @@ public class LinkService extends Service {
                     alert("Note from the Mac", body);
                 }
                 case "clipboard" -> {
+                    if (!acceptClipboard()) break;
                     copy(body);
                     publish("Clipboard updated from the Mac", null);
                     alert("Clipboard from the Mac", "Clipboard updated");
                 }
+                case "clipboard_image" -> acceptClipboardImage(message.text("data"));
+                case "notify_reply" -> {
+                    boolean sent = NotifyMirror.reply(message.text("key"), message.text("body"));
+                    publish(sent ? "Sent a reply" : "That notification does not accept a reply", null);
+                }
+                case "notify_dismiss" -> {
+                    NotifyMirror.dismiss(message.text("key"));
+                    publish("Dismissed a notification", null);
+                }
+                case "dnd" -> applyMacDnd("1".equals(message.text("on")));
                 case "ring" -> {
                     publish("Mac is ringing this phone", null);
                     startRing("1".equals(message.text("flash")), !"0".equals(message.text("vibrate")));
@@ -540,7 +568,11 @@ public class LinkService extends Service {
                     String status = files.chunk(message.text("id"), longText(message, "offset"), message.text("data"));
                     if (status != null) publish(status, null);
                 }
-                case "file_end" -> publish(files.finish(message.text("id"), message.text("sha256")), null);
+                case "file_end" -> {
+                    String saved = files.finish(message.text("id"), message.text("sha256"));
+                    publish(saved, null);
+                    if (saved != null && saved.startsWith("Saved")) main.post(() -> files.openLast());
+                }
                 case "file_cancel" -> {
                     files.cancel(message.text("id"));
                     publish("File cancelled", null);
@@ -608,8 +640,8 @@ public class LinkService extends Service {
             try {
                 JsonObject payload = new JsonObject();
                 String text = body == null ? "" : body;
-                if ("clipboard".equals(kind) && Features.isEcho(lastEcho, text)) {
-                    publish("Skipped a clipboard echo", null);
+                if ("clipboard".equals(kind)) {
+                    sendClipboardNow(true);
                     return;
                 }
                 payload.addProperty("body", text);
@@ -631,6 +663,8 @@ public class LinkService extends Service {
                 JsonObject payload = new JsonObject();
                 payload.addProperty("title", safe(intent.getStringExtra(EXTRA_BODY)));
                 payload.addProperty("app", safe(intent.getStringExtra("app")));
+                payload.addProperty("key", safe(intent.getStringExtra("key")));
+                payload.addProperty("reply", safe(intent.getStringExtra("reply")));
                 payload.addProperty("body", safe(intent.getStringExtra("detail")));
                 writeEnvelope(Envelope.make("notify", "android", payload));
                 if ("1".equals(intent.getStringExtra("otp"))
@@ -654,28 +688,48 @@ public class LinkService extends Service {
     }
 
     private void sendFile(String source) {
+        sendFiles(source);
+    }
+
+    private void sendFiles(String source) {
+        fileCancel.set(false);
         new Thread(() -> {
             if (!paired || files == null) {
                 publish("Connect and pair before sending", null);
                 return;
             }
             try {
-                files.send(source, new FileBridge.Out() {
-                    @Override
-                    public void frame(String type, JsonObject payload) throws Exception {
-                        writeEnvelope(Envelope.make(type, "android", payload));
-                    }
-
-                    @Override
-                    public long have(String id) {
-                        return waitHave(id);
-                    }
-                });
+                files.sendMany(source, fileOut());
                 publish("Sent the file", null);
             } catch (Exception error) {
-                publish(error.getMessage() == null ? "Could not send the file" : error.getMessage(), null);
+                String message = error.getMessage() == null ? "Could not send the file" : error.getMessage();
+                publish(message, null);
             }
         }, "bridgelink-file").start();
+    }
+
+    private FileBridge.Out fileOut() {
+        return new FileBridge.Out() {
+            @Override
+            public void frame(String type, JsonObject payload) throws Exception {
+                writeEnvelope(Envelope.make(type, "android", payload));
+            }
+
+            @Override
+            public long have(String id) {
+                return waitHave(id);
+            }
+
+            @Override
+            public void progress(String name, int percent) {
+                publish("Sending " + name + " — " + percent + "%", null);
+            }
+
+            @Override
+            public boolean cancelled() {
+                return fileCancel.get();
+            }
+        };
     }
 
     private int lastBattery = -1;
@@ -692,7 +746,10 @@ public class LinkService extends Service {
             int percent = scale <= 0 ? level : (int) (level * 100f / scale);
             boolean charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING
                     || status == android.os.BatteryManager.BATTERY_STATUS_FULL;
-            if (!Features.batteryChanged(lastBattery, lastCharging, sawBattery, percent, charging)) return;
+            if (!Features.batteryChanged(lastBattery, lastCharging, sawBattery, percent, charging)) {
+                maybeSendDnd();
+                return;
+            }
             sawBattery = true;
             lastBattery = percent;
             lastCharging = charging;
@@ -704,6 +761,7 @@ public class LinkService extends Service {
                     payload.addProperty("charging", charging ? "1" : "0");
                     payload.addProperty("label", "phone");
                     writeEnvelope(Envelope.make("battery", "android", payload));
+                    maybeSendDnd();
                 } catch (Exception ignored) {
                 }
             });
@@ -748,8 +806,10 @@ public class LinkService extends Service {
             publish("Refused a link that is not http or https", null);
             return;
         }
+        boolean always = "1".equals(Prefs.open(this).getString("linksAlways", "0"));
         PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
-        if (power == null || !power.isInteractive()) {
+        boolean screenOn = power != null && power.isInteractive();
+        if (!StageRules.openLinkNow(screenOn, always)) {
             publish("Link from the Mac is waiting", null);
             alert("Link from the Mac", "The screen was off, so the link was not opened.");
             return;
@@ -784,6 +844,208 @@ public class LinkService extends Service {
     private void closeSocket() {
         Attempt current = attempt;
         if (current != null) current.close();
+    }
+
+    private void noteMacBattery(String levelText, boolean charging) {
+        int level;
+        try {
+            level = Integer.parseInt(levelText);
+        } catch (Exception error) {
+            publish("Mac battery " + levelText + "%", null);
+            return;
+        }
+        if (StageRules.fullBattery(level, macFullAlerted)) {
+            macFullAlerted = true;
+            alert("Mac is fully charged", "The Mac battery is at 100%.");
+        }
+        if (level < 100) macFullAlerted = false;
+        if (Features.lowBattery(level, charging, macLowAlerted)) {
+            macLowAlerted = true;
+            alert("Mac battery is low", "The Mac battery is at " + level + "%.");
+        }
+        if (level > 15 || charging) macLowAlerted = false;
+        publish("Mac battery " + level + "%", null);
+    }
+
+    private void maybeSendDnd() {
+        boolean dnd = manager().getCurrentInterruptionFilter() != NotificationManager.INTERRUPTION_FILTER_ALL;
+        if (sawDnd && dnd == lastDnd) return;
+        sawDnd = true;
+        lastDnd = dnd;
+        if (!Features.enabled(Prefs.open(this).getString("flags", ""), "dnd", false)) return;
+        outbox.submit(() -> {
+            if (!paired) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("on", dnd ? "1" : "0");
+                payload.addProperty("label", "phone");
+                writeEnvelope(Envelope.make("dnd", "android", payload));
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    private void applyMacDnd(boolean on) {
+        if (!Features.enabled(Prefs.open(this).getString("flags", ""), "dnd", false)) {
+            publish(on ? "Mac is in Do Not Disturb" : "Mac left Do Not Disturb", null);
+            return;
+        }
+        try {
+            if (manager().isNotificationPolicyAccessGranted()) {
+                manager().setInterruptionFilter(on
+                        ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                        : NotificationManager.INTERRUPTION_FILTER_ALL);
+            }
+        } catch (Exception ignored) {
+        }
+        publish(on ? "Mac is in Do Not Disturb" : "Mac left Do Not Disturb", null);
+    }
+
+    private boolean acceptClipboard() {
+        return Features.enabled(Prefs.open(this).getString("flags", ""), "clipboard", true);
+    }
+
+    private void watchClipboard() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard == null) return;
+        clipboard.addPrimaryClipChangedListener(() -> {
+            if (!paired) return;
+            if (!Features.enabled(Prefs.open(this).getString("flags", ""), "clipboard", false)) return;
+            sendClipboardNow(false);
+        });
+    }
+
+    private void sendClipboardNow(boolean manual) {
+        outbox.submit(() -> {
+            if (!paired) {
+                if (manual) publish("Connect and pair before sending", null);
+                return;
+            }
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.getPrimaryClip() == null) {
+                if (manual) publish("Clipboard was empty", null);
+                return;
+            }
+            ClipData clip = clipboard.getPrimaryClip();
+            CharSequence text = clip.getItemCount() > 0 ? clip.getItemAt(0).getText() : null;
+            String value = text == null ? "" : text.toString();
+            boolean image = clip.getItemCount() > 0 && clip.getItemAt(0).getUri() != null && value.isEmpty();
+            String kind = StageRules.clipKind(!value.isEmpty(), image, Features.looksSensitive(value));
+            if ("skip".equals(kind)) {
+                publish("Skipped sensitive clipboard", null);
+                return;
+            }
+            if ("text".equals(kind)) {
+                if (Features.isEcho(lastEcho, value)) {
+                    if (manual) publish("Skipped a clipboard echo", null);
+                    return;
+                }
+                try {
+                    JsonObject payload = new JsonObject();
+                    payload.addProperty("body", value);
+                    writeEnvelope(Envelope.make("clipboard", "android", payload));
+                    publish("Sent clipboard", null);
+                } catch (Exception error) {
+                    publish("Send failed. Try again.", null);
+                }
+                return;
+            }
+            if ("image".equals(kind)) {
+                sendClipboardImage(clip.getItemAt(0).getUri());
+                return;
+            }
+            if (manual) publish("Clipboard was empty", null);
+        });
+    }
+
+    private static byte[] readCap(java.io.InputStream in, int cap) throws java.io.IOException {
+        byte[] buffer = new byte[8192];
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int count;
+        while (out.size() <= cap && (count = in.read(buffer)) >= 0) {
+            if (count > 0) out.write(buffer, 0, count);
+        }
+        return out.toByteArray();
+    }
+
+    private void sendClipboardImage(Uri uri) {
+        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) {
+                publish("Could not read the clipboard image", null);
+                return;
+            }
+            byte[] raw = readCap(in, StageRules.IMAGE_CAP + 1);
+            if (!StageRules.imageFits(raw.length)) {
+                publish("That clipboard image is too big", null);
+                return;
+            }
+            String key = Features.echoKey(java.util.Base64.getEncoder().encodeToString(raw));
+            if (key.equals(lastEcho)) return;
+            lastEcho = key;
+            JsonObject payload = new JsonObject();
+            payload.addProperty("data", java.util.Base64.getEncoder().encodeToString(raw));
+            writeEnvelope(Envelope.make("clipboard_image", "android", payload));
+            publish("Sent a clipboard image", null);
+        } catch (Exception error) {
+            publish("Could not send the clipboard image", null);
+        }
+    }
+
+    private void acceptClipboardImage(String data) {
+        if (!acceptClipboard()) return;
+        byte[] raw;
+        try {
+            raw = java.util.Base64.getDecoder().decode(data == null ? "" : data);
+        } catch (IllegalArgumentException error) {
+            publish("Skipped a clipboard image", null);
+            return;
+        }
+        if (!StageRules.imageFits(raw.length)) {
+            publish("Skipped a clipboard image", null);
+            return;
+        }
+        try {
+            java.io.File dir = new java.io.File(getCacheDir(), "clips");
+            if (!dir.isDirectory() && !dir.mkdirs()) return;
+            java.io.File file = new java.io.File(dir, "clip.png");
+            java.nio.file.Files.write(file.toPath(), raw);
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(this, "app.bridgelink.android.files", file);
+            lastEcho = Features.echoKey(data);
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(ClipData.newUri(getContentResolver(), "BridgeLink", uri));
+            }
+            publish("Clipboard image updated", null);
+        } catch (Exception error) {
+            publish("Could not save the clipboard image", null);
+        }
+    }
+
+    private void sendOtp(String code) {
+        outbox.submit(() -> {
+            if (!paired || code == null || code.isEmpty()) return;
+            if (!Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("body", code);
+                writeEnvelope(Envelope.make("otp", "android", payload));
+                publish("Copied a code to the Mac", null);
+            } catch (Exception error) {
+                publish("Could not copy the code", null);
+            }
+        });
+    }
+
+    private void sendDismiss(String key) {
+        outbox.submit(() -> {
+            if (!paired || key == null || key.isEmpty()) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("key", key);
+                writeEnvelope(Envelope.make("notify_dismiss", "android", payload));
+            } catch (Exception ignored) {
+            }
+        });
     }
 
     private void copy(String text) {
@@ -824,7 +1086,7 @@ public class LinkService extends Service {
         Intent stop = new Intent(this, LinkService.class);
         stop.setAction(ACTION_STOP_RING);
         PendingIntent pending = PendingIntent.getService(this, 2, stop, PendingIntent.FLAG_IMMUTABLE);
-        Notification ring = new Notification.Builder(this, CHANNEL)
+        Notification ring = new Notification.Builder(this, RING_CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle("BridgeLink is ringing")
                 .setContentText("The Mac asked this phone to ring")

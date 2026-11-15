@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Transfers;
 
 /** Reads and writes files off the UI thread. The caller sends the frames. */
@@ -33,10 +34,18 @@ public final class FileBridge {
         default long have(String id) {
             return 0;
         }
+
+        default void progress(String name, int percent) {
+        }
+
+        default boolean cancelled() {
+            return false;
+        }
     }
 
     private final Context context;
     private final Map<String, Slot> incoming = new HashMap<>();
+    private Uri lastUri;
 
     public FileBridge(Context context) {
         this.context = context.getApplicationContext();
@@ -138,12 +147,24 @@ public final class FileBridge {
         slot.file.delete();
     }
 
+    public void sendMany(String joined, Out out) throws Exception {
+        if (joined == null || joined.isBlank()) throw new IllegalArgumentException("No file");
+        int sent = 0;
+        for (String part : joined.split("\n")) {
+            if (part == null || part.isBlank()) continue;
+            if (out.cancelled()) throw new IllegalArgumentException("File send cancelled.");
+            send(part.trim(), out);
+            sent++;
+        }
+        if (sent == 0) throw new IllegalArgumentException("No file");
+    }
+
     public void send(String source, Out out) throws Exception {
         if (source == null || source.isEmpty()) throw new IllegalArgumentException("No file");
         Stream opened = open(source);
         if (opened.size > Transfers.MAX_BYTES) {
             opened.close();
-            throw new IllegalArgumentException("That file is over 100 MB.");
+            throw new IllegalArgumentException("That file is over 4 GB.");
         }
         String id = stableId(source, opened.size);
         try (InputStream in = opened.stream) {
@@ -166,8 +187,15 @@ public final class FileBridge {
                 digest.update(buffer, 0, count);
                 offset += count;
             }
+            int lastPercent = -1;
             int count;
             while ((count = in.read(buffer)) >= 0) {
+                if (out.cancelled()) {
+                    JsonObject cancel = new JsonObject();
+                    cancel.addProperty("id", id);
+                    out.frame("file_cancel", cancel);
+                    throw new IllegalArgumentException("File send cancelled.");
+                }
                 if (count == 0) continue;
                 digest.update(buffer, 0, count);
                 JsonObject chunk = new JsonObject();
@@ -177,6 +205,11 @@ public final class FileBridge {
                         count == buffer.length ? buffer : java.util.Arrays.copyOf(buffer, count)));
                 out.frame("file_chunk", chunk);
                 offset += count;
+                int percent = StageRules.progressPercent(offset, opened.size);
+                if (percent == 100 || percent >= lastPercent + 10) {
+                    lastPercent = percent;
+                    out.progress(opened.name, percent);
+                }
             }
             if (offset != opened.size) throw new IllegalArgumentException("The file changed while it was sending.");
             JsonObject end = new JsonObject();
@@ -238,7 +271,7 @@ public final class FileBridge {
                 total += count;
                 if (total > Transfers.MAX_BYTES) {
                     out.delete();
-                    throw new IllegalArgumentException("That file is over 100 MB.");
+                    throw new IllegalArgumentException("That file is over 4 GB.");
                 }
                 if (count > 0) output.write(buffer, 0, count);
             }
@@ -265,6 +298,7 @@ public final class FileBridge {
             values.clear();
             values.put(MediaStore.Downloads.IS_PENDING, 0);
             context.getContentResolver().update(uri, values, null, null);
+            lastUri = uri;
             return "Saved " + name + " in Downloads/BridgeLink";
         }
         File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
@@ -278,6 +312,17 @@ public final class FileBridge {
             }
         }
         return "Saved " + name;
+    }
+
+    public void openLast() {
+        if (lastUri == null) return;
+        try {
+            android.content.Intent view = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+            view.setData(lastUri);
+            view.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            context.startActivity(view);
+        } catch (Exception ignored) {
+        }
     }
 
     private static String stableId(String source, long size) {

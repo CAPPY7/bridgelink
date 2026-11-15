@@ -15,7 +15,7 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
     PageScroll {
         Text("Send", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Text, a link, a file, or the clipboard goes to the paired Mac.",
+            "Text, a link, many files, or the clipboard goes to the paired Mac. A folder is sent as a zip. Files can be up to 4 GB.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (!model.status.startsWith("Paired")) {
@@ -40,8 +40,9 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
             singleLine = true,
         )
         BigButton("Open link on Mac", "send-link", actions::sendLink, tonal = true)
-        BigButton("Send a file", "send-file", actions::pickFile, tonal = true)
+        BigButton("Send files", "send-file", actions::pickFile, tonal = true)
         BigButton("Send clipboard", "clipboard", actions::sendClipboard, tonal = true)
+        BigButton("Cancel send", "cancel-file", actions::cancelFile, tonal = true)
     }
 }
 
@@ -61,6 +62,14 @@ fun NotificationsPage(model: PhoneModel, actions: PhoneActions) {
             }
             BigButton("Show me the steps", "restricted", actions::restrictedHelp, tonal = true)
         } else {
+            OutlinedTextField(
+                value = model.blockApp,
+                onValueChange = { model.blockApp = it },
+                modifier = Modifier.fillMaxWidth().testTag("block-app"),
+                label = { Text("App package to keep off the Mac") },
+                singleLine = true,
+            )
+            BigButton("Block this app", "block-app", actions::blockNotify, tonal = true)
             EmptyState(
                 Icons.Filled.Notifications,
                 "No mirrored list is kept here.",
@@ -75,10 +84,11 @@ fun FilesPage(model: PhoneModel, actions: PhoneActions) {
     PageScroll {
         Text("Files", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Pick a file and it is sent to Downloads/BridgeLink on the Mac.",
+            "Pick files and they are sent to Downloads/BridgeLink on the Mac. Drop a folder on the Mac to send it as a zip.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        BigButton("Send a file", "files-send", actions::pickFile)
+        BigButton("Send files", "files-send", actions::pickFile)
+        BigButton("Cancel send", "files-cancel", actions::cancelFile, tonal = true)
         val files = model.lines.filter { line ->
             val text = line.lowercase()
             text.contains("file") || text.contains("download")

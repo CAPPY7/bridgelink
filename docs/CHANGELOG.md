@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.0
+
+- Files can be up to 4 GB. They still stream in small pieces, can resume, and can be cancelled. A folder is sent as a zip. Several files can be sent together. A received file opens when it is saved.
+- The Android share sheet sends every file you picked, not only the first. On the Mac, drop files on the window, the menu-bar icon, or the drop zone. Finder has Services, Send to phone. Share has BridgeLink.
+- Notification banners can be dismissed both ways. If the app allows a reply, the Mac can send it. An app can be blocked. Do Not Disturb can stay quiet on the other side.
+- A low battery and a full battery are announced on the other device.
+- Find my phone rings on the alarm stream, so the mute switch does not hide it. Either side can stop it.
+- A code in a notification or an SMS is copied on the Mac and cleared after 60 seconds. The code is not written into the activity list.
+- Links open both ways. You can choose to open them right away.
+- Clipboard sync can stay on. Passwords and card numbers are skipped. Pictures on the clipboard are sent when they are small enough.
+- Saved Macs and phones can be renamed. If the Mac key changed, the phone shows a button to forget it and scan again.
+- The link stays TLS. New messages use the same encrypted connection.
+
 ## 0.9.0
 
 - The phone uses a new screen: Home, Send, Notifications, Messages, Files, Remote, Mirror, and Settings.
