@@ -168,7 +168,7 @@ final class Laser {
 }
 
 final class SharedBox {
-    private var incoming: [String: Partial] = []
+    private var incoming: [String: Partial] = [:]
 
     func root() -> URL {
         let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("BridgeLink Shared", isDirectory: true)
@@ -200,7 +200,7 @@ final class SharedBox {
             return "Refused a shared file."
         }
         if let handle = try? FileHandle(forWritingTo: slot.url) {
-            _ = try? handle.seekToEnd()
+            handle.seekToEndOfFile()
             try? handle.write(contentsOf: raw)
             try? handle.close()
         }
@@ -266,7 +266,11 @@ final class SharedBox {
     }
 
     private func walk(_ dir: URL, _ prefix: String, _ items: inout [StageFive.Entry]) {
-        let kids = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey], options: [.skipsHiddenFiles])) ?? []
+        let kids = (try? FileManager.default.contentsOfDirectory(
+            at: dir,
+            includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey],
+            options: .skipsHiddenFiles
+        )) ?? []
         for kid in kids {
             if items.count >= StageFive.folderCap { return }
             let name = kid.lastPathComponent
