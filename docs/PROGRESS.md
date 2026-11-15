@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass. C7 is done. Next is H1: stopping the screen mirror must not crash the phone.
+Fix-all pass. H1 is done. Next is H2: video frames must not pile up without limit.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -38,6 +38,7 @@ Fix-all pass. C7 is done. Next is H1: stopping the screen mirror must not crash 
 - C5. Each phone has its own away secret. Forgetting that phone deletes the secret.
 - C6 partly. Every feature message is named in a test and round-trips. The emulator still only sends one real note.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
+- H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

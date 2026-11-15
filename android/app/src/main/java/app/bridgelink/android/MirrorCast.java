@@ -74,57 +74,60 @@ public final class MirrorCast {
         Thread thread = drain;
         drain = null;
         if (thread != null) thread.interrupt();
-        if (display != null) {
-            display.release();
-            display = null;
-        }
-        if (surface != null) {
-            surface.release();
-            surface = null;
-        }
-        if (codec != null) {
-            try {
-                codec.stop();
-            } catch (Exception ignored) {
+        MediaCodec dying = codec;
+        android.hardware.display.VirtualDisplay dyingDisplay = display;
+        Surface dyingSurface = surface;
+        MediaProjection dyingProjection = projection;
+        codec = null;
+        display = null;
+        surface = null;
+        projection = null;
+        MirrorStop.stopEncoder(thread, MirrorStop.JOIN_MS, () -> {
+            if (dyingDisplay != null) dyingDisplay.release();
+            if (dyingSurface != null) dyingSurface.release();
+            if (dying != null) {
+                try {
+                    dying.stop();
+                } catch (Exception ignored) {
+                }
+                dying.release();
             }
-            codec.release();
-            codec = null;
-        }
-        if (projection != null) {
-            projection.stop();
-            projection = null;
-        }
+            if (dyingProjection != null) dyingProjection.stop();
+        });
+        drain = null;
     }
 
     private void drain() {
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean sentSets = false;
-        while (running && codec != null) {
+        while (running) {
+            MediaCodec live = codec;
+            if (live == null) break;
             int index;
             try {
-                index = codec.dequeueOutputBuffer(info, 20_000);
+                index = live.dequeueOutputBuffer(info, 20_000);
+                if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED && !sentSets) {
+                    sentSets = sendSets(live.getOutputFormat());
+                }
+                if (index < 0) continue;
+                ByteBuffer buffer = live.getOutputBuffer(index);
+                if (buffer != null && info.size > 0) {
+                    byte[] data = new byte[info.size];
+                    buffer.position(info.offset);
+                    buffer.limit(info.offset + info.size);
+                    buffer.get(data);
+                    boolean config = (info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0;
+                    if (config) {
+                        sentSets = sendSets(data) || sentSets;
+                    } else {
+                        int flags = (info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 ? 1 : 0;
+                        sendPieces(1, flags, data);
+                    }
+                }
+                live.releaseOutputBuffer(index, false);
             } catch (Exception error) {
                 break;
             }
-            if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED && !sentSets) {
-                sentSets = sendSets(codec.getOutputFormat());
-            }
-            if (index < 0) continue;
-            ByteBuffer buffer = codec.getOutputBuffer(index);
-            if (buffer != null && info.size > 0) {
-                byte[] data = new byte[info.size];
-                buffer.position(info.offset);
-                buffer.limit(info.offset + info.size);
-                buffer.get(data);
-                boolean config = (info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0;
-                if (config) {
-                    sentSets = sendSets(data) || sentSets;
-                } else {
-                    int flags = (info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 ? 1 : 0;
-                    sendPieces(1, flags, data);
-                }
-            }
-            codec.releaseOutputBuffer(index, false);
         }
     }
 
