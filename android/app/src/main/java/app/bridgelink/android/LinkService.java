@@ -961,14 +961,20 @@ public class LinkService extends Service {
         void close() {
             closed = true;
             FrameChannel current = channel;
-            if (current != null) current.close();
+            if (current != null) {
+                current.close();
+                return;
+            }
             SSLSocket open = socket;
-            if (open != null) {
+            if (open == null) return;
+            Thread closer = new Thread(() -> {
                 try {
                     open.close();
                 } catch (Exception ignored) {
                 }
-            }
+            }, "bridgelink-close");
+            closer.setDaemon(true);
+            closer.start();
         }
     }
 }

@@ -67,15 +67,20 @@ public final class FrameChannel implements AutoCloseable {
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {
-            drain(new IOException("not connected"));
             return;
         }
-        try {
-            socket.close();
-        } catch (IOException ignored) {
-        }
-        writer.interrupt();
-        drain(new IOException("not connected"));
+        // SSLSocket.close writes a close alert. That is network I/O, so it must
+        // not run on the thread that asked to close (often the main thread).
+        Thread closer = new Thread(() -> {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+            }
+            writer.interrupt();
+            drain(new IOException("not connected"));
+        }, "bridgelink-close");
+        closer.setDaemon(true);
+        closer.start();
     }
 
     private void drain(IOException error) {
