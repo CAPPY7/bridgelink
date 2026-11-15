@@ -30,20 +30,79 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 adb shell am start -W -n app.bridgelink.android/.MainActivity
 adb uninstall app.bridgelink.android
 
+prepare_log() {
+  adb logcat -G 32M || true
+  adb logcat -c || true
+}
+
 run_tests() {
+  prepare_log
   ./gradlew connectedDebugAndroidTest --no-daemon
 }
 
 pull_shots() {
   mkdir -p ../docs/screenshots
-  adb shell run-as app.bridgelink.android ls files/shots > /tmp/bl-shot-names.txt 2>/dev/null || true
-  while IFS= read -r name; do
-    name=$(printf '%s' "$name" | tr -d '\r')
-    if [ -z "$name" ]; then
-      continue
+  echo "---- phone screenshots ----"
+  local names="home send notifications messages files remote mirror settings"
+  for name in $names; do
+    adb pull "/data/local/tmp/android-${name}.png" "../docs/screenshots/android-${name}.png" \
+      && echo "tmp $name" || echo "tmp missing $name"
+  done
+  find app/build/outputs -name 'android-*.png' -print || true
+  find app/build/outputs -name 'android-*.png' -exec cp -n {} ../docs/screenshots/ \; || true
+  adb shell ls -la /sdcard/Android/media/app.bridgelink.android /sdcard/Android/media/app.bridgelink.android/additional_test_output /data/local/tmp || true
+  adb pull /data/local/tmp/blshot-log.txt /tmp/blshot-log.txt || true
+  if [ ! -s /tmp/blshot-log.txt ]; then
+    adb logcat -d -s BLSHOT:I > /tmp/blshot-log.txt || true
+  fi
+  echo "logcat lines $(wc -l < /tmp/blshot-log.txt)"
+  python3 - << 'PY'
+import base64, pathlib, re, sys
+log = pathlib.Path("/tmp/blshot-log.txt").read_text(errors="replace")
+parts = {}
+ends = {}
+for line in log.splitlines():
+    if "BLSHOT" not in line:
+        continue
+    end = re.search(r"(android-[a-z]+)#END#(\d+)", line)
+    if end:
+        ends[end.group(1)] = int(end.group(2))
+        continue
+    chunk = re.search(r"(android-[a-z]+)#(\d+)#([A-Za-z0-9+/=]+)", line)
+    if chunk:
+        parts.setdefault(chunk.group(1), {})[int(chunk.group(2))] = chunk.group(3)
+out = pathlib.Path("../docs/screenshots")
+wrote = []
+for name, expected in sorted(ends.items()):
+    chunks = parts.get(name, {})
+    if any(i not in chunks for i in range(expected)):
+        print("missing chunks", name, "have", len(chunks), "want", expected)
+        continue
+    png = base64.b64decode("".join(chunks[i] for i in range(expected)))
+    dest = out / f"{name}.png"
+    if dest.exists() and dest.stat().st_size > 1000 and open(dest, "rb").read(8).startswith(b"\x89PNG"):
+        wrote.append(name + " (kept)")
+        continue
+    if png.startswith(b"\x89PNG") and len(png) > 1000:
+        dest.write_bytes(png)
+        wrote.append(name)
+print("from log:", ", ".join(wrote) or "none")
+PY
+  local count=0
+  for name in $names; do
+    local f="../docs/screenshots/android-${name}.png"
+    if [ -f "$f" ] && [ "$(wc -c < "$f")" -gt 1000 ]; then
+      count=$((count + 1))
+    else
+      echo "bad or missing $f"
+      rm -f "$f"
     fi
-    adb exec-out run-as app.bridgelink.android cat "files/shots/$name" > "../docs/screenshots/$name" || true
-  done < /tmp/bl-shot-names.txt
+  done
+  echo "phone screenshots: $count"
+  if [ "$count" -ne 8 ]; then
+    echo "Need 8 phone screenshots"
+    return 1
+  fi
 }
 
 if ! run_tests; then

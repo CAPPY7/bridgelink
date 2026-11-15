@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- The phone uses a new screen: Home, Send, Notifications, Messages, Files, Remote, Mirror, and Settings.
+- The Mac app has a menu-bar panel and a window with a sidebar. Drop a file on either one.
+- Light and dark follow the system. Features that are not built yet say so, instead of pretending to work.
+
 ## 0.8.0
 
 - The Mac app is a disk image with an icon. The first-open steps are correct for macOS 13, 14, and 15.

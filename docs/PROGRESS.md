@@ -6,11 +6,11 @@ Release: https://github.com/CAPPY7/bridgelink/releases/tag/v0.8.0
 
 ## Done in code
 - Stage 1 bug fixes are in v0.8.0.
-- Stage 2 screen work is in progress on top of that. The phone screen is Compose. The Mac app has a menu panel and a sidebar window. The link code is unchanged.
-- Screenshots are drawn by the Mac build and by the emulator test, then copied into docs/screenshots.
+- Stage 2 screen work is in the tree at version 0.9.0. The phone screen is Compose. The Mac app has a menu panel and a sidebar window. The link code is unchanged.
+- The emulator test writes each phone screen to the log so CI can save it. The Mac build draws each Mac screen.
 
 ## Next exact step
-Finish Stage 2. Keep CI green, put the screenshots in the repo, tag v0.9.0.
+Wait until CI is green, commit the pictures into docs/screenshots, show them in the README, then tag v0.9.0.
 
 ## Open problems
 - LinkService.java is still longer than 400 lines.
