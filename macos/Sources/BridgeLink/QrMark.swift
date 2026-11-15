@@ -3,6 +3,7 @@ import BridgeLinkCore
 import CoreImage
 import SwiftUI
 
+@MainActor
 func pairingText(_ model: LinkModel) -> String {
     let host = model.chosenAddress
     let usable = host.isEmpty || host == "No Wi-Fi address yet" ? "" : host
@@ -15,6 +16,7 @@ func pairingText(_ model: LinkModel) -> String {
     )
 }
 
+@MainActor
 func qrCode(_ text: String) -> NSImage? {
     guard text.contains("host="), !text.contains("host=&"),
           let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }

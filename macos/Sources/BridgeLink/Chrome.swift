@@ -59,6 +59,7 @@ struct CardBox<Content: View>: View {
 
 extension View {
     /// A file dropped on the window or the menu panel is sent to the phone.
+    @MainActor
     func bridgeDrop(_ model: LinkModel) -> some View {
         onDrop(of: [.fileURL], isTargeted: nil) { providers in
             for provider in providers {
@@ -78,11 +79,13 @@ extension View {
     }
 }
 
+@MainActor
 func phoneTitle(_ phase: Phase) -> String {
     if case .paired(let name) = phase { return name }
     return "No phone"
 }
 
+@MainActor
 func statusLine(_ model: LinkModel) -> String {
     switch model.phase {
     case .idle: return "Starting…"
