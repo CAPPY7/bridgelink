@@ -45,3 +45,4 @@ H15. A release could ship an ad-hoc Mac app and skip version checks. Fixed: the 
 H16. Partly fixed. First-run setup, Check for update, and Reset BridgeLink are in both apps. Check for update opens the release page. The Sparkle framework is not linked, because that needs an EdDSA secret that is not here. It does not install the update by itself.
 M1. The phone kept dialing an old Mac address. Fixed: after two misses it looks for BridgeLink on the Wi-Fi and accepts only the Mac whose key matches the one you saved.
 M2. Tapping Connect replaced the list of Mac addresses with one address. Fixed: the typed address is added, and the other saved addresses stay.
+M3. A second phone that was still pairing silently dropped the first waiting connection. Fixed: each waiting connection stays until it pairs or times out.

@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass. M2 is done. Next is M3: a second waiting connection must not drop the first one.
+Fix-all pass. M3 is done. Next is M4: the phone must be able to stop the Mac ringing.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -56,6 +56,7 @@ Fix-all pass. M2 is done. Next is M3: a second waiting connection must not drop 
 - H16 partly. First-run, Check for update, and Reset are in. Sparkle is not linked, so the update opens the release page.
 - M1. After two misses the phone looks for the saved Mac on Wi-Fi.
 - M2. Connect adds an address. It does not throw away the others.
+- M3. A second waiting connection does not drop the first one.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

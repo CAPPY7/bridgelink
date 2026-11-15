@@ -120,6 +120,8 @@ final class LinkModel: ObservableObject {
     var live: NWConnection?
     var pending: NWConnection?
     var pendingID = UUID()
+    var pendingLinks: [UUID: NWConnection] = [:]
+    var pendingSet = PendingSet()
     var liveID = UUID()
     var replyOnRelay = false
     var relayTrusted = false

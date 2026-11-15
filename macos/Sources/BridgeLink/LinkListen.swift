@@ -148,9 +148,11 @@ extension LinkModel {
         pendingCount += 1
         pendingID = id
         pending = connection
+        pendingLinks[id] = connection
+        pendingSet.add(id.uuidString)
         connection.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
-                guard let self, self.pendingID == id, self.liveID != id else { return }
+                guard let self, self.pendingSet.contains(id.uuidString), self.liveID != id else { return }
                 if case .failed = state {
                     self.finishPending(id)
                     self.note("A connection failed before it paired. The current phone stays linked.")
@@ -161,7 +163,7 @@ extension LinkModel {
         receive(connection, id: id, buffer: FrameBuffer())
         queue.asyncAfter(deadline: .now() + 10) { [weak self] in
             Task { @MainActor in
-                guard let self, self.pendingID == id, self.liveID != id else { return }
+                guard let self, self.pendingSet.contains(id.uuidString), self.liveID != id else { return }
                 if self.sasConnectionID == id { return }
                 connection.cancel()
                 self.finishPending(id)
@@ -180,8 +182,13 @@ extension LinkModel {
     }
 
     func finishPending(_ id: UUID) {
-        if pendingID == id { pending = nil }
-        pendingCount = max(0, pendingCount - 1)
+        pendingLinks.removeValue(forKey: id)
+        if pendingSet.remove(id.uuidString) {
+            pendingCount = pendingSet.count
+        }
+        if pendingID == id {
+            pending = pendingLinks.values.first
+        }
     }
 
     func receive(_ connection: NWConnection, id: UUID, buffer: FrameBuffer) {
@@ -203,7 +210,7 @@ extension LinkModel {
             let jsons = lanes.json
             Task { @MainActor in
                 guard let self else { return }
-                if self.liveID != id && self.pendingID != id { return }
+                if self.liveID != id && !self.pendingSet.contains(id.uuidString) { return }
                 let stillPending = self.liveID != id
                 if failed {
                     connection.cancel()
@@ -214,7 +221,7 @@ extension LinkModel {
                     self.handle(message, connection: connection, id: id, pending: stillPending)
                 }
                 if isComplete || error != nil {
-                    if self.pendingID == id && self.liveID != id { self.pending = nil }
+                    if self.pendingSet.contains(id.uuidString) && self.liveID != id { self.finishPending(id) }
                     if self.liveID == id {
                         self.live = nil
                         self.phase = .listening

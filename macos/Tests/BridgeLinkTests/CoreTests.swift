@@ -3,6 +3,15 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testASecondPendingConnectionStays() {
+        var set = PendingSet()
+        set.add("one")
+        set.add("two")
+        XCTAssertTrue(set.contains("one"))
+        XCTAssertTrue(set.contains("two"))
+        XCTAssertEqual(set.count, 2)
+    }
+
     func testASecondPhoneDoesNotReplaceTheFirst() {
         XCTAssertTrue(SecondPhone.allow("", "b", false))
         XCTAssertTrue(SecondPhone.allow("a", "a", true))
