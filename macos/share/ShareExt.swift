@@ -1,16 +1,5 @@
 import AppKit
-import Darwin
 import Foundation
-
-@_silgen_name("NSExtensionMain")
-func NSExtensionMain(_ argc: Int32, _ argv: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Int32
-
-@main
-struct ShareMain {
-    static func main() {
-        exit(NSExtensionMain(CommandLine.argc, CommandLine.unsafeArgv))
-    }
-}
 
 /// Share menu item. It only writes file paths. The main app sends them.
 @objc(ShareExt)
