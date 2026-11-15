@@ -1,14 +1,14 @@
 # Progress
 
-v0.7.0 is the bug-fix release. It is not tagged until CI on that commit is green.
+v0.7.0 is tagged on b6d3588. CI was green, including the emulator: https://github.com/CAPPY7/bridgelink/actions/runs/43677930845
 
 ## Done in code
-- Pairing with commit-then-reveal, emulator test, signed v0.4.0 and v0.6.0.
+- Pairing with commit-then-reveal, emulator test, signed v0.4.0, v0.6.0, and v0.7.0.
 - Files both ways, resume, links, share sheet, Quick Settings tile, menu-bar drop, find, clipboard echo, battery, notification and OTP hooks.
-- v0.7.0: connection threads, non-blocking close, typed link errors, background-start queue, notification privacy, restricted-settings help, dead helper removal, feature matrix gate.
+- v0.7.0: connection threads, close off the main thread, 20 second write deadline, typed link errors, background-start queue, notification privacy, restricted-settings help, dead helper removal, feature matrix gate.
 
 ## Next exact step
-Wait for CI on the v0.7.0 commit. If it is green, tag v0.7.0. Then start Stage 2: Kotlin Compose shell, light and dark theme, adaptive icon, Mac icon. Do not mark any feature Done until the owner replies "worked".
+Stage 2. Rebuild the Android UI in Kotlin and Jetpack Compose with Material 3, light and dark mode, an adaptive icon, and a Mac icon. Keep the service and protocol. Do not mark any feature Done until the owner replies "worked".
 
 ## Open problems
 - Apple Developer ID is not decided. The Mac app stays ad-hoc signed until the owner answers. Permissions can reset after each update.
