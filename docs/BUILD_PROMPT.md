@@ -1,3 +1,5 @@
+See docs/FIX_ALL_PROMPT.md for the v1.0.0 fix-all pass.
+
 =====================================================================
 BRIDGELINK – MASTER BUILD PROMPT (v2)
 Paste ALL of this to the bot that builds BridgeLink.
