@@ -88,6 +88,7 @@ final class LinkModel: ObservableObject {
     @Published var ruleThen = "alert"
     @Published var ruleExtra = ""
     @Published var trackpadOn = false
+    var pointerExplained = false
     var batteryAuto = false
     let sharedBox = SharedBox()
     var beacon: LeaveBeacon?

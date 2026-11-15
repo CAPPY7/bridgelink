@@ -314,17 +314,18 @@ extension LinkModel {
     }
 
     func explainPointer() {
-        let alert = NSAlert()
-        alert.messageText = "Allow the phone to move the pointer"
-        alert.informativeText = StageFive.pointerSteps
-        alert.addButton(withTitle: "Open Accessibility")
-        alert.addButton(withTitle: "Not now")
-        if alert.runModal() == .alertFirstButtonReturn {
-            MacInput.prompt()
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                NSWorkspace.shared.open(url)
-            }
+        pointerExplained = true
+        note("Allow BridgeLink under Accessibility so the phone can move the pointer.")
+        MacInput.prompt()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
         }
+    }
+
+    private func notePointerOnce() {
+        guard PointerGate.shouldAlert(pointerExplained, MacInput.trusted()) else { return }
+        pointerExplained = true
+        note("Allow BridgeLink under Accessibility. The pointer waits until you allow it. Open the steps from the window when you want them.")
     }
 
     func setTrackpad(_ on: Bool) {
@@ -333,7 +334,7 @@ extension LinkModel {
         trackpadOn = on
         send(type: "input", payload: ["on": on ? "1" : "0"], on: live)
         note(on ? "Phone trackpad is on" : "Phone trackpad is off")
-        if on && !MacInput.trusted() { explainPointer() }
+        if on && !MacInput.trusted() { notePointerOnce() }
     }
 
     func sendSms() {
@@ -587,7 +588,7 @@ extension LinkModel {
             let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
             UserDefaults.standard.set(StageRules.setFlag(flags, "input", trackpadOn), forKey: "flags")
             note(trackpadOn ? "Phone trackpad is on" : "Phone trackpad is off")
-            if trackpadOn && !MacInput.trusted() { explainPointer() }
+            if trackpadOn && !MacInput.trusted() { notePointerOnce() }
             return true
         case "pointer":
             let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
@@ -595,13 +596,16 @@ extension LinkModel {
                 note("Phone trackpad is off")
                 return true
             }
-            let line = MacInput.perform(
+            if !MacInput.trusted() {
+                notePointerOnce()
+                return true
+            }
+            _ = MacInput.perform(
                 kind: envelope.text("kind"),
                 x: Int(envelope.text("x")) ?? 0,
                 y: Int(envelope.text("y")) ?? 0,
                 text: envelope.text("text")
             )
-            if line.contains("Accessibility") { explainPointer() }
             return true
         case "wifi":
             fireAuto("home_wifi", envelope.text("ssid"))

@@ -3,6 +3,12 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testPointerAlertShowsOnce() {
+        XCTAssertTrue(PointerGate.shouldAlert(false, false))
+        XCTAssertFalse(PointerGate.shouldAlert(true, false))
+        XCTAssertFalse(PointerGate.shouldAlert(false, true))
+    }
+
     func testPictureLaneSendsBytesToTheDecoderNotTheUi() {
         let items = [
             Incoming(json: Data([1]), binary: nil),
