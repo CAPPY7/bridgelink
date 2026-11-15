@@ -1,6 +1,6 @@
 # Progress
 
-v0.12.0 is the Stage 5 release. The code CI must be green before this tag is trusted.
+v0.12.0 is the Stage 5 release. The code CI was green: https://github.com/CAPPY7/bridgelink/actions/runs/43704475077
 
 ## Done in code
 - Stage 1 bug fixes are in v0.8.0.
