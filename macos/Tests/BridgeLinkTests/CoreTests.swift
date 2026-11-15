@@ -3,6 +3,13 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testMacLocksAfterTheLinkIsGone() {
+        XCTAssertFalse(MacLeave.shouldLock(true, false, false, 1000, 30_000))
+        XCTAssertTrue(MacLeave.shouldLock(true, false, false, 30_000, 30_000))
+        XCTAssertFalse(MacLeave.shouldLock(true, false, true, 60_000, 30_000))
+        XCTAssertFalse(MacLeave.shouldLock(false, false, false, 60_000, 30_000))
+    }
+
     func testMirroringKeepsOtherSettings() {
         let flags = MirrorFlags.apply("folder=1,input=1,auto=1", true)
         XCTAssertTrue(flags.contains("folder=1"))

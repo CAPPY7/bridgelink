@@ -68,6 +68,34 @@ extension LinkModel {
         ClipFile.save(clips)
     }
 
+    func armLeaveLock() {
+        guard lockOn, !atDesk else { return }
+        if linkGoneAt == nil { linkGoneAt = Date() }
+        leaveTimer?.invalidate()
+        leaveTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tickLeaveLock() }
+        }
+    }
+
+    func tickLeaveLock() {
+        guard let linkGoneAt else { return }
+        let gone = Int64(Date().timeIntervalSince(linkGoneAt) * 1000)
+        let delay = Int64(StageFour.delaySeconds(lockDelay)) * 1000
+        let linkUp = live != nil || away?.isLive == true
+        if !MacLeave.shouldLock(lockOn, atDesk, linkUp, gone, delay) {
+            if linkUp || !lockOn || atDesk { clearLeaveLock() }
+            return
+        }
+        clearLeaveLock()
+        note(MacLock.lock())
+    }
+
+    func clearLeaveLock() {
+        leaveTimer?.invalidate()
+        leaveTimer = nil
+        linkGoneAt = nil
+    }
+
     func useClip(_ id: String) {
         guard let clip = clips.first(where: { $0.id == id }) else { return }
         NSPasteboard.general.clearContents()

@@ -35,3 +35,4 @@ H5. Asking Music or Spotify froze the Mac, and it asked even when nobody was loo
 H6. Every incoming frame, including video, was handled on the Mac's main thread, so the window stuttered. Fixed: frames are split on the network thread. Pictures decode on their own queue. Only text and the window update run on the main thread.
 H7. Turning the phone trackpad on without Accessibility stacked a blocking alert for every move. Fixed: one quiet note per session, and pointer moves are ignored until Accessibility is on.
 H8. Turning notification mirroring on replaced every other switch. Fixed: only the notify and otp switches change. Folder, trackpad, and automations stay as they were.
+H9. The phone could not lock the Mac after you walked away, because the Wi-Fi link was already gone. Fixed: the Mac itself locks after the link has been gone for the delay you set. At the desk skips it. The Mac still never unlocks.

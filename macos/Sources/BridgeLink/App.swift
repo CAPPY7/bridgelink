@@ -92,6 +92,8 @@ final class LinkModel: ObservableObject {
     var batteryAuto = false
     let sharedBox = SharedBox()
     var beacon: LeaveBeacon?
+    var linkGoneAt: Date?
+    var leaveTimer: Timer?
     var lastMacNow = ""
     let fileCancel = CancelFlag()
     var phoneLowAlerted = false

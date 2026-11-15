@@ -293,6 +293,7 @@ extension LinkModel {
         away?.stop()
         replyOnRelay = false
         phase = .paired(name)
+        clearLeaveLock()
         send(type: "paired", payload: ["token": token, "deviceId": deviceId], on: connection)
         lastRx = Date()
         note("Paired with \(name)")
