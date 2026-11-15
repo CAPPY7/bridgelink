@@ -234,7 +234,8 @@ final class LinkModel: ObservableObject {
 
     func setMirror(_ on: Bool) {
         mirrorOn = on
-        UserDefaults.standard.set(on ? "notify=1,otp=1" : "notify=0,otp=0", forKey: "flags")
+        let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
+        UserDefaults.standard.set(MirrorFlags.apply(flags, on), forKey: "flags")
     }
 
     func setShowNotificationText(_ on: Bool) {

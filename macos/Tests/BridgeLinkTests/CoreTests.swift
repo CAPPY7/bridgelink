@@ -3,6 +3,15 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testMirroringKeepsOtherSettings() {
+        let flags = MirrorFlags.apply("folder=1,input=1,auto=1", true)
+        XCTAssertTrue(flags.contains("folder=1"))
+        XCTAssertTrue(flags.contains("input=1"))
+        XCTAssertTrue(flags.contains("auto=1"))
+        XCTAssertTrue(flags.contains("notify=1"))
+        XCTAssertTrue(flags.contains("otp=1"))
+    }
+
     func testPointerAlertShowsOnce() {
         XCTAssertTrue(PointerGate.shouldAlert(false, false))
         XCTAssertFalse(PointerGate.shouldAlert(true, false))
