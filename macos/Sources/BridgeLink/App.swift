@@ -146,9 +146,6 @@ final class LinkModel: ObservableObject {
         clipboardMode = mode
         UserDefaults.standard.set(mode, forKey: "clipboardMode")
     }
-        clipboardMode = mode
-        UserDefaults.standard.set(mode, forKey: "clipboardMode")
-    }
 
     func acceptClipboard() {
         let text = pendingClipboard
