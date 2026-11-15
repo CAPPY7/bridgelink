@@ -65,9 +65,9 @@ public final class LinkState {
         return true;
     }
 
-    /** Reconnect when the phone is not linked, even if the old phase was PAIRED. */
-    public static boolean networkShouldConnect(Phase phase, boolean linked) {
-        if (linked) return false;
+    /** Reconnect when the phone is not on Wi-Fi, even if an away relay is up. */
+    public static boolean networkShouldConnect(Phase phase, boolean linkedOnWifi) {
+        if (linkedOnWifi) return false;
         return phase != Phase.CONNECTING && phase != Phase.FATAL;
     }
 

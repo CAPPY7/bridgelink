@@ -129,6 +129,7 @@ public class LinkService extends Service {
     private LeaveWatch leave;
     private PhoneFive five;
     private PhoneSix six;
+    private volatile boolean onRelay;
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -194,6 +195,7 @@ public class LinkService extends Service {
             @Override
             public void relayUp() {
                 paired = true;
+                onRelay = true;
                 publish("Away (relay). The relay cannot read the link.", null);
                 main.removeCallbacks(heartbeat);
                 main.postDelayed(heartbeat, 1_000);
@@ -399,7 +401,7 @@ public class LinkService extends Service {
 
     private void runConnect(Attempt mine, String address, int port, String code) {
         if (mine.closed || generation.get() != mine.gen) return;
-        paired = false;
+        if (!onRelay) paired = false;
         SharedPreferences prefs = Prefs.open(this);
         String savedToken = prefs.getString("token", "");
         String pinned = prefs.getString("fp", "");
@@ -537,8 +539,9 @@ public class LinkService extends Service {
             switch (message.type) {
                 case "paired" -> {
                     paired = true;
-                    linkState.paired();
+                    onRelay = false;
                     if (six != null) six.stopRelay();
+                    linkState.paired();
                     String issued = message.text("token");
                     if (issued.length() >= 16) {
                         SharedPreferences prefs = Prefs.open(this);
@@ -1438,7 +1441,8 @@ public class LinkService extends Service {
                 int chosen = port;
                 String chosenHost = host;
                 main.post(() -> {
-                    if (!LinkState.networkShouldConnect(linkState.phase, paired)) return;
+                    boolean wifiLinked = paired && !onRelay;
+                    if (!LinkState.networkShouldConnect(linkState.phase, wifiLinked)) return;
                     connect(chosenHost, chosen, "");
                 });
             }
