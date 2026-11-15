@@ -6,6 +6,41 @@ Downloads: https://github.com/CAPPY7/bridgelink/releases/latest
 
 The page at the root of this repo is a **simulated demo**. It does not talk to the phone or the Mac. The apps in `/android` and `/macos` are the product.
 
+## Screens
+
+Light and dark follow the system. A screen that is not built yet says so.
+
+### Phone
+
+<img src="docs/screenshots/android-home.png" alt="Phone home" width="180">
+<img src="docs/screenshots/android-send.png" alt="Phone send" width="180">
+<img src="docs/screenshots/android-notifications.png" alt="Phone notifications" width="180">
+<img src="docs/screenshots/android-messages.png" alt="Phone messages" width="180">
+<img src="docs/screenshots/android-files.png" alt="Phone files" width="180">
+<img src="docs/screenshots/android-remote.png" alt="Phone remote" width="180">
+<img src="docs/screenshots/android-mirror.png" alt="Phone mirror" width="180">
+<img src="docs/screenshots/android-settings.png" alt="Phone settings" width="180">
+
+### Mac menu bar
+
+<img src="docs/screenshots/mac-popover.png" alt="Mac menu bar" width="280">
+<img src="docs/screenshots/mac-popover-dark.png" alt="Mac menu bar in dark mode" width="280">
+
+### Mac window
+
+<img src="docs/screenshots/mac-home.png" alt="Mac home" width="320">
+<img src="docs/screenshots/mac-home-dark.png" alt="Mac home in dark mode" width="320">
+<img src="docs/screenshots/mac-notifications.png" alt="Mac notifications" width="320">
+<img src="docs/screenshots/mac-messages.png" alt="Mac messages" width="320">
+<img src="docs/screenshots/mac-files.png" alt="Mac files" width="320">
+<img src="docs/screenshots/mac-clipboard.png" alt="Mac clipboard" width="320">
+<img src="docs/screenshots/mac-shared.png" alt="Mac shared folder" width="320">
+<img src="docs/screenshots/mac-mirror.png" alt="Mac mirror" width="320">
+<img src="docs/screenshots/mac-webcam.png" alt="Mac webcam" width="320">
+<img src="docs/screenshots/mac-automations.png" alt="Mac automations" width="320">
+<img src="docs/screenshots/mac-devices.png" alt="Mac devices" width="320">
+<img src="docs/screenshots/mac-settings.png" alt="Mac settings" width="320">
+
 ## Install
 
 See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
