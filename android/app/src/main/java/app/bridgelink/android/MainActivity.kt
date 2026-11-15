@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     val easy by lazy { EasyWork(this) }
     val five by lazy { FiveWork(this) }
     val six by lazy { SixWork(this) }
+    val polish by lazy { Polish(this) }
     var browser: MacBrowser? = null
 
     private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -89,6 +90,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         easy.load()
         five.refresh()
         six.load()
+        polish.load()
         setContent { BridgeApp(model, this) }
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -194,6 +196,10 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun saveRelay() = six.saveRelay()
     override fun useRelay() = six.useRelay()
     override fun controlSteps() = six.controlSteps()
+    override fun checkUpdate() = polish.checkUpdate()
+    override fun finishSetup() = polish.finishSetup()
+    override fun showSetup() = polish.showSetup()
+    override fun resetApp() = polish.reset()
 
     private fun startScan() {
         try {

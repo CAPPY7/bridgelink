@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing or new tag to publish, for example v0.3.0"
+        description: "Existing or new tag to publish, for example v1.0.0"
         required: true
         type: string
 
@@ -84,6 +84,7 @@ jobs:
     needs: [android, mac]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - name: Create the release if needed, then attach both apps
         env:
@@ -104,5 +105,6 @@ jobs:
           if [ -f android-apk/BridgeLink-android.apk ]; then files+=(android-apk/BridgeLink-android.apk); fi
           if [ -f mac-app/BridgeLink-mac.zip ]; then files+=(mac-app/BridgeLink-mac.zip); fi
           if [ -f mac-app/BridgeLink.dmg ]; then files+=(mac-app/BridgeLink.dmg); fi
-          if [ "${#files[@]}" -ne 3 ]; then echo "Need the signed APK, the zip, and the disk image"; exit 1; fi
+          if [ -f appcast.xml ]; then files+=(appcast.xml); fi
+          if [ "${#files[@]}" -ne 4 ]; then echo "Need the signed APK, the zip, the disk image, and appcast.xml"; exit 1; fi
           gh release upload "$TAG" "${files[@]}" --repo "${GITHUB_REPOSITORY}" --clobber

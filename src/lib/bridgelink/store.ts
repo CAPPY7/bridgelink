@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import {
   APP_VERSION,
   CHUNK_SIZE,
+  compareVersions,
   extractOtp,
   looksSensitive,
   nextBackoff,
@@ -67,6 +68,9 @@ export type MacPane =
   | "settings"
   | "browser";
 export type RemoteMode = "trackpad" | "keyboard" | "slides";
+
+export type SavedPhone = { id: string; name: string; battery: number; charging: boolean };
+export type SavedMac = { id: string; name: string };
 
 export type Notice = {
   id: string;
@@ -331,6 +335,13 @@ const seeded = seed();
 export type BridgeState = {
   hydrated: boolean;
   tourDismissed: boolean;
+  macSetupDone: boolean;
+  phoneSetupDone: boolean;
+  updateLine: string;
+  phones: SavedPhone[];
+  activePhoneId: string;
+  macs: SavedMac[];
+  activeMacId: string;
   paired: boolean;
   pin: string;
   pinExpires: number;
@@ -402,6 +413,11 @@ export type BridgeState = {
   mismatch: () => boolean;
   setTheme: (theme: "dark" | "light") => void;
   dismissTour: () => void;
+  finishMacSetup: () => void;
+  finishPhoneSetup: () => void;
+  replaySetup: () => void;
+  checkUpdate: (offerNewer?: boolean) => void;
+  resetDesk: () => void;
   beginPairing: () => void;
   submitPin: (pin: string) => void;
   forgetDevice: () => void;
@@ -444,6 +460,12 @@ export type BridgeState = {
   startRing: () => void;
   stopRing: () => void;
   setNames: (androidName: string, macName: string) => void;
+  switchPhone: (id: string) => void;
+  addPhone: (name: string) => void;
+  forgetPhone: (id: string) => void;
+  switchMac: (id: string) => void;
+  addMac: (name: string) => void;
+  forgetMac: (id: string) => void;
   setPhoneScreen: (screen: PhoneScreen) => void;
   setSystemPage: (page: SystemPage) => void;
   setMacPane: (pane: MacPane) => void;
@@ -514,6 +536,19 @@ export const useBridge = create<BridgeState>()(
     (set, get) => ({
       hydrated: false,
       tourDismissed: false,
+      macSetupDone: false,
+      phoneSetupDone: false,
+      updateLine: "",
+      phones: [
+        { id: "and-pixel-01", name: "Pixel", battery: 64, charging: false },
+        { id: "and-tab-02", name: "Tablet", battery: 91, charging: true },
+      ],
+      activePhoneId: "and-pixel-01",
+      macs: [
+        { id: "mac-book-01", name: "MacBook" },
+        { id: "mac-studio-02", name: "Studio" },
+      ],
+      activeMacId: "mac-book-01",
       ...seeded,
       pin: "",
       pinExpires: 0,
@@ -580,6 +615,36 @@ export const useBridge = create<BridgeState>()(
 
       setTheme: (theme) => set({ theme }),
       dismissTour: () => set({ tourDismissed: true }),
+
+      finishMacSetup: () => {
+        set({ macSetupDone: true });
+        get().log("info", "Mac setup finished. Scan the QR on the phone.");
+      },
+      finishPhoneSetup: () => {
+        set({ phoneSetupDone: true });
+        get().log("info", "Phone setup finished.");
+      },
+      replaySetup: () => set({ macSetupDone: false, phoneSetupDone: false, updateLine: "" }),
+      checkUpdate: (offerNewer = false) => {
+        const remote = offerNewer ? "1.1.0" : APP_VERSION;
+        const newer = compareVersions(APP_VERSION, remote) > 0;
+        const updateLine = newer
+          ? `BridgeLink ${remote} is ready. On a real Mac or phone this opens the release. This demo does not download it.`
+          : `BridgeLink ${APP_VERSION} is the latest.`;
+        set({ updateLine });
+        get().log("info", updateLine);
+      },
+      resetDesk: () => {
+        get().clearHistory();
+        get().forgetDevice();
+        set({
+          macSetupDone: false,
+          phoneSetupDone: false,
+          updateLine: "",
+          manualHost: "",
+        });
+        get().log("info", "BridgeLink was reset. Pair again.");
+      },
 
       beginPairing: () => {
         const pin = String(Math.floor(100000 + Math.random() * 900000));
@@ -1007,7 +1072,11 @@ export const useBridge = create<BridgeState>()(
 
       setPhoneBattery: (n) => {
         const phoneBattery = Math.max(1, Math.min(100, Math.round(n)));
-        set({ phoneBattery, lowBatterySent: phoneBattery > 20 ? false : get().lowBatterySent });
+        set((s) => ({
+          phoneBattery,
+          lowBatterySent: phoneBattery > 20 ? false : s.lowBatterySent,
+          phones: s.phones.map((p) => (p.id === s.activePhoneId ? { ...p, battery: phoneBattery } : p)),
+        }));
         if (phoneBattery <= 20 && get().features.battery && !get().lowBatterySent) {
           set({ lowBatterySent: true });
           get().pushNotice({
@@ -1022,7 +1091,10 @@ export const useBridge = create<BridgeState>()(
 
       setPhoneCharging: (phoneCharging) => {
         const prev = get();
-        set({ phoneCharging });
+        set((s) => ({
+          phoneCharging,
+          phones: s.phones.map((p) => (p.id === s.activePhoneId ? { ...p, charging: phoneCharging } : p)),
+        }));
         reactTo(prev, get());
       },
 
@@ -1094,7 +1166,92 @@ export const useBridge = create<BridgeState>()(
         get().log("info", "Ringing stopped.");
       },
 
-      setNames: (androidName, macName) => set({ androidName, macName }),
+      setNames: (androidName, macName) =>
+        set((s) => {
+          const phoneName = androidName.trim() || s.androidName;
+          const nextMac = macName.trim() || s.macName;
+          return {
+            androidName: phoneName,
+            macName: nextMac,
+            phones: s.phones.map((p) => (p.id === s.activePhoneId ? { ...p, name: phoneName } : p)),
+            macs: s.macs.map((m) => (m.id === s.activeMacId ? { ...m, name: nextMac } : m)),
+          };
+        }),
+
+      switchPhone: (phoneId) => {
+        const s = get();
+        const phone = s.phones.find((p) => p.id === phoneId);
+        if (!phone || phone.id === s.activePhoneId) return;
+        const phones = s.phones.map((p) =>
+          p.id === s.activePhoneId ? { ...p, battery: s.phoneBattery, charging: s.phoneCharging } : p,
+        );
+        const next = phones.find((p) => p.id === phoneId) ?? phone;
+        set({
+          phones,
+          activePhoneId: next.id,
+          androidId: next.id,
+          androidName: next.name,
+          phoneBattery: next.battery,
+          phoneCharging: next.charging,
+          ringing: false,
+        });
+        get().log("info", `Now linked to ${next.name}. The other phones stay saved.`);
+      },
+
+      addPhone: (raw) => {
+        const name = raw.trim().slice(0, 40);
+        if (!name) return;
+        const phone: SavedPhone = { id: id(), name, battery: 80, charging: false };
+        set((s) => ({ phones: [...s.phones, phone] }));
+        get().switchPhone(phone.id);
+      },
+
+      forgetPhone: (phoneId) => {
+        const s = get();
+        const phone = s.phones.find((p) => p.id === phoneId);
+        if (!phone) return;
+        const rest = s.phones.filter((p) => p.id !== phoneId);
+        if (rest.length === 0) {
+          set({ phones: [], activePhoneId: "" });
+          get().forgetDevice();
+          get().log("info", `Forgot ${phone.name}. No phone is saved.`);
+          return;
+        }
+        set({ phones: rest });
+        if (s.activePhoneId === phoneId) get().switchPhone(rest[0].id);
+        else get().log("info", `Forgot ${phone.name}. ${get().androidName} stays linked.`);
+      },
+
+      switchMac: (macId) => {
+        const mac = get().macs.find((m) => m.id === macId);
+        if (!mac || mac.id === get().activeMacId) return;
+        set({ activeMacId: mac.id, macId: mac.id, macName: mac.name });
+        get().log("info", `Phone is now linked to ${mac.name}. The other Macs stay saved.`);
+      },
+
+      addMac: (raw) => {
+        const name = raw.trim().slice(0, 40);
+        if (!name) return;
+        const mac: SavedMac = { id: id(), name };
+        set((s) => ({ macs: [...s.macs, mac] }));
+        get().switchMac(mac.id);
+      },
+
+      forgetMac: (macId) => {
+        const s = get();
+        const mac = s.macs.find((m) => m.id === macId);
+        if (!mac) return;
+        const rest = s.macs.filter((m) => m.id !== macId);
+        if (rest.length === 0) {
+          set({ macs: [], activeMacId: "" });
+          get().forgetDevice();
+          get().log("info", `Forgot ${mac.name}. No Mac is saved.`);
+          return;
+        }
+        set({ macs: rest });
+        if (s.activeMacId === macId) get().switchMac(rest[0].id);
+        else get().log("info", `Forgot ${mac.name}. ${get().macName} stays linked.`);
+      },
 
       setPhoneScreen: (phoneScreen) => set({ phoneScreen, systemPage: phoneScreen === "system" ? get().systemPage : "root" }),
       setSystemPage: (systemPage) => set({ systemPage, phoneScreen: "system" }),

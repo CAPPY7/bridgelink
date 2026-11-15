@@ -328,6 +328,7 @@ extension LinkModel {
 
     func publishPairs() {
         pairedSummary = book.devices.map(\.name).joined(separator: ", ")
+        phoneList = book.devices
     }
 
     func applyClipboard(_ text: String) {

@@ -135,8 +135,19 @@ function PhoneApp({ clock }: { clock: number }) {
 function Home() {
   const s = useBridge();
   const [note, setNote] = useState("");
+  const [macName, setMacName] = useState("");
+  const others = s.macs.filter((m) => m.id !== s.activeMacId);
   return (
     <div className="space-y-3">
+      {!s.phoneSetupDone && (
+        <div className="rounded-lg border border-line bg-panel p-4">
+          <p className="text-sm font-medium">Finish phone setup</p>
+          <p className="mt-1 text-sm text-muted">Allow notifications, turn off battery limits, and on Android 13 allow restricted settings before texts or screen control.</p>
+          <Btn className="mt-3" variant="primary" onClick={() => s.finishPhoneSetup()}>
+            I'm ready
+          </Btn>
+        </div>
+      )}
       <div className="rounded-lg border border-line bg-panel p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -151,6 +162,42 @@ function Home() {
         <p className="mt-3 text-sm">
           Mac battery <span className="tabular-nums">{s.macBattery}%</span>
         </p>
+        {s.macs.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {s.macs.map((m) => (
+              <Btn key={m.id} className="h-9" variant={m.id === s.activeMacId ? "primary" : "quiet"} onClick={() => s.switchMac(m.id)}>
+                {m.name}
+              </Btn>
+            ))}
+          </div>
+        )}
+        {others.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-3">
+            {others.map((m) => (
+              <button key={m.id} className="text-xs text-muted" onClick={() => s.forgetMac(m.id)}>
+                Forget {m.name}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mt-3 flex gap-2">
+          <input
+            value={macName}
+            onChange={(e) => setMacName(e.target.value)}
+            placeholder="Another Mac"
+            aria-label="Name of another Mac"
+            className="h-11 min-w-0 flex-1 rounded-sm border border-line bg-inset px-3 text-sm"
+          />
+          <Btn
+            onClick={() => {
+              if (!macName.trim()) return;
+              s.addMac(macName);
+              setMacName("");
+            }}
+          >
+            Save
+          </Btn>
+        </div>
       </div>
 
       {s.features.media && (
@@ -1045,6 +1092,14 @@ function SettingsPage() {
       >
         Export diagnostics
       </Btn>
+      <Btn onClick={() => s.checkUpdate(false)}>Check for update</Btn>
+      <Btn onClick={() => s.checkUpdate(true)}>Show what an update looks like</Btn>
+      {s.updateLine && <p className="text-sm text-muted">{s.updateLine}</p>}
+      <Btn onClick={() => s.replaySetup()}>Show setup again</Btn>
+      <Btn variant="danger" onClick={() => s.resetDesk()}>
+        Reset BridgeLink
+      </Btn>
+      <p className="text-xs text-subtle">BridgeLink 1.0.0</p>
       <Btn variant="danger" onClick={() => setConfirm("clear")}>
         Clear history
       </Btn>

@@ -15,7 +15,7 @@ const FEATURES: { n: number; name: string; status: "Working" | "Partial"; note: 
   { n: 9, name: "Trackpad, keyboard, slides", status: "Working", note: "Needs the Mac accessibility switch, which you grant in the app." },
   { n: 10, name: "Clipboard sync", status: "Working", note: "Mac to phone is automatic. The phone has all five send methods." },
   { n: 11, name: "SMS", status: "Working", note: "Turn it on to read, reply, and keep contact names." },
-  { n: 12, name: "Screen mirror", status: "In the apps", note: "The installable apps send H.264. This browser demo only shows a stand-in picture." },
+  { n: 12, name: "Screen mirror", status: "Partial", note: "The installable apps send H.264. This browser demo only shows a stand-in picture." },
   { n: 13, name: "Control while mirroring", status: "Partial", note: "Clicks use the accessibility path. There is no wireless ADB channel here." },
   { n: 14, name: "Phone as webcam", status: "Partial", note: "Browser preview only. No virtual camera other apps can select." },
   { n: 15, name: "Shared folder", status: "Partial", note: "Browse folders you mark and copy files. Finder does not mount a disk." },

@@ -1,26 +1,34 @@
 # User guide
 
-## What you can do in 0.3.0
+BridgeLink 1.0 links one or more Android phones to a Mac on the menu bar. The browser page is a simulation. It is not connected to your devices.
 
-- Pair the phone and the Mac on the same Wi-Fi.
-- Send a text note either way.
-- Send the clipboard either way. On the Mac, clipboard from the phone can be automatic, ask-first, or off. A short numeric code, or text that contains the word password, waits for **Use phone clipboard**.
-- Ring the phone at maximum alarm volume. It stops after 2 minutes, or when you tap Stop.
-- Leave the apps paired across restarts. The Mac keeps its certificate. The phone keeps the token.
-- Quit the Mac app from the menu window. Turn on launch at login there too. The app should live in Applications for the login item to stick.
+## First open
 
-## What you cannot do yet
+On the Mac, a setup window walks through notifications, the local network, launch at login, and pairing. You can open it again from Settings, Show setup again.
 
-Sparkle updates, a first-run wizard, and an in-app updater. Screen mirror, phone control, the camera window, and away-from-home are in 0.13.0. The browser preview can imitate some of those. It is not connected to your devices.
-
-## Screen mirror, camera, and away from home
-
-On the Mac, open Mirror and tap Start mirror. On the phone, allow the screen when Android asks. Closing the Mirror page stops the picture. Click the picture to tap the phone. Turn on BridgeLink under Accessibility first. Android 13 and newer may need Allow restricted settings.
-
-Webcam shows the phone camera inside BridgeLink. It does not appear as a Zoom camera unless you have a paid Apple Developer ID.
-
-Away from home needs the relay steps in Setup for the owner, and one pairing on the same Wi-Fi first.
+On the phone, Home explains notifications, battery limits, and restricted settings. Tap I'm ready. Show setup again is in Settings.
 
 ## Day to day
 
-Open the Mac menu when you need a new PIN or you want to send something. The phone service keeps running. If the status says disconnected, tap Connect. If it says the Mac key changed, tap Forget this Mac and pair again.
+- Pair on the same Wi-Fi. Scan the Mac QR. That is the first button on the phone. The code lasts 2 minutes.
+- Send a note, a link, or files either way. Drop files on the Mac window or the menu-bar icon.
+- Clipboard can stay in sync. Passwords and card numbers are skipped. Both apps keep the last 100 copies.
+- Notifications can mirror, with reply when the phone app allows it. Texts can be read and sent from the Mac after you allow SMS.
+- The phone can be a trackpad, keyboard, and slide remote. The Mac needs Accessibility.
+- Mirror shows the phone screen in a Mac window. Closing it stops the picture. Clicks in that window need the phone accessibility service.
+- Webcam shows the phone camera inside BridgeLink. It does not appear in Zoom unless you have a paid Apple Developer ID.
+- If you turn it on, a weak Bluetooth signal locks the Mac. The phone never unlocks it.
+- Away from home needs the relay steps in Setup for the owner, and one pairing on the same Wi-Fi first.
+
+## Updates and reset
+
+Settings, Check for update, looks at the release list. If a newer version exists, the download page opens. You install the APK over the old one, or replace the Mac app in Applications.
+
+Reset BridgeLink forgets paired devices and saved history. On the Mac it also drops the Mac key. Quit, open BridgeLink again, then pair. Dragging the Mac app to the Trash is enough to uninstall. Reset does not remove the app.
+
+## What still needs you
+
+- macOS 15 shows Open Anyway once. The install page has the steps.
+- Android 13 and newer may need Allow restricted settings before notification access, texts, or screen control.
+- Leave-lock needs Bluetooth on the phone.
+- Files over 32 MB in the shared folder are skipped. Other sends can be larger, up to 4 GB.

@@ -101,7 +101,7 @@ private fun PhoneShell(model: PhoneModel, actions: PhoneActions) {
             label = "page",
         ) { page ->
             when (page) {
-                Page.Home -> HomePage(model, actions)
+                Page.Home -> if (model.setupDone) HomePage(model, actions) else SetupPage(actions)
                 Page.Send -> SendPage(model, actions)
                 Page.Notifications -> NotificationsPage(model, actions)
                 Page.Messages -> MessagesPage(model, actions)

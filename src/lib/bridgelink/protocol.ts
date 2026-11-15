@@ -1,5 +1,31 @@
 export const PROTOCOL_VERSION = 1 as const;
 export const APP_VERSION = "1.0.0";
+export const APPCAST_URL = "https://github.com/CAPPY7/bridgelink/releases/latest/download/appcast.xml";
+
+/** 1 when remote is newer, -1 when local is newer, 0 when they match. */
+export function compareVersions(local: string, remote: string): number {
+  const a = versionParts(local);
+  const b = versionParts(remote);
+  const n = Math.max(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? 0;
+    if (bv !== av) return bv > av ? 1 : -1;
+  }
+  return 0;
+}
+
+export function versionInAppcast(xml: string): string {
+  const match = xml.match(/sparkle:shortVersionString="([^"]+)"/);
+  return match?.[1]?.trim() ?? "";
+}
+
+function versionParts(raw: string): number[] {
+  return raw.split(".").map((bit) => {
+    const n = Number.parseInt(bit, 10);
+    return Number.isFinite(n) ? n : 0;
+  });
+}
 export const CHUNK_SIZE = 256 * 1024;
 
 export type Side = "android" | "mac";

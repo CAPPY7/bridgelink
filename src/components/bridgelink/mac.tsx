@@ -27,6 +27,7 @@ export function MacPanel({ clock }: { clock: number }) {
           {paired ? <MacBody /> : <PairMac clock={clock} />}
           <KeyWall />
           <LockScreen clock={clock} />
+          <FirstRun />
         </div>
       </div>
     </section>
@@ -52,6 +53,69 @@ function MenuBar({ clock }: { clock: number }) {
         </span>
         <ClockLabel clock={clock} />
       </span>
+    </div>
+  );
+}
+
+function FirstRun() {
+  const done = useBridge((s) => s.macSetupDone);
+  const finish = useBridge((s) => s.finishMacSetup);
+  const setPermission = useBridge((s) => s.setPermission);
+  const [step, setStep] = useState(0);
+  if (done) return null;
+  const steps = [
+    {
+      title: "Welcome",
+      body: "BridgeLink links this Mac to your Android phone. Four short steps, then the pairing code.",
+    },
+    {
+      title: "Notifications",
+      body: "Allow notifications so a note, a text, or a low battery from the phone can appear.",
+    },
+    {
+      title: "Local network",
+      body: "The system asks the first time the phone connects. Both devices need the same Wi-Fi for the first pair.",
+    },
+    {
+      title: "Launch at login",
+      body: "Optional. On a real Mac the app should live in Applications if you turn this on.",
+    },
+    {
+      title: "Pair the phone",
+      body: "Scan the Mac QR from the phone. That is the safe way to pair. The code lasts two minutes.",
+    },
+  ];
+  const current = steps[step] ?? steps[0];
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-bg/95 p-6">
+      <div className="w-full max-w-md rounded-lg border border-line bg-panel p-5">
+        <p className="text-xs text-subtle">Set up BridgeLink · {step + 1} of {steps.length}</p>
+        <h2 className="mt-1 text-lg font-medium">{current.title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{current.body}</p>
+        {step === 1 && (
+          <Btn className="mt-4" onClick={() => setPermission("mac", "notifications", true)}>
+            Allow notifications
+          </Btn>
+        )}
+        {step === 2 && (
+          <Btn className="mt-4" onClick={() => setPermission("mac", "localNetwork", true)}>
+            Allow local network
+          </Btn>
+        )}
+        <div className="mt-5 flex gap-2">
+          {step > 0 && <Btn onClick={() => setStep(step - 1)}>Back</Btn>}
+          <Btn
+            variant="primary"
+            className="ml-auto"
+            onClick={() => {
+              if (step === steps.length - 1) finish();
+              else setStep(step + 1);
+            }}
+          >
+            {step === steps.length - 1 ? "Done" : "Next"}
+          </Btn>
+        </div>
+      </div>
     </div>
   );
 }
@@ -128,6 +192,7 @@ function HomePane() {
   const s = useBridge();
   const fileRef = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState("");
+  const [phoneName, setPhoneName] = useState("");
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!s.features.quickdrop) {
@@ -147,6 +212,7 @@ function HomePane() {
   };
   const grace =
     s.graceUntil && !s.phoneNear ? Math.max(0, Math.ceil((s.graceUntil - Date.now()) / 1000)) : null;
+  const others = s.phones.filter((p) => p.id !== s.activePhoneId);
   return (
     <div className="space-y-4">
       <div className="flex items-end justify-between gap-3">
@@ -162,7 +228,25 @@ function HomePane() {
         onDrop={onDrop}
       >
         <p className="text-sm font-medium">Drop a file, link, or note</p>
-        <p className="mt-1 text-sm text-muted">It goes to {s.androidName}. One device is paired, so there is nothing to pick.</p>
+        <p className="mt-1 text-sm text-muted">It goes to {s.androidName || "a saved phone"}. Other phones stay paired.</p>
+        {s.phones.length > 0 && (
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {s.phones.map((p) => (
+              <Btn key={p.id} variant={p.id === s.activePhoneId ? "primary" : "quiet"} onClick={() => s.switchPhone(p.id)}>
+                {p.name} {p.battery}%
+              </Btn>
+            ))}
+          </div>
+        )}
+        {others.length > 0 && (
+          <div className="mt-2 flex flex-wrap justify-center gap-3">
+            {others.map((p) => (
+              <button key={p.id} className="text-xs text-muted" onClick={() => s.forgetPhone(p.id)}>
+                Forget {p.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mt-3 flex gap-2">
           <Btn onClick={() => fileRef.current?.click()}>Choose file</Btn>
           <Btn
@@ -184,6 +268,24 @@ function HomePane() {
           className="mt-3 h-11 w-full max-w-sm rounded-sm border border-line bg-inset px-3 text-sm"
           aria-label="Note for the phone"
         />
+        <div className="mt-3 flex w-full max-w-sm gap-2">
+          <input
+            value={phoneName}
+            onChange={(e) => setPhoneName(e.target.value)}
+            placeholder="Another phone"
+            aria-label="Name of another phone"
+            className="h-11 min-w-0 flex-1 rounded-sm border border-line bg-inset px-3 text-sm"
+          />
+          <Btn
+            onClick={() => {
+              if (!phoneName.trim()) return;
+              s.addPhone(phoneName);
+              setPhoneName("");
+            }}
+          >
+            Save
+          </Btn>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -638,6 +740,14 @@ function MacSettings() {
         ))}
       </ul>
       <Btn onClick={() => s.dropLink()}>Drop the link</Btn>
+      <Btn onClick={() => s.checkUpdate(false)}>Check for update</Btn>
+      <Btn onClick={() => s.checkUpdate(true)}>Show what an update looks like</Btn>
+      {s.updateLine && <p className="text-sm text-muted">{s.updateLine}</p>}
+      <Btn onClick={() => s.replaySetup()}>Show setup again</Btn>
+      <Btn variant="danger" onClick={() => s.resetDesk()}>
+        Reset BridgeLink
+      </Btn>
+      <p className="text-xs text-subtle">BridgeLink 1.0.0</p>
       <Btn onClick={() => s.triggerKeyChange()}>Simulate a key change</Btn>
     </div>
   );

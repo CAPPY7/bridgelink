@@ -427,6 +427,15 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(avcc[avcc.startIndex], 0)
         XCTAssertEqual(avcc[avcc.index(avcc.startIndex, offsetBy: 3)], 3)
     }
+
+    func testReleaseCompare() {
+        XCTAssertEqual(ReleaseCheck.compare("0.13.0", "1.0.0"), 1)
+        XCTAssertEqual(ReleaseCheck.compare("1.0.0", "1.0.0"), 0)
+        XCTAssertEqual(ReleaseCheck.compare("1.1.0", "1.0.0"), -1)
+        XCTAssertEqual(ReleaseCheck.compare("1.0", "1.0.0"), 0)
+        XCTAssertEqual(ReleaseCheck.shortVersion("<item sparkle:shortVersionString=\"1.0.0\" sparkle:version=\"13\">"), "1.0.0")
+        XCTAssertEqual(ReleaseCheck.shortVersion("nope"), "")
+    }
 }
 
 private let otpRows: [(String?, String)] = [

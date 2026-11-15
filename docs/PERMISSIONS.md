@@ -1,31 +1,35 @@
 # Permissions
 
-## Android
+Each permission stays off until a feature needs it. BridgeLink does not change a system setting silently.
+
+## Android 8–15
 
 | Permission | Why | When |
 |---|---|---|
 | Notifications | Connection status, notes, the ring notification | First launch, Android 13 and later |
-| Internet, network state, Wi-Fi state | Connect to the Mac | Always, no prompt |
-| Change network state, change Wi-Fi multicast state | Required for the connected-device foreground service on Android 14, and for finding the Mac | Install time |
-| Foreground service, connected device | Keep the link alive while the app is closed | While the service runs |
+| Internet, network state, Wi-Fi state | Connect to the Mac | Install time, no prompt |
+| Foreground service | Keep the link while the app is closed | While the service runs |
 | Receive boot completed | Reconnect after a reboot if a token is saved | Install time |
-| Vibrate, wake lock | Ring the phone if no alarm sound is available | During a ring |
 | Ignore battery optimizations | Stop the vendor from killing the service | When you tap Keep me connected |
-| None for ordinary files | The file picker and the share sheet hand over a file. The shared folder uses the app's own folder | When you send a file or turn the shared folder on |
-| Receive, read, and send SMS | Show texts on the Mac, send a reply, and copy a code from a text | When you turn texts on |
-| Phone state | Tell two SIMs apart. If you say no, texts use the default SIM | When you turn texts on |
-| Nearby Bluetooth, location | Leave-lock measures the Mac signal. Location is only for older Android Bluetooth scans | When you turn leave-lock on |
-| Camera | Reserved for a future in-app QR scanner. Not requested in 0.3.0 | Not yet |
+| Nearby Bluetooth | Leave-lock watches the Mac signal | When you turn leave-lock on |
+| SMS and phone state | Read and send texts, and tell two SIMs apart | When you turn texts on |
+| Notification access | Mirror alerts, reply, and phone media controls | When you turn notification mirroring on |
+| Accessibility | Clicks in the Mac mirror window | When you turn phone control on. Android 13+ may need Allow restricted settings |
+| Screen share | The Mac mirror window | Every time you start a mirror. Android asks each time |
+| Camera and microphone | The camera inside BridgeLink, and a scan | When you open the camera or scan |
+| Files you pick | Send a file or use the shared folder | When you pick them. The shared folder uses the app's own folder |
 
-Not requested, because the feature is not built: contacts, accessibility on the phone, media projection.
+The document scanner uses Play services. If that is missing, pick a photo instead. The in-app QR scanner also uses Play services. Paste the link if it is missing.
 
-## Mac
+## Mac, macOS 13, 14, and 15
 
 | Item | Why | How |
 |---|---|---|
-| Local network | Talk to the phone. The system shows this because the app advertises Bonjour | First connection. The reason string is in Info.plist |
-| Notifications | Notes from the phone | Button in the menu window |
-| Login item | Launch at login | Toggle in the menu window. Put the app in Applications |
-| Accessibility | The phone trackpad, keyboard, and slides. Also the leave-lock shortcut | Button in Settings. System Settings, Privacy and Security, Accessibility |
+| Local network | Talk to the phone | First connection |
+| Notifications | Notes from the phone | Setup window, or the button in the menu |
+| Login item | Launch at login | Setup window or Settings. Put the app in Applications |
+| Accessibility | Trackpad, keyboard, slides, and the leave-lock shortcut | Settings explains the page. The phone never unlocks the Mac |
+| Bluetooth | Leave-lock | When you turn leave-lock on |
+| Camera and microphone | Only if a future system camera is enabled | Not used by the free webcam window |
 
-The owner sideloads this app. There is no Apple Developer certificate and no notarization, on purpose.
+The owner sideloads this app. There is no paid Apple Developer certificate. macOS 15 needs Open Anyway once. Later updates keep permissions only when the build is signed with the same self-signed certificate. Ad-hoc builds can forget them.

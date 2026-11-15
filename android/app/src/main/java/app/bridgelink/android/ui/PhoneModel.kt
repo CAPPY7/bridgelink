@@ -62,6 +62,8 @@ class PhoneModel {
     var camFlash by mutableStateOf(false)
     var camMic by mutableStateOf(false)
     var relayUrl by mutableStateOf("")
+    var setupDone by mutableStateOf(true)
+    var updateLine by mutableStateOf("")
 }
 
 data class ClipRow(val id: String, val text: String, val pinned: Boolean)
@@ -121,4 +123,8 @@ interface PhoneActions {
     fun saveRelay()
     fun useRelay()
     fun controlSteps()
+    fun checkUpdate()
+    fun finishSetup()
+    fun showSetup()
+    fun resetApp()
 }

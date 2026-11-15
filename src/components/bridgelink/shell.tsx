@@ -16,6 +16,7 @@ export function Shell() {
   const heartbeat = useBridge((s) => s.heartbeat);
   const tick = useBridge((s) => s.tick);
   const [clock, setClock] = useState(DEMO_NOW);
+  const macSetupDone = useBridge((s) => s.macSetupDone);
   const [tab, setTab] = useState<"phone" | "mac">("phone");
   const [guide, setGuide] = useState(false);
   const [log, setLog] = useState(false);
@@ -41,6 +42,11 @@ export function Shell() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!hydrated || macSetupDone) return;
+    setTab("mac");
+  }, [hydrated, macSetupDone]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -83,7 +89,7 @@ export function Shell() {
         <Mark className="size-6 shrink-0" />
         <div className="min-w-0">
           <h1 className="truncate text-sm font-medium">BridgeLink interactive demo (simulated)</h1>
-          <p className="text-xs text-subtle">Simulated, not connected to real devices</p>
+          <p className="text-xs text-subtle">1.0 · simulated, not connected to real devices</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <Btn className="h-11 px-2.5" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle color theme">

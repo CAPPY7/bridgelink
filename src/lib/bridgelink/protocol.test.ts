@@ -10,7 +10,19 @@ import {
   rememberId,
   sealJson,
   splitChunks,
+  compareVersions,
+  versionInAppcast,
 } from "./protocol.ts";
+
+test("release compare", () => {
+  assert.equal(compareVersions("0.13.0", "1.0.0"), 1);
+  assert.equal(compareVersions("1.0.0", "1.0.0"), 0);
+  assert.equal(compareVersions("1.1.0", "1.0.0"), -1);
+  assert.equal(compareVersions("1.0", "1.0.0"), 0);
+  const xml = '<item sparkle:shortVersionString="1.0.0" sparkle:version="13"></item>';
+  assert.equal(versionInAppcast(xml), "1.0.0");
+  assert.equal(versionInAppcast("nope"), "");
+});
 
 test("envelope roundtrip", () => {
   const raw = encodeEnvelope({

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0
+
+- First open on the Mac is a short setup window: notifications, local network, launch at login, then the pairing QR.
+- First open on the phone asks you to allow notifications, turn off battery limits, and read the restricted-settings note. Tap I'm ready when that is done.
+- Check for update reads the release list. If a newer version is there, it opens the download page. Reset BridgeLink forgets the paired devices, the saved history, and the Mac key. Quit and open the Mac app again after a reset, then pair.
+- The release includes appcast.xml next to the disk image, the zip, and the signed APK.
+
 ## 0.13.0
 
 - The Mac can show the phone screen in a window. The phone encodes H.264. The Mac decodes it. Low, medium, and high set the size and the frame rate. Closing the window stops the picture.

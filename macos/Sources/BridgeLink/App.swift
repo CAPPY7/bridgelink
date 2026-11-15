@@ -45,6 +45,8 @@ final class LinkModel: ObservableObject {
     @Published var phoneBattery = ""
     @Published var macBattery = "—"
     var openWindow: (() -> Void)?
+    var openSetup: (() -> Void)?
+    var closeSetup: (() -> Void)?
     var macLevel = -1
     var macCharging = false
     var sawMacBattery = false
@@ -116,6 +118,7 @@ final class LinkModel: ObservableObject {
     var liveID = UUID()
     let queue = DispatchQueue(label: "app.bridgelink.mac")
     var book = DeviceBook()
+    @Published var phoneList: [PairedDevice] = []
     var pendingGate = PendingGate()
     var pendingCount = 0
     var liveDeviceId = ""

@@ -36,6 +36,17 @@ extension LinkModel {
         note("Renamed the phone")
     }
 
+    func forgetSaved(_ id: String) {
+        if id == liveDeviceId {
+            forget()
+            return
+        }
+        let name = book.devices.first { $0.id == id }?.name ?? "that phone"
+        book.forget(id: id)
+        saveBook()
+        note("Forgot \(name). The phone you are using stays linked.")
+    }
+
     func setLinksAlways(_ on: Bool) {
         linksAlways = on
         UserDefaults.standard.set(on, forKey: "linksAlways")

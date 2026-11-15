@@ -11,11 +11,14 @@ final class MenuHost: NSObject, NSWindowDelegate {
     private var bag = Set<AnyCancellable>()
     private var globalMonitor: Any?
     private var desk: NSWindow?
+    private var setup: NSWindow?
 
     init(model: LinkModel) {
         self.model = model
         super.init()
         model.openWindow = { [weak self] in self?.openDesk() }
+        model.openSetup = { [weak self] in self?.presentSetup() }
+        model.closeSetup = { [weak self] in self?.setup?.close() }
         let host = NSHostingController(rootView: PopoverView().environmentObject(model))
         popover.contentSize = NSSize(width: 360, height: 560)
         popover.behavior = .transient
@@ -58,6 +61,26 @@ final class MenuHost: NSObject, NSWindowDelegate {
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+
+    func presentSetupIfNeeded() {
+        if UserDefaults.standard.bool(forKey: "didFinishSetup") { return }
+        presentSetup()
+    }
+
+    func presentSetup() {
+        if setup == nil {
+            let host = NSHostingController(rootView: FirstRunView().environmentObject(model))
+            let window = NSWindow(contentViewController: host)
+            window.title = "Set up BridgeLink"
+            window.setContentSize(NSSize(width: 480, height: 340))
+            window.styleMask = [.titled, .closable]
+            window.isReleasedWhenClosed = false
+            setup = window
+        }
+        NSApp.setActivationPolicy(.regular)
+        setup?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func openDesk() {
@@ -131,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             exit(0)
         }
         menu = MenuHost(model: model)
+        menu?.presentSetupIfNeeded()
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         model.startClipboardWatch()

@@ -186,7 +186,7 @@ public func sha256Hex(_ text: String) -> String {
     SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
 }
 
-public struct PairedDevice: Codable, Equatable {
+public struct PairedDevice: Codable, Equatable, Identifiable {
     public var id: String
     public var name: String
     public var tokenHash: String

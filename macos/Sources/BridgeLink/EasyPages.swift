@@ -53,7 +53,7 @@ struct InboxPane: View {
                 EmptyNote(
                     symbol: "tray",
                     title: "Nothing in the inbox yet.",
-                    line: "Notifications and received files show up here. Sending texts arrives in a later update."
+                    line: "Notifications, text messages, and received files show up here."
                 )
             } else {
                 ForEach(Array(rows.prefix(30).enumerated()), id: \.offset) { _, item in

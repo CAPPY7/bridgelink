@@ -10,13 +10,22 @@
 
 ## It paired, then the phone went quiet
 
-- Android killed the service. Tap Keep me connected. Then, in the phone's settings, allow autostart and unrestricted battery for BridgeLink.
+- Android killed the service. Tap Keep me connected. Then allow autostart and unrestricted battery for BridgeLink.
 - Xiaomi and Poco: Security app, Autostart, and Battery saver, No restrictions.
 - Oppo, Realme, and OnePlus: App battery management, allow background.
 - Vivo: Background power consumption, high.
-- Samsung: Sleeping apps, remove BridgeLink.
+- Samsung: Sleeping apps, remove BridgeLink. Also look at Allow restricted settings on Android 13 and newer.
 - Huawei: App launch, manage manually, allow all three toggles.
 - After a reboot the phone reconnects only if a token was saved.
+
+## Check for update does nothing
+
+The phone or the Mac could not read the release list. Open the GitHub releases page and download the APK or the disk image yourself. The app does not install the update in the background.
+
+## Reset did not change the Mac key
+
+Quit BridgeLink and open it again. The new key is created on the next launch. Then scan the QR. The phone will say the Mac key changed until you forget the old one and pair again.
+
 
 ## "This Mac key changed"
 

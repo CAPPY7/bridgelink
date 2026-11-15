@@ -63,6 +63,12 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         Text("Phone", style = MaterialTheme.typography.titleMedium)
         BigButton("Keep me connected", "battery", actions::batterySettings, tonal = true)
         BigButton("Send diagnostics", "diagnostics", actions::diagnostics, tonal = true)
+        BigButton("Check for update", "check-update", actions::checkUpdate, tonal = true)
+        if (model.updateLine.isNotEmpty()) {
+            Text(model.updateLine, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        BigButton("Show setup again", "show-setup", actions::showSetup, tonal = true)
+        BigButton("Reset BridgeLink", "reset-app", actions::resetApp, tonal = true)
         BigButton("Stop ringing", "stop-ring", actions::stopRing, tonal = true)
         Text("Lock the Mac when you leave", style = MaterialTheme.typography.titleMedium)
         Text(

@@ -1,10 +1,11 @@
 # BridgeLink
 
-Installable link between an Android phone and a Mac menu-bar app.
+Installable link between an Android phone and a Mac menu-bar app. Version 1.0.
 
-Downloads: https://github.com/CAPPY7/bridgelink/releases/latest
+Downloads, after the release workflow runs: https://github.com/CAPPY7/bridgelink/releases/latest
 
-The page at the root of this repo is a **simulated demo**. It does not talk to the phone or the Mac. The apps in `/android` and `/macos` are the product.
+The page at the root of this repo is a **simulated demo**. It does not talk to the phone or the Mac. The apps in `/android` and `/macos` are the product. In the demo, walk through Set up BridgeLink, then Check for update and Reset BridgeLink in Settings.
+
 
 ## Screens
 
