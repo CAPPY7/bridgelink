@@ -59,6 +59,7 @@ public final class MirrorCast {
                     null
             );
             running = true;
+            LinkService.onNeedKey(this::requestKey);
             drain = new Thread(this::drain, "bridgelink-mirror");
             drain.start();
         } catch (Exception error) {
@@ -71,6 +72,7 @@ public final class MirrorCast {
         if (stopping) return;
         stopping = true;
         running = false;
+        LinkService.onNeedKey(null);
         Thread thread = drain;
         drain = null;
         if (thread != null) thread.interrupt();
@@ -95,6 +97,17 @@ public final class MirrorCast {
             if (dyingProjection != null) dyingProjection.stop();
         });
         drain = null;
+    }
+
+    public void requestKey() {
+        MediaCodec live = codec;
+        if (live == null) return;
+        try {
+            android.os.Bundle params = new android.os.Bundle();
+            params.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
+            live.setParameters(params);
+        } catch (Exception ignored) {
+        }
     }
 
     private void drain() {

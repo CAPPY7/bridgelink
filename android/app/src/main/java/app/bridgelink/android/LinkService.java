@@ -37,6 +37,7 @@ import com.google.gson.JsonObject;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
+import app.bridgelink.android.protocol.MediaQueue;
 import app.bridgelink.android.protocol.StageFour;
 import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Frame;
@@ -94,6 +95,9 @@ public class LinkService extends Service {
 
     private final IBinder binder = new LocalBinder();
     private final Outbox outbox = new Outbox();
+    private final MediaQueue media = new MediaQueue();
+    private final AtomicBoolean mediaPumping = new AtomicBoolean();
+    private static volatile Runnable needKey;
     private final AtomicInteger generation = new AtomicInteger();
     private final AtomicInteger alertIds = new AtomicInteger(100);
     private final Dedup seen = new Dedup(500);
@@ -1042,14 +1046,42 @@ public class LinkService extends Service {
         throw new IOException("not connected");
     }
 
+    public static void onNeedKey(Runnable ask) {
+        needKey = ask;
+    }
+
     public static void sendRaw(byte[] framed) {
         LinkService live = running;
         if (live == null || framed == null) return;
-        live.outbox.submit(() -> {
+        MediaQueue.Result result = live.media.offer(framed, MediaQueue.keyFrame(framed));
+        if (result.askKey) {
+            Runnable ask = needKey;
+            if (ask != null) {
+                try {
+                    ask.run();
+                } catch (RuntimeException ignored) {
+                }
+            }
+        }
+        if (result.kept) live.pumpMedia();
+    }
+
+    private void pumpMedia() {
+        if (!mediaPumping.compareAndSet(false, true)) return;
+        outbox.submit(() -> {
             try {
-                live.writeRaw(framed);
-            } catch (Exception error) {
-                live.publish("The picture could not be sent.", null);
+                byte[] next;
+                while ((next = media.poll()) != null) {
+                    try {
+                        writeRaw(next);
+                    } catch (Exception error) {
+                        publish("The picture could not be sent.", null);
+                        break;
+                    }
+                }
+            } finally {
+                mediaPumping.set(false);
+                if (media.size() > 0) pumpMedia();
             }
         });
     }
