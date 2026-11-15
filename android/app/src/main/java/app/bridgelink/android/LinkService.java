@@ -52,6 +52,7 @@ import app.bridgelink.android.protocol.Outbox;
 import app.bridgelink.android.protocol.PairGate;
 import app.bridgelink.android.protocol.Sas;
 import app.bridgelink.android.protocol.ServiceDoor;
+import app.bridgelink.android.protocol.SecondPhone;
 import app.bridgelink.android.protocol.Transfers;
 
 import java.io.IOException;
@@ -503,6 +504,10 @@ public class LinkService extends Service {
                 String next = mine.hopTo;
                 if (next != null && !next.isEmpty()) {
                     main.post(() -> openAttempt(next, port, code));
+                } else if (linkState.holding(System.currentTimeMillis()) && !address.isEmpty()) {
+                    long delay = Math.max(0, linkState.holdUntil - System.currentTimeMillis());
+                    publish("Another phone is connected. This phone will wait 5 minutes.", null);
+                    main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (linkState.afterClose(userStopped, tokenSaved) && !address.isEmpty()) {
                     long delay = linkState.delayMs();
                     if (linkState.attempt >= 2 && six != null) {
@@ -621,6 +626,11 @@ public class LinkService extends Service {
                 }
                 case "error" -> {
                     String code = message.code();
+                    if ("busy".equals(code)) {
+                        linkState.holdUntil = SecondPhone.until(System.currentTimeMillis());
+                        publish("Another phone is connected. This phone will wait 5 minutes.", null);
+                        closeSocket();
+                    } else {
                     LinkFailure.Kind kind = LinkFailure.fromCode(code);
                     boolean fatal = LinkState.isFatalCode(code);
                     String shown = fatal ? LinkFailure.message(kind) : "The Mac rejected that message.";
@@ -633,6 +643,7 @@ public class LinkService extends Service {
                         closeSocket();
                     }
                     publish(shown, null);
+                    }
                 }
                 case "text" -> {
                     publish("Note from the Mac", body);

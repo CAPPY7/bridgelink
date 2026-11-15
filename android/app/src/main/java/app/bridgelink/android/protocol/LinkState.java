@@ -8,6 +8,11 @@ public final class LinkState {
     public int attempt;
     public String fatal;
     public boolean retryScheduled;
+    public long holdUntil;
+
+    public boolean holding(long now) {
+        return holdUntil > now;
+    }
 
     public void begin() {
         retryScheduled = false;
@@ -53,6 +58,11 @@ public final class LinkState {
     public boolean afterClose(boolean userStopped, boolean tokenSaved) {
         if (userStopped) {
             if (phase != Phase.FATAL) stop();
+            return false;
+        }
+        if (holding(System.currentTimeMillis())) {
+            phase = Phase.BACKOFF;
+            retryScheduled = false;
             return false;
         }
         if (phase == Phase.FATAL) return false;

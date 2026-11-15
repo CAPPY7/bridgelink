@@ -38,3 +38,4 @@ H8. Turning notification mirroring on replaced every other switch. Fixed: only t
 H9. The phone could not lock the Mac after you walked away, because the Wi-Fi link was already gone. Fixed: the Mac itself locks after the link has been gone for the delay you set. At the desk skips it. The Mac still never unlocks.
 H10. Locking the Mac silently changed the password setting. Fixed: BridgeLink only sleeps the display. It does not write system settings. If a password is not required right away, it says so once.
 H11. The Mac share extension was a library, not a real extension, so it could not load. Fixed: it is not shipped. Send files with Finder Services, a Dock drop, or the drop zone.
+H12. Two phones on one Mac kept kicking each other off. Fixed: the Mac keeps the phone that is already connected and tells the other one to wait 5 minutes.

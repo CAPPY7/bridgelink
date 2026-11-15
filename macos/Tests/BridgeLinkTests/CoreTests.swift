@@ -3,6 +3,12 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testASecondPhoneDoesNotReplaceTheFirst() {
+        XCTAssertTrue(SecondPhone.allow("", "b", false))
+        XCTAssertTrue(SecondPhone.allow("a", "a", true))
+        XCTAssertFalse(SecondPhone.allow("a", "b", true))
+    }
+
     func testLockDoesNotWriteSettings() {
         XCTAssertFalse(LockPlan.writesSettings())
         XCTAssertEqual(LockPlan.command(), ["/usr/bin/pmset", "displaysleepnow"])

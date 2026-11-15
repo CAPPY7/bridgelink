@@ -283,6 +283,13 @@ extension LinkModel {
 
     func promote(_ connection: NWConnection, id: UUID, name: String, token: String, deviceId: String) {
         guard pendingID == id || liveID == id else { return }
+        if !SecondPhone.allow(liveDeviceId, deviceId, live != nil && liveID != id) {
+            send(type: "error", payload: ["code": "busy", "body": "Another phone is connected"], on: connection)
+            connection.cancel()
+            finishPending(id)
+            note("Another phone tried to connect. This one stays paired.")
+            return
+        }
         live?.cancel()
         liveID = id
         live = connection
