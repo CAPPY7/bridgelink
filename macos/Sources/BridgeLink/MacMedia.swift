@@ -134,17 +134,22 @@ enum MacShell {
     }
 }
 
-/// Locks the screen. There is no unlock here.
+/// Locks the screen. There is no unlock here, and no system setting is changed.
 enum MacLock {
+    private static var toldPassword = false
+
     static func lock() -> String {
-        _ = MacShell.ok("/usr/bin/defaults", ["write", "com.apple.screensaver", "askForPassword", "-int", "1"])
-        _ = MacShell.ok("/usr/bin/defaults", ["write", "com.apple.screensaver", "askForPasswordDelay", "-int", "0"])
-        if MacShell.ok("/usr/bin/osascript", ["-e", "tell application \"System Events\" to keystroke \"q\" using {control down, command down}"]) {
-            return "Locked the screen"
+        var passwordNow = true
+        if !toldPassword {
+            toldPassword = true
+            if let text = MacShell.text("/usr/bin/defaults", ["read", "com.apple.screensaver", "askForPassword"]) {
+                passwordNow = text.trimmingCharacters(in: .whitespacesAndNewlines) == "1"
+            }
         }
-        if MacShell.ok("/usr/bin/open", ["-a", "ScreenSaverEngine"]) {
-            return "Started the screen saver. Ask for a password immediately in Lock Screen settings."
+        let command = LockPlan.command()
+        if command.count >= 2, MacShell.ok(command[0], Array(command.dropFirst())) {
+            return LockPlan.note(passwordNow)
         }
-        return "Could not lock. Allow Accessibility for BridgeLink, or press Control-Command-Q."
+        return "Could not lock. Press Control-Command-Q, and turn on Require password immediately in Lock Screen settings."
     }
 }

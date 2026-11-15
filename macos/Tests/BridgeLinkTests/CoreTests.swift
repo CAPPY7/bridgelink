@@ -3,6 +3,12 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testLockDoesNotWriteSettings() {
+        XCTAssertFalse(LockPlan.writesSettings())
+        XCTAssertEqual(LockPlan.command(), ["/usr/bin/pmset", "displaysleepnow"])
+        XCTAssertTrue(LockPlan.note(false).contains("Require password"))
+    }
+
     func testMacLocksAfterTheLinkIsGone() {
         XCTAssertFalse(MacLeave.shouldLock(true, false, false, 1000, 30_000))
         XCTAssertTrue(MacLeave.shouldLock(true, false, false, 30_000, 30_000))
