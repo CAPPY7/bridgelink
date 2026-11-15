@@ -143,6 +143,7 @@ public class ProtocolTest {
 
         HelloPlan mitm = HelloPlan.decide("Pixel", "123456", "tokentokentoken1", "pinned", "attacker", "n");
         assertEquals(null, mitm.payload);
+        assertEquals(LinkFailure.Kind.KEY_CHANGED, mitm.kind);
         assertTrue(mitm.fatal.contains("key changed"));
     }
 
@@ -316,21 +317,41 @@ public class ProtocolTest {
         assertNull(Features.safeRelative("/etc/passwd"));
         assertFalse(Features.shouldMirror(true, false, true, false));
         assertTrue(Features.shouldMirror(false, false, true, false));
-        Features.LeaveLock lock = new Features.LeaveLock(-70, 30_000);
-        assertFalse(lock.observe(true, -60, 0));
-        assertFalse(lock.observe(true, -80, 1_000));
-        assertFalse(lock.observe(false, -80, 20_000));
-        assertTrue(lock.observe(false, -90, 31_000));
-        assertFalse(lock.observe(true, -60, 40_000));
-        Features.RateLimit rate = new Features.RateLimit(2, 1_000);
-        assertTrue(rate.allow(0));
-        assertTrue(rate.allow(10));
-        assertFalse(rate.allow(20));
-        assertTrue(rate.allow(1_000));
-        Features.ClipHistory history = new Features.ClipHistory();
-        assertFalse(history.add("1", "123456"));
-        assertTrue(history.add("2", "grocery list"));
-        assertEquals(List.of("grocery list"), history.search("groc"));
+        Features.Notice hidden = Features.notificationShown("Mail", "Salary", "secret body", false, true);
+        assertEquals("Mail", hidden.title);
+        assertEquals("Notification", hidden.body);
+        assertFalse(hidden.body.contains("secret"));
+        Features.Notice shown = Features.notificationShown("Mail", "Salary", "secret body", true, true);
+        assertEquals("Salary", shown.title);
+        assertEquals("secret body", shown.body);
+        Features.Notice optedOut = Features.notificationShown("Mail", "Salary", "secret body", true, false);
+        assertEquals("Mail", optedOut.title);
+        assertEquals("Notification", optedOut.body);
+        assertEquals(LinkFailure.Kind.KEY_CHANGED, LinkFailure.classify(new LinkFailure(LinkFailure.Kind.KEY_CHANGED, "x")));
+        assertEquals(LinkFailure.Kind.TIMEOUT, LinkFailure.classify(new java.net.SocketTimeoutException("timed out waiting")));
+        assertEquals(LinkFailure.Kind.VERSION_MISMATCH, LinkFailure.classify(
+                new IllegalArgumentException(new LinkFailure(LinkFailure.Kind.VERSION_MISMATCH, "version"))));
+        assertTrue(LinkFailure.Kind.KEY_CHANGED.fatal);
+        assertFalse(LinkFailure.Kind.NETWORK_LOST.fatal);
+        assertFalse(LinkFailure.message(LinkFailure.Kind.TIMEOUT).contains("timed out waiting"));
+        java.util.ArrayDeque<String> parked = new java.util.ArrayDeque<>();
+        ServiceDoor.Result blocked = ServiceDoor.deliver(false, () -> {
+            throw new AssertionError("in process");
+        }, () -> {
+            throw new ForegroundServiceStartNotAllowedException();
+        }, ticket -> parked.add(ticket), "notify");
+        assertTrue(blocked.queued);
+        assertEquals(ServiceDoor.RECONNECT, blocked.notice);
+        assertEquals("notify", parked.peek());
+        ServiceDoor.Result live = ServiceDoor.deliver(true, () -> parked.add("handled"), () -> {
+            throw new AssertionError("should not start");
+        }, ticket -> parked.add(ticket), "notify");
+        assertTrue(live.handled);
+        assertFalse(live.queued);
+        assertTrue(RestrictedHelp.blocked(33, 1));
+        assertFalse(RestrictedHelp.blocked(32, 1));
+        assertFalse(RestrictedHelp.blocked(34, 0));
+        assertTrue(RestrictedHelp.stepsText().contains("Allow restricted settings"));
         String secret = "pairing-secret-value";
         assertEquals(32, Features.roomId(secret).length());
         assertFalse(Features.roomId(secret).contains(secret));
@@ -346,9 +367,6 @@ public class ProtocolTest {
         } catch (Exception expected) {
             assertTrue(true);
         }
-        Features.Replay replay = new Features.Replay();
-        assertTrue(replay.accept(1));
-        assertFalse(replay.accept(1));
         assertEquals(17, Features.streamHeader(3, 100, 1, 20).length);
         assertEquals(20, Features.streamLength(Features.streamHeader(3, 100, 1, 20)));
         Frame.Parser parser = new Frame.Parser();
@@ -435,5 +453,12 @@ public class ProtocolTest {
             if (Files.exists(path)) return new String(Files.readAllBytes(path), StandardCharsets.UTF_8).trim();
         }
         throw new IllegalStateException("Missing docs/fixtures/text.json");
+    }
+
+    /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */
+    public static final class ForegroundServiceStartNotAllowedException extends IllegalStateException {
+        public ForegroundServiceStartNotAllowedException() {
+            super("blocked");
+        }
     }
 }

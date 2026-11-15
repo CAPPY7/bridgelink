@@ -29,31 +29,35 @@ import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 
+import androidx.core.content.ContextCompat;
+
 import com.google.gson.JsonObject;
 
-import app.bridgelink.android.protocol.Backoff;
 import app.bridgelink.android.protocol.Dedup;
-import app.bridgelink.android.protocol.Frame;
-import app.bridgelink.android.protocol.Features;
-import app.bridgelink.android.protocol.Outbox;
-
 import app.bridgelink.android.protocol.Envelope;
+import app.bridgelink.android.protocol.Features;
+import app.bridgelink.android.protocol.Frame;
+import app.bridgelink.android.protocol.FrameChannel;
 import app.bridgelink.android.protocol.HelloPlan;
+import app.bridgelink.android.protocol.LinkFailure;
 import app.bridgelink.android.protocol.LinkState;
-import app.bridgelink.android.protocol.Sas;
-import app.bridgelink.android.protocol.Transfers;
 import app.bridgelink.android.protocol.MacList;
+import app.bridgelink.android.protocol.Outbox;
+import app.bridgelink.android.protocol.Sas;
+import app.bridgelink.android.protocol.ServiceDoor;
+import app.bridgelink.android.protocol.Transfers;
 
-import java.io.BufferedWriter;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLContext;
@@ -82,17 +86,17 @@ public class LinkService extends Service {
     private static final int RING_ID = 2;
 
     private final IBinder binder = new LocalBinder();
-    private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Outbox outbox = new Outbox();
-    private final Object writeLock = new Object();
     private final AtomicInteger generation = new AtomicInteger();
     private final AtomicInteger alertIds = new AtomicInteger(100);
     private final Dedup seen = new Dedup(500);
     private final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
     private final Handler main = new Handler(Looper.getMainLooper());
+    private static final Object PARK = new Object();
+    private static final ArrayDeque<Intent> parked = new ArrayDeque<>();
+    private static volatile LinkService running;
 
-    private SSLSocket socket;
-    private BufferedWriter writer;
+    private volatile Attempt attempt;
     private MediaPlayer player;
     private volatile boolean paired;
     private volatile String lastHost = "";
@@ -137,7 +141,9 @@ public class LinkService extends Service {
         channel.setDescription("Phone to Mac link");
         manager().createNotificationChannel(channel);
         files = new FileBridge(this);
+        running = this;
         watchNetwork();
+        flushParked();
     }
 
     @Override
@@ -148,7 +154,14 @@ public class LinkService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startInForeground(paired ? "Paired with the Mac" : "Not connected");
+        running = this;
+        flushParked();
         if (intent == null) return START_STICKY;
+        handleCommand(intent);
+        return START_STICKY;
+    }
+
+    private void handleCommand(Intent intent) {
         String action = intent.getAction();
         if (ACTION_CONNECT.equals(action)) {
             connect(
@@ -167,13 +180,51 @@ public class LinkService extends Service {
         } else if (ACTION_CONFIRM.equals(action)) {
             new Thread(this::confirmSas, "bridgelink-confirm").start();
         } else if (ACTION_FORGET.equals(action)) {
-            // The read loop blocks the single io thread. Forgetting on that
-            // thread would wait for the read it is supposed to cancel.
             new Thread(this::forgetMac, "bridgelink-forget").start();
         } else if (ACTION_FIND_MAC.equals(action)) {
             send("find_mac", "");
         }
-        return START_STICKY;
+    }
+
+    /** Used by background callers. Never throws if Android blocks a foreground start. */
+    public static void post(Context context, Intent intent) {
+        LinkService current = running;
+        ServiceDoor.Result result = ServiceDoor.deliver(current != null, () -> {
+            LinkService live = running;
+            if (live != null) live.handleCommand(intent);
+        }, () -> ContextCompat.startForegroundService(context, intent), ticket -> {
+            synchronized (PARK) {
+                parked.offer(ticket);
+            }
+        }, intent);
+        if (result.notice != null) notifyReconnect(context);
+    }
+
+    private void flushParked() {
+        List<Intent> waiting = new ArrayList<>();
+        synchronized (PARK) {
+            waiting.addAll(parked);
+            parked.clear();
+        }
+        for (Intent intent : waiting) handleCommand(intent);
+    }
+
+    private static void notifyReconnect(Context context) {
+        NotificationManager notifications = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+        if (notifications == null) return;
+        NotificationChannel channel = new NotificationChannel(CHANNEL, "BridgeLink", NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("Phone to Mac link");
+        notifications.createNotificationChannel(channel);
+        Intent open = new Intent(context, MainActivity.class);
+        PendingIntent pending = PendingIntent.getActivity(context, 3, open, PendingIntent.FLAG_IMMUTABLE);
+        Notification note = new Notification.Builder(context, CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle("BridgeLink")
+                .setContentText(ServiceDoor.RECONNECT)
+                .setContentIntent(pending)
+                .setAutoCancel(true)
+                .build();
+        notifications.notify(3, note);
     }
 
     @Override
@@ -192,9 +243,9 @@ public class LinkService extends Service {
         main.removeCallbacksAndMessages(null);
         linkState.stop();
         generation.incrementAndGet();
-        io.execute(this::closeSocket);
+        if (running == this) running = null;
+        closeSocket();
         outbox.close();
-        io.shutdownNow();
         super.onDestroy();
     }
 
@@ -204,96 +255,109 @@ public class LinkService extends Service {
         lastHost = address;
         lastPort = port;
         final int gen = generation.incrementAndGet();
-        closeSocket();
+        Attempt previous = attempt;
+        attempt = null;
+        if (previous != null) previous.close();
         linkState.begin();
-        io.execute(() -> {
-            if (generation.get() != gen) return;
-            paired = false;
-            SharedPreferences prefs = Prefs.open(this);
-            String savedToken = prefs.getString("token", "");
-            String pinned = prefs.getString("fp", "");
-            boolean tokenReady = savedToken != null && savedToken.length() >= 16 && pinned != null && !pinned.isEmpty();
-            boolean qrReady = code.length() == 6 && pinned != null && !pinned.isEmpty();
-            boolean sasReady = pinned == null || pinned.isEmpty();
-            if (address.isEmpty() || !(tokenReady || qrReady || sasReady)) {
-                linkState.failFatal("Scan the Mac code, or enter the Mac address and confirm the match code.");
-                publish(linkState.fatal, null);
+        Attempt mine = new Attempt(gen);
+        attempt = mine;
+        Thread thread = new Thread(() -> runConnect(mine, address, port, code), "bridgelink-conn-" + gen);
+        thread.start();
+    }
+
+    private void runConnect(Attempt mine, String address, int port, String code) {
+        if (mine.closed || generation.get() != mine.gen) return;
+        paired = false;
+        SharedPreferences prefs = Prefs.open(this);
+        String savedToken = prefs.getString("token", "");
+        String pinned = prefs.getString("fp", "");
+        boolean tokenReady = savedToken != null && savedToken.length() >= 16 && pinned != null && !pinned.isEmpty();
+        boolean qrReady = code.length() == 6 && pinned != null && !pinned.isEmpty();
+        boolean sasReady = pinned == null || pinned.isEmpty();
+        if (address.isEmpty() || !(tokenReady || qrReady || sasReady)) {
+            linkState.failFatal("Scan the Mac code, or enter the Mac address and confirm the match code.");
+            publish(linkState.fatal, null);
+            return;
+        }
+        publish("Connecting to " + address + "…", null);
+        try {
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, new TrustManager[]{new PinningTrust(this)}, null);
+            SSLSocket next = (SSLSocket) context.getSocketFactory().createSocket();
+            mine.socket = next;
+            next.connect(new InetSocketAddress(address, port), 8000);
+            next.setTcpNoDelay(true);
+            next.startHandshake();
+            if (mine.closed || generation.get() != mine.gen) {
+                next.close();
                 return;
             }
-            publish("Connecting to " + address + "…", null);
-            try {
-                SSLContext context = SSLContext.getInstance("TLS");
-                context.init(null, new TrustManager[]{new PinningTrust(this)}, null);
-                SSLSocket next = (SSLSocket) context.getSocketFactory().createSocket();
-                next.connect(new InetSocketAddress(address, port), 8000);
-                next.setTcpNoDelay(true);
-                next.startHandshake();
-                String seen = fingerprint((X509Certificate) next.getSession().getPeerCertificates()[0]);
-                sessionFp = seen;
-                matchCode = "";
-                macCommit = "";
-                byte[] nonceRaw = new byte[16];
-                new SecureRandom().nextBytes(nonceRaw);
-                StringBuilder nonce = new StringBuilder(nonceRaw.length * 2);
-                for (byte value : nonceRaw) nonce.append(String.format("%02x", value));
-                sasPhoneNonce = nonce.toString();
-                HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen, nonce.toString());
-                if (plan.fatal != null) {
-                    next.close();
-                    linkState.failFatal(plan.fatal);
-                    if (plan.fatal.contains("key changed")) prefs.edit().remove("token").apply();
-                    publish(plan.fatal, null);
-                    return;
-                }
-                synchronized (writeLock) {
-                    if (generation.get() != gen) {
-                        next.close();
-                        return;
-                    }
-                    socket = next;
-                    writer = null;
-                }
-                writeEnvelope(Envelope.make("hello", "android", plan.payload));
-                Frame.Parser parser = new Frame.Parser();
-                byte[] buffer = new byte[8192];
-                int count;
-                while (generation.get() == gen && (count = next.getInputStream().read(buffer)) >= 0) {
-                    if (count == 0) continue;
-                    byte[] chunk = java.util.Arrays.copyOf(buffer, count);
-                    for (Frame frame : parser.push(chunk)) {
-                        lastRx = System.currentTimeMillis();
-                        if (frame.type == Frame.JSON) {
-                            onLine(new String(frame.payload, StandardCharsets.UTF_8));
-                        }
-                    }
-                }
-            } catch (Exception error) {
-                if (generation.get() == gen && linkState.phase != LinkState.Phase.FATAL) {
-                    String message = error.getMessage() == null ? "Link dropped" : error.getMessage();
-                    if (message.contains("key changed") || message.contains("Unsupported version")) {
-                        linkState.failFatal(message);
-                        Prefs.open(this).edit().remove("token").apply();
-                        publish(message, null);
-                    } else {
-                        linkState.retryable(message);
-                        publish(message, null);
-                    }
-                }
-            } finally {
-                main.removeCallbacks(heartbeat);
-                if (generation.get() == gen) {
-                    paired = false;
-                    closeSocket();
-                    if (linkState.retryScheduled && !address.isEmpty()) {
-                        long delay = linkState.delayMs();
-                        publish("Reconnecting…", null);
-                        main.postDelayed(() -> connect(address, port, code), delay);
-                    } else if (linkState.phase != LinkState.Phase.FATAL) {
-                        publish("Disconnected", null);
+            String seen = fingerprint((X509Certificate) next.getSession().getPeerCertificates()[0]);
+            sessionFp = seen;
+            matchCode = "";
+            macCommit = "";
+            byte[] nonceRaw = new byte[16];
+            new SecureRandom().nextBytes(nonceRaw);
+            StringBuilder nonce = new StringBuilder(nonceRaw.length * 2);
+            for (byte value : nonceRaw) nonce.append(String.format("%02x", value));
+            sasPhoneNonce = nonce.toString();
+            HelloPlan plan = HelloPlan.decide(Build.MODEL, code, savedToken, pinned, seen, nonce.toString());
+            if (plan.kind != null) {
+                next.close();
+                linkState.failFatal(plan.fatal);
+                if (plan.kind == LinkFailure.Kind.KEY_CHANGED) prefs.edit().remove("token").apply();
+                publish(plan.fatal, null);
+                return;
+            }
+            mine.channel = new FrameChannel(next);
+            if (mine.closed || generation.get() != mine.gen) {
+                mine.close();
+                return;
+            }
+            writeEnvelope(Envelope.make("hello", "android", plan.payload));
+            Frame.Parser parser = new Frame.Parser();
+            byte[] buffer = new byte[8192];
+            int count;
+            while (!mine.closed && generation.get() == mine.gen && (count = next.getInputStream().read(buffer)) >= 0) {
+                if (count == 0) continue;
+                byte[] chunk = java.util.Arrays.copyOf(buffer, count);
+                for (Frame frame : parser.push(chunk)) {
+                    lastRx = System.currentTimeMillis();
+                    if (frame.type == Frame.JSON) {
+                        onLine(new String(frame.payload, StandardCharsets.UTF_8));
                     }
                 }
             }
-        });
+        } catch (Exception error) {
+            if (generation.get() == mine.gen && linkState.phase != LinkState.Phase.FATAL) {
+                LinkFailure.Kind kind = LinkFailure.classify(error);
+                String message = LinkFailure.message(kind);
+                if (kind.fatal) {
+                    linkState.failFatal(message);
+                    if (kind == LinkFailure.Kind.KEY_CHANGED || kind == LinkFailure.Kind.TOKEN_REJECTED) {
+                        Prefs.open(this).edit().remove("token").apply();
+                    }
+                    publish(message, null);
+                } else {
+                    linkState.retryable(message);
+                    publish(message, null);
+                }
+            }
+        } finally {
+            main.removeCallbacks(heartbeat);
+            mine.close();
+            if (attempt == mine) {
+                attempt = null;
+                paired = false;
+                if (linkState.retryScheduled && !address.isEmpty()) {
+                    long delay = linkState.delayMs();
+                    publish("Reconnecting…", null);
+                    main.postDelayed(() -> connect(address, port, code), delay);
+                } else if (linkState.phase != LinkState.Phase.FATAL) {
+                    publish("Disconnected", null);
+                }
+            }
+        }
     }
 
     private void onLine(String line) {
@@ -368,10 +432,12 @@ public class LinkService extends Service {
                 }
                 case "error" -> {
                     String code = message.code();
-                    String shown = body.isEmpty() ? "Mac rejected the link" : body;
-                    if (LinkState.isFatalCode(code)) {
+                    LinkFailure.Kind kind = LinkFailure.fromCode(code);
+                    boolean fatal = LinkState.isFatalCode(code);
+                    String shown = fatal ? LinkFailure.message(kind) : "The Mac rejected that message.";
+                    if (fatal) {
                         linkState.failFatal(shown);
-                        if ("bad_token".equals(code) || "bad_proof".equals(code) || "bad_pin".equals(code)) {
+                        if (kind == LinkFailure.Kind.TOKEN_REJECTED || kind == LinkFailure.Kind.WRONG_CODE || kind == LinkFailure.Kind.KEY_CHANGED) {
                             Prefs.open(this).edit().remove("token").apply();
                         }
                         generation.incrementAndGet();
@@ -425,6 +491,14 @@ public class LinkService extends Service {
                 }
             }
         } catch (Exception error) {
+            LinkFailure.Kind kind = LinkFailure.classify(error);
+            if (kind == LinkFailure.Kind.VERSION_MISMATCH) {
+                linkState.failFatal(LinkFailure.message(kind));
+                publish(LinkFailure.message(kind), null);
+                generation.incrementAndGet();
+                closeSocket();
+                return;
+            }
             publish("Bad message from the Mac", null);
         }
     }
@@ -482,7 +556,7 @@ public class LinkService extends Service {
                     publish("Sent", body == null || body.isEmpty() ? kind : "Sent");
                 }
             } catch (Exception error) {
-                publish("Send failed: " + error.getMessage(), null);
+                publish("Send failed. Try again.", null);
             }
         });
     }
@@ -636,23 +710,17 @@ public class LinkService extends Service {
     }
 
     private void writeEnvelope(Envelope envelope) throws Exception {
-        byte[] frame = Frame.encode(Frame.JSON, envelope.toJsonString().getBytes(StandardCharsets.UTF_8));
-        synchronized (writeLock) {
-            if (socket == null) throw new IllegalStateException("not connected");
-            socket.getOutputStream().write(frame);
-            socket.getOutputStream().flush();
+        Attempt current = attempt;
+        if (current == null || current.channel == null || current.closed) {
+            throw new IOException("not connected");
         }
+        byte[] frame = Frame.encode(Frame.JSON, envelope.toJsonString().getBytes(StandardCharsets.UTF_8));
+        current.channel.write(frame);
     }
 
     private void closeSocket() {
-        synchronized (writeLock) {
-            try {
-                if (socket != null) socket.close();
-            } catch (Exception ignored) {
-            }
-            socket = null;
-            writer = null;
-        }
+        Attempt current = attempt;
+        if (current != null) current.close();
     }
 
     private void copy(String text) {
@@ -869,13 +937,38 @@ public class LinkService extends Service {
                 return;
             }
             if (!MessageDigest.isEqual(pinned.getBytes(StandardCharsets.UTF_8), fp.getBytes(StandardCharsets.UTF_8))) {
-                throw new CertificateException("This Mac key changed. Forget the Mac, then pair again.");
+                throw new CertificateException(new LinkFailure(LinkFailure.Kind.KEY_CHANGED, LinkFailure.message(LinkFailure.Kind.KEY_CHANGED)));
             }
         }
 
         @Override
         public X509Certificate[] getAcceptedIssuers() {
             return new X509Certificate[0];
+        }
+    }
+
+    /** One connection attempt. Its threads own the socket. close() does not wait for a write. */
+    private static final class Attempt {
+        final int gen;
+        volatile SSLSocket socket;
+        volatile FrameChannel channel;
+        volatile boolean closed;
+
+        Attempt(int gen) {
+            this.gen = gen;
+        }
+
+        void close() {
+            closed = true;
+            FrameChannel current = channel;
+            if (current != null) current.close();
+            SSLSocket open = socket;
+            if (open != null) {
+                try {
+                    open.close();
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 }

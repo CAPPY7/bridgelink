@@ -231,6 +231,24 @@
             android:minHeight="48dp"
             android:text="@string/mirror_notifications" />
 
+        <TextView
+            android:id="@+id/restricted"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/text"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/restrictedHelp"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/restricted_help" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/battery"
             style="@style/Widget.Material3.Button.OutlinedButton"

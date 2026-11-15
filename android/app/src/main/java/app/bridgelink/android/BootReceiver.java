@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
-import androidx.core.content.ContextCompat;
-
 public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -24,6 +22,6 @@ public class BootReceiver extends BroadcastReceiver {
         service.putExtra(LinkService.EXTRA_HOST, host);
         service.putExtra(LinkService.EXTRA_PORT, port);
         service.putExtra(LinkService.EXTRA_PIN, "");
-        ContextCompat.startForegroundService(context, service);
+        LinkService.post(context, service);
     }
 }

@@ -12,13 +12,13 @@ See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_GUIDE.md](docs/USER_GUIDE.
 
 ## Status of the 25 features
 
-Honest status of the **installable apps** in 0.6.0. The demo is not counted.
+Honest status of the **installable apps** in 0.7.0. The demo is not counted. Nothing is Done until it is tested on a real phone and Mac. See [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
 
 | # | Feature | Status |
 |---|---|---|
 | 1 | Send files, links, and text | Partial. Text both ways. Files both ways with a hash check, a 100 MB cap, sanitized names, and resume from the last saved offset |
 | 2 | Share sheet and drag-drop | Partial. Android share sheet sends text, a link, or one file. The Mac menu-bar icon and the panel accept a dropped file |
-| 3 | Notification mirroring | Partial. The phone can mirror notifications after you turn it on and allow notification access. The Mac shows the app name, not the text in the menu log. Reply and dismiss are not done |
+| 3 | Notification mirroring | Partial. The phone can mirror after you turn it on. On Android 13+ a sideloaded app needs Allow restricted settings first; the app shows the steps. The Mac shows the full text only when it is unlocked and Show notification text is on. Otherwise it shows the app name. Reply and dismiss are not done |
 | 4 | Media control | Not started |
 | 5 | Battery status | Partial. The phone sends its level when it pairs. The Mac shows it. The Mac battery is not sent yet |
 | 6 | Find phone | Partial. Rings at alarm volume, can vibrate, stops from the phone or the Mac, and the phone can ring the Mac |

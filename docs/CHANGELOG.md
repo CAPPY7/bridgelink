@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+- A stalled file send can no longer freeze the phone. Socket open, close, read, and write run on connection threads. Closing the link does not wait on a blocked write. A write that makes no progress for 20 seconds closes the socket.
+- Each connection attempt has its own thread. A new connect does not wait behind the old read loop.
+- If Android refuses to start the link service from the background, the message is kept and a notification says to open BridgeLink. It does not crash.
+- Link failures are chosen by type (key changed, wrong code, rejected phone, version, timeout, refused, network). The screen does not match words inside an error.
+- Notification text is shown on the Mac only when the Mac is unlocked and Show notification text is on. Otherwise the Mac shows the app name. The text is not written into the activity log.
+- Android 13 and newer shows the restricted-settings steps before notification access, and detects when that setting is still blocked.
+- Clipboard history, leave-lock, rate-limit, and replay helpers that were not used by either app were removed.
+- The Mac build is still ad-hoc signed. After an update, macOS can forget permissions. The app says so.
+
 ## 0.6.0
 
 - Files go both ways. The name is sanitized, the size is capped at 100 MB, and the SHA-256 is checked before the file is kept. The phone saves into Downloads/BridgeLink. The Mac saves into ~/Downloads/BridgeLink.

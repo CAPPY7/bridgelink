@@ -58,7 +58,9 @@ public final class Envelope {
         JsonElement parsed = JsonParser.parseString(json);
         if (parsed == null || !parsed.isJsonObject()) throw new IllegalArgumentException("Bad JSON");
         JsonObject root = parsed.getAsJsonObject();
-        if (!root.has("v") || root.get("v").getAsInt() != VERSION) throw new IllegalArgumentException("Unsupported version");
+        if (!root.has("v") || root.get("v").getAsInt() != VERSION) {
+            throw new IllegalArgumentException(new LinkFailure(LinkFailure.Kind.VERSION_MISMATCH, LinkFailure.message(LinkFailure.Kind.VERSION_MISMATCH)));
+        }
         Envelope envelope = new Envelope();
         envelope.v = VERSION;
         envelope.id = required(root, "id");

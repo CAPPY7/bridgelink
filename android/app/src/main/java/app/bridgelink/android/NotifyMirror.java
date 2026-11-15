@@ -5,8 +5,6 @@ import android.content.Intent;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
-import androidx.core.content.ContextCompat;
-
 import app.bridgelink.android.protocol.Features;
 
 /** Mirrors notifications only after the user turns the feature on. Text is not logged. */
@@ -33,6 +31,6 @@ public class NotifyMirror extends NotificationListenerService {
         if (code != null && Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) {
             send.putExtra("otp", "1");
         }
-        ContextCompat.startForegroundService(this, send);
+        LinkService.post(this, send);
     }
 }

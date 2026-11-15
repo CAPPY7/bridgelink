@@ -9,38 +9,44 @@ import com.google.gson.JsonObject;
  * match-code exchange and sends no secret.
  */
 public final class HelloPlan {
+    public final LinkFailure.Kind kind;
     public final String fatal;
     public final JsonObject payload;
 
-    private HelloPlan(String fatal, JsonObject payload) {
+    private HelloPlan(LinkFailure.Kind kind, String fatal, JsonObject payload) {
+        this.kind = kind;
         this.fatal = fatal;
         this.payload = payload;
     }
 
     public static HelloPlan decide(String name, String pin, String token, String pinnedFingerprint, String seenFingerprint, String phoneNonce) {
         if (seenFingerprint == null || seenFingerprint.isEmpty()) {
-            return new HelloPlan("The Mac did not present a certificate.", null);
+            return fail(LinkFailure.Kind.REFUSED, "The Mac did not present a certificate.");
         }
         boolean pinned = pinnedFingerprint != null && !pinnedFingerprint.isEmpty();
         if (pinned && !pinnedFingerprint.equalsIgnoreCase(seenFingerprint)) {
-            return new HelloPlan("This Mac key changed. Forget the Mac, then pair again.", null);
+            return fail(LinkFailure.Kind.KEY_CHANGED, LinkFailure.message(LinkFailure.Kind.KEY_CHANGED));
         }
         if (token != null && token.length() >= 16 && pinned && pinnedFingerprint.equalsIgnoreCase(seenFingerprint)) {
             JsonObject payload = base(name);
             payload.addProperty("token", token);
-            return new HelloPlan(null, payload);
+            return new HelloPlan(null, null, payload);
         }
         if (pin != null && pin.length() == 6 && pinned && pinnedFingerprint.equalsIgnoreCase(seenFingerprint)) {
             JsonObject payload = base(name);
             payload.addProperty("proof", Proof.hmacHex(pin, seenFingerprint));
-            return new HelloPlan(null, payload);
+            return new HelloPlan(null, null, payload);
         }
         if (!pinned) {
             JsonObject payload = base(name);
             payload.addProperty("commit", Sas.commit(phoneNonce));
-            return new HelloPlan(null, payload);
+            return new HelloPlan(null, null, payload);
         }
-        return new HelloPlan("Scan the Mac code again. The saved key does not have a PIN.", null);
+        return fail(LinkFailure.Kind.WRONG_CODE, "Scan the Mac code again. The saved key does not have a PIN.");
+    }
+
+    private static HelloPlan fail(LinkFailure.Kind kind, String message) {
+        return new HelloPlan(kind, message, null);
     }
 
     private static JsonObject base(String name) {

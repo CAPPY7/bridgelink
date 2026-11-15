@@ -1,6 +1,8 @@
 package app.bridgelink.android;
 
 import android.Manifest;
+import android.app.AppOpsManager;
+import android.os.Process;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -18,6 +20,7 @@ import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -31,6 +34,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
 import app.bridgelink.android.protocol.MacList;
 import app.bridgelink.android.protocol.PairingLink;
+import app.bridgelink.android.protocol.RestrictedHelp;
 
 public class MainActivity extends AppCompatActivity {
     private EditText host;
@@ -134,8 +138,20 @@ public class MainActivity extends AppCompatActivity {
         });
         findViewById(R.id.mirror).setOnClickListener(v -> {
             Prefs.open(this).edit().putString("flags", "notify=1,otp=1").apply();
+            if (restrictedBlocked()) {
+                showRestrictedHelp();
+                return;
+            }
             startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
         });
+        findViewById(R.id.restrictedHelp).setOnClickListener(v -> showRestrictedHelp());
+        TextView restricted = findViewById(R.id.restricted);
+        if (restrictedBlocked()) {
+            restricted.setVisibility(android.view.View.VISIBLE);
+            restricted.setText(RestrictedHelp.stepsText());
+        } else {
+            restricted.setVisibility(android.view.View.GONE);
+        }
         applyLinkUri(getIntent());
     }
 
@@ -144,6 +160,30 @@ public class MainActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         applyLinkUri(intent);
+    }
+
+    private boolean restrictedBlocked() {
+        if (Build.VERSION.SDK_INT < 33) return false;
+        try {
+            AppOpsManager ops = getSystemService(AppOpsManager.class);
+            if (ops == null) return false;
+            int mode = ops.unsafeCheckOpNoThrow("android:access_restricted_settings", Process.myUid(), getPackageName());
+            return RestrictedHelp.blocked(Build.VERSION.SDK_INT, mode);
+        } catch (RuntimeException error) {
+            return false;
+        }
+    }
+
+    private void showRestrictedHelp() {
+        new AlertDialog.Builder(this)
+                .setTitle("Allow restricted settings")
+                .setMessage(RestrictedHelp.stepsText())
+                .setPositiveButton("Open app info", (dialog, which) -> {
+                    Intent settings = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+                    startActivity(settings);
+                })
+                .setNegativeButton("Not now", null)
+                .show();
     }
 
     private void applyLinkUri(Intent intent) {

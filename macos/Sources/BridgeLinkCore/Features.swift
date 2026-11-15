@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 /// Pure rules shared with the Android Features class. No AppKit, so tests can run them.
@@ -208,6 +209,18 @@ public enum Features {
         return value
     }
 
+    public struct Notice: Equatable {
+        public let title: String
+        public let body: String
+    }
+
+    /// Full text only when the Mac is unlocked and the user turned show-text on.
+    public static func notificationShown(app: String, title: String, body: String, unlocked: Bool, showText: Bool) -> Notice {
+        let name = app.isEmpty ? "Notification" : app
+        if !unlocked || !showText { return Notice(title: name, body: "Notification") }
+        return Notice(title: title.isEmpty ? name : title, body: body)
+    }
+
     public static func streamHeader(streamId: Int, offset: Int64, flags: Int, length: Int) -> Data? {
         if streamId < 0 || offset < 0 || length < 0 || length > 64 * 1024 { return nil }
         var out = Data(capacity: 17)
@@ -223,98 +236,6 @@ public enum Features {
         let length = intOf(header.suffix(4))
         if length < 0 || length > 64 * 1024 { return -1 }
         return length
-    }
-
-    public final class RateLimit {
-        private let max: Int
-        private let windowMs: Int64
-        private var windowStart: Int64 = Int64.min
-        private var count = 0
-        public init(max: Int, windowMs: Int64) {
-            self.max = max
-            self.windowMs = windowMs
-        }
-        public func allow(_ now: Int64) -> Bool {
-            if windowStart == Int64.min || now - windowStart >= windowMs {
-                windowStart = now
-                count = 0
-            }
-            if count >= max { return false }
-            count += 1
-            return true
-        }
-    }
-
-    public final class LeaveLock {
-        public let weakRssi: Int
-        public let graceMs: Int64
-        private var weakSince: Int64 = 0
-        private var awayFlag = false
-        public init(weakRssi: Int, graceMs: Int64) {
-            self.weakRssi = weakRssi
-            self.graceMs = graceMs
-        }
-        public func observe(connected: Bool, rssi: Int, now: Int64) -> Bool {
-            let strong = connected && rssi >= weakRssi + 8
-            let weak = !connected || rssi < weakRssi
-            if strong || (!weak && !awayFlag) {
-                weakSince = 0
-                return false
-            }
-            if !weak { return false }
-            if weakSince == 0 { weakSince = now }
-            if !awayFlag && now - weakSince >= graceMs {
-                awayFlag = true
-                return true
-            }
-            return false
-        }
-        public func away() -> Bool { awayFlag }
-    }
-
-    public final class ClipHistory {
-        public static let max = 50
-        public struct Item {
-            public let id: String
-            public let text: String
-            public var pinned: Bool
-        }
-        private var items: [Item] = []
-        public init() {}
-        public func add(id: String, text: String) -> Bool {
-            if id.isEmpty || text.isEmpty || Features.sensitiveText(text) { return false }
-            items.removeAll { $0.text == text || $0.id == id }
-            items.insert(Item(id: id, text: text, pinned: false), at: 0)
-            while items.count > ClipHistory.max {
-                if let index = items.lastIndex(where: { !$0.pinned }) { items.remove(at: index) } else { break }
-            }
-            return items.contains { $0.id == id }
-        }
-        public func search(_ query: String) -> [String] {
-            let needle = query.lowercased()
-            return items.filter { needle.isEmpty || $0.text.lowercased().contains(needle) }.map(\.text)
-        }
-        public func pin(_ id: String) -> Bool {
-            guard let index = items.firstIndex(where: { $0.id == id }) else { return false }
-            items[index].pinned = true
-            return true
-        }
-        public func delete(_ id: String) -> Bool {
-            let before = items.count
-            items.removeAll { $0.id == id }
-            return items.count != before
-        }
-        public func size() -> Int { items.count }
-    }
-
-    public final class Replay {
-        private var highest: Int64 = -1
-        public init() {}
-        public func accept(_ counter: Int64) -> Bool {
-            if counter <= highest { return false }
-            highest = counter
-            return true
-        }
     }
 
     private static func wordEdge(_ text: String, _ range: Range<String.Index>) -> Bool {
@@ -446,5 +367,52 @@ public enum Features {
         var value = 0
         for byte in data { value = (value << 8) | Int(byte) }
         return value
+    }
+}
+
+public enum LinkKind: Equatable {
+    case keyChanged
+    case wrongCode
+    case tokenRejected
+    case versionMismatch
+    case timeout
+    case refused
+    case networkLost
+
+    public var fatal: Bool {
+        switch self {
+        case .keyChanged, .wrongCode, .tokenRejected, .versionMismatch:
+            return true
+        case .timeout, .refused, .networkLost:
+            return false
+        }
+    }
+
+    public var message: String {
+        switch self {
+        case .keyChanged: return "This Mac key changed. Forget the phone, then pair again."
+        case .wrongCode: return "The match code was wrong. Connect again."
+        case .tokenRejected: return "This Mac rejected the phone. Pair again."
+        case .versionMismatch: return "This phone and Mac need the same BridgeLink version."
+        case .timeout: return "The phone did not answer in time."
+        case .refused: return "The phone refused the connection."
+        case .networkLost: return "The Wi-Fi link dropped."
+        }
+    }
+
+    public static func from(code: String) -> LinkKind? {
+        switch code {
+        case "key_changed": return .keyChanged
+        case "bad_code", "bad_pin", "bad_proof": return .wrongCode
+        case "bad_token": return .tokenRejected
+        case "bad_version": return .versionMismatch
+        default: return nil
+        }
+    }
+
+    public static func fromErrno(_ errno: Int32) -> LinkKind {
+        if errno == ECONNREFUSED || errno == ECONNRESET { return .refused }
+        if errno == ETIMEDOUT { return .timeout }
+        return .networkLost
     }
 }

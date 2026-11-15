@@ -1,4 +1,5 @@
 import BridgeLinkCore
+import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
@@ -167,20 +168,19 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Features.safeRelative("photos/cat.jpg"), "photos/cat.jpg" as String?)
         XCTAssertNil(Features.safeRelative("../etc/passwd"))
         XCTAssertEqual(Features.unseen(already: ["a"], current: ["a", "b"]), ["b"])
-        let lock = Features.LeaveLock(weakRssi: -70, graceMs: 30_000)
-        XCTAssertFalse(lock.observe(connected: true, rssi: -60, now: 0))
-        XCTAssertFalse(lock.observe(connected: true, rssi: -80, now: 1_000))
-        XCTAssertFalse(lock.observe(connected: false, rssi: -80, now: 20_000))
-        XCTAssertTrue(lock.observe(connected: false, rssi: -90, now: 31_000))
-        let rate = Features.RateLimit(max: 2, windowMs: 1_000)
-        XCTAssertTrue(rate.allow(0))
-        XCTAssertTrue(rate.allow(10))
-        XCTAssertFalse(rate.allow(20))
-        XCTAssertTrue(rate.allow(1_000))
-        let history = Features.ClipHistory()
-        XCTAssertFalse(history.add(id: "1", text: "123456"))
-        XCTAssertTrue(history.add(id: "2", text: "grocery list"))
-        XCTAssertEqual(history.search("groc"), ["grocery list"])
+        let hidden = Features.notificationShown(app: "Mail", title: "Salary", body: "secret body", unlocked: false, showText: true)
+        XCTAssertEqual(hidden.title, "Mail")
+        XCTAssertEqual(hidden.body, "Notification")
+        XCTAssertFalse(hidden.body.contains("secret"))
+        let shown = Features.notificationShown(app: "Mail", title: "Salary", body: "secret body", unlocked: true, showText: true)
+        XCTAssertEqual(shown.body, "secret body")
+        let opted = Features.notificationShown(app: "Mail", title: "Salary", body: "secret body", unlocked: true, showText: false)
+        XCTAssertEqual(opted.body, "Notification")
+        XCTAssertEqual(LinkKind.from(code: "bad_token"), .tokenRejected)
+        XCTAssertTrue(LinkKind.tokenRejected.fatal)
+        XCTAssertEqual(LinkKind.fromErrno(ECONNREFUSED), .refused)
+        XCTAssertFalse(LinkKind.refused.fatal)
+        XCTAssertFalse(LinkKind.timeout.message.contains("ETIMEDOUT"))
         XCTAssertEqual(Features.roomId("pairing-secret-value"), "f507aed2ed2149bbb78e8dccbe166a53")
         let key = Features.deriveKey("pairing-secret-value")
         XCTAssertEqual(key.map { String(format: "%02x", $0) }.joined(), "530b21bed696739ee321edc2b49c0dc8a0c443df9799e6ca8601f74f2fa5f959")
@@ -192,9 +192,6 @@ final class CoreTests: XCTestCase {
         var flipped = sealed
         flipped[flipped.count - 1] ^= 1
         XCTAssertThrowsError(try Features.open(key: key, sealed: flipped))
-        let replay = Features.Replay()
-        XCTAssertTrue(replay.accept(1))
-        XCTAssertFalse(replay.accept(1))
         let header = try XCTUnwrap(Features.streamHeader(streamId: 3, offset: 100, flags: 1, length: 20))
         XCTAssertEqual(header.count, 17)
         XCTAssertEqual(Features.streamLength(header), 20)

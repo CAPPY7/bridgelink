@@ -1,20 +1,18 @@
 # Progress
 
-v0.6.0 is tagged on a736cd8 (CI was green). Resume, menu-bar drop, find-Mac, clipboard echo, battery, and notification/OTP hooks are committed after that tag.
+v0.7.0 is the bug-fix release. It is not tagged until CI on that commit is green.
 
 ## Done in code
 - Pairing with commit-then-reveal, emulator test, signed v0.4.0 and v0.6.0.
-- Files both ways, resume via file_have, links, share sheet, Quick Settings tile.
-- Menu-bar icon drop target and Command-Shift-D.
-- Find phone with stop, vibrate, Find my Mac beep.
-- Clipboard echo prevention. Notification listener and OTP copy exist but stay off until both sides turn mirroring on.
-- Shared tested rules: OTP table, SMS parts, clipboard history, leave-lock, relay seal, stream header.
+- Files both ways, resume, links, share sheet, Quick Settings tile, menu-bar drop, find, clipboard echo, battery, notification and OTP hooks.
+- v0.7.0: connection threads, non-blocking close, typed link errors, background-start queue, notification privacy, restricted-settings help, dead helper removal, feature matrix gate.
 
 ## Next exact step
-Wire the remaining features into both apps, one commit each, in this order: clipboard history screen, media buttons, SMS module, inbox list, scan-to-PDF, automations, shared folder, proximity lock, screen mirror framing, remote control, camera preview, relay client. Then run the full test list in section 3, fix CI, and tag the highest honest version.
+Wait for CI on the v0.7.0 commit. If it is green, tag v0.7.0. Then start Stage 2: Kotlin Compose shell, light and dark theme, adaptive icon, Mac icon. Do not mark any feature Done until the owner replies "worked".
 
 ## Open problems
-- v0.6.0 release assets are the commit before resume. The resume commit still needs a green CI run.
-- Notification text is sent only when the user turns mirroring on. It is not logged. Restricted-settings help screen is not written yet.
-- Mac global shortcut needs Accessibility on some macOS versions.
-- Do not create a new signing key. Do not print secrets.
+- Apple Developer ID is not decided. The Mac app stays ad-hoc signed until the owner answers. Permissions can reset after each update.
+- Theme is still hard-coded dark on Android. No adaptive icon. No Mac app icon. That is Stage 2.
+- Features 4, 9, 11-21 are not in the apps.
+- The owner has not run the manual tests yet, so nothing is Done.
+- Do not create a new signing key. Do not print secrets. The release keystore stays outside the repo, in the owner's own backup of bridgelink-release.keystore.

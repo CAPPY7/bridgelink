@@ -17,7 +17,9 @@ jobs:
           distribution: temurin
           java-version: "17"
       - name: Versions match
-        run: python3 scripts/check-versions.py
+        run: |
+          python3 scripts/check-versions.py
+          python3 scripts/check-matrix.py
       - name: Unit tests, lint, and release APK
         working-directory: android
         run: |

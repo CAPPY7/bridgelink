@@ -259,6 +259,25 @@ public final class Features {
         return cipher.doFinal(body);
     }
 
+    /** Full notification text only when the Mac is unlocked and show-text is on. */
+    public static final class Notice {
+        public final String title;
+        public final String body;
+
+        public Notice(String title, String body) {
+            this.title = title;
+            this.body = body;
+        }
+    }
+
+    public static Notice notificationShown(String app, String title, String body, boolean unlocked, boolean showText) {
+        String name = app == null || app.isEmpty() ? "Notification" : app;
+        if (!unlocked || !showText) return new Notice(name, "Notification");
+        String shownTitle = title == null || title.isEmpty() ? name : title;
+        String shownBody = body == null ? "" : body;
+        return new Notice(shownTitle, shownBody);
+    }
+
     public static long counterOf(byte[] sealed) {
         if (sealed == null || sealed.length < 20) return -1;
         return ByteBuffer.wrap(sealed, 12, 8).getLong();
@@ -282,129 +301,6 @@ public final class Features {
         int length = ByteBuffer.wrap(header, 13, 4).getInt();
         if (length < 0 || length > 64 * 1024) return -1;
         return length;
-    }
-
-    public static final class RateLimit {
-        private final int max;
-        private final long windowMs;
-        private long windowStart = Long.MIN_VALUE;
-        private int count;
-
-        public RateLimit(int max, long windowMs) {
-            this.max = max;
-            this.windowMs = windowMs;
-        }
-
-        public synchronized boolean allow(long now) {
-            if (windowStart == Long.MIN_VALUE || now - windowStart >= windowMs) {
-                windowStart = now;
-                count = 0;
-            }
-            if (count >= max) return false;
-            count++;
-            return true;
-        }
-    }
-
-    /** Lock only after the phone stays weak for the grace period. A stronger signal clears it. */
-    public static final class LeaveLock {
-        public final int weakRssi;
-        public final long graceMs;
-        private long weakSince;
-        private boolean away;
-
-        public LeaveLock(int weakRssi, long graceMs) {
-            this.weakRssi = weakRssi;
-            this.graceMs = graceMs;
-        }
-
-        public boolean observe(boolean connected, int rssi, long now) {
-            boolean strong = connected && rssi >= weakRssi + 8;
-            boolean weak = !connected || rssi < weakRssi;
-            if (strong || (!weak && !away)) {
-                weakSince = 0;
-                return false;
-            }
-            if (!weak) return false;
-            if (weakSince == 0) weakSince = now;
-            if (!away && now - weakSince >= graceMs) {
-                away = true;
-                return true;
-            }
-            return false;
-        }
-
-        public boolean away() {
-            return away;
-        }
-    }
-
-    /** Last 50 clipboard items. Sensitive text and OTPs are refused. */
-    public static final class ClipHistory {
-        public static final int MAX = 50;
-        private final List<Item> items = new ArrayList<>();
-
-        public static final class Item {
-            public final String id;
-            public final String text;
-            public boolean pinned;
-
-            Item(String id, String text) {
-                this.id = id;
-                this.text = text;
-            }
-        }
-
-        public boolean add(String id, String text) {
-            if (id == null || id.isEmpty() || text == null || text.isEmpty()) return false;
-            if (looksSensitive(text)) return false;
-            items.removeIf(item -> item.text.equals(text) || item.id.equals(id));
-            items.add(0, new Item(id, text));
-            for (int i = items.size() - 1; i >= 0 && items.size() > MAX; i--) {
-                if (!items.get(i).pinned) items.remove(i);
-            }
-            for (Item item : items) {
-                if (item.id.equals(id)) return true;
-            }
-            return false;
-        }
-
-        public List<String> search(String query) {
-            String needle = query == null ? "" : query.toLowerCase(Locale.US);
-            List<String> found = new ArrayList<>();
-            for (Item item : items) {
-                if (needle.isEmpty() || item.text.toLowerCase(Locale.US).contains(needle)) found.add(item.text);
-            }
-            return found;
-        }
-
-        public boolean pin(String id) {
-            for (Item item : items) {
-                if (item.id.equals(id)) {
-                    item.pinned = true;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public boolean delete(String id) {
-            return items.removeIf(item -> item.id.equals(id));
-        }
-
-        public int size() {
-            return items.size();
-        }
-    }
-
-    public static final class Replay {
-        private long highest = -1;
-
-        public boolean accept(long counter) {
-            if (counter <= highest) return false;
-            highest = counter;
-            return true;
-        }
     }
 
     private static boolean wordEdge(String text, int at, int length) {

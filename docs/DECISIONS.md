@@ -1,5 +1,17 @@
 # Decisions
 
+## v0.7.0 link threads and signing
+
+Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".
+
+Link errors use a kind. Fatal kinds do not retry. The wording of an exception is not the rule.
+
+Notification text crosses the link only so the Mac can show it when asked. The Mac shows the full text only if the screen is unlocked and Show notification text is on. The activity list stores "Notification from the phone" and never the text.
+
+The Mac app is still ad-hoc signed. Developer ID signing was not chosen yet. Until it is, each update can drop Accessibility, Screen Recording, and Bluetooth, and the app tells the owner to allow them again in System Settings.
+
+Clipboard history, leave-lock, rate limit, and replay classes were deleted because nothing in the apps called them. They come back only when those features are wired in.
+
 ## v0.4.0 pairing proof
 
 The first hello sends `proof` only when the QR link already contained the certificate fingerprint and the live certificate matches it. A typed address does not send a PIN proof. Both screens show a 6-digit match code from the certificate the phone saw. The user confirms on both. A relay sees a different code and is not given a token. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens. The PIN on the Mac refreshes itself after 120 seconds.

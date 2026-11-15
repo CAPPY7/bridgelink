@@ -24,6 +24,7 @@
     <string name="stop_ringing">Stop ringing</string>
     <string name="find_mac_sound">Find my Mac</string>
     <string name="mirror_notifications">Mirror notifications</string>
+    <string name="restricted_help">Notification access help</string>
     <string name="forget_mac">Forget this Mac</string>
     <string name="keep_connected">Keep me connected</string>
     <string name="forgot_mac">Forgot this Mac. Pair again with a new PIN.</string>

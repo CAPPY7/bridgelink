@@ -38,6 +38,7 @@ final class LinkModel: ObservableObject {
     @Published var linkDraft = ""
     @Published var phoneBattery = ""
     @Published var mirrorOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "notify", fallback: false)
+    @Published var showNotificationText = UserDefaults.standard.bool(forKey: "showNotificationText")
     private var haves: [String: Int] = [:]
     private var haveWaiters: [String: (Int) -> Void] = [:]
     private var lastEcho = ""
@@ -140,6 +141,11 @@ final class LinkModel: ObservableObject {
     func setMirror(_ on: Bool) {
         mirrorOn = on
         UserDefaults.standard.set(on ? "notify=1,otp=1" : "notify=0,otp=0", forKey: "flags")
+    }
+
+    func setShowNotificationText(_ on: Bool) {
+        showNotificationText = on
+        UserDefaults.standard.set(on, forKey: "showNotificationText")
     }
 
     func setClipboardMode(_ mode: String) {
@@ -308,7 +314,13 @@ final class LinkModel: ObservableObject {
                         if self.listenAttempt < 8 {
                             self.openListener()
                         } else {
-                            self.phase = .failed(error.localizedDescription)
+                            let kind: LinkKind
+                            if case .posix(let code) = error {
+                                kind = LinkKind.fromErrno(code.rawValue)
+                            } else {
+                                kind = .networkLost
+                            }
+                            self.phase = .failed(kind.message)
                         }
                     default:
                         break
@@ -318,7 +330,7 @@ final class LinkModel: ObservableObject {
             listener.start(queue: queue)
             self.listener = listener
         } catch {
-            phase = .failed(String(describing: error))
+            phase = .failed("Could not start the listener.")
         }
     }
 
@@ -606,8 +618,14 @@ final class LinkModel: ObservableObject {
         case "notify":
             let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
             guard Features.enabled(flags, "notify", fallback: false) else { return }
-            let title = envelope.text("title")
-            notify(title.isEmpty ? "Notification" : title, envelope.text("app"))
+            let shown = Features.notificationShown(
+                app: envelope.text("app"),
+                title: envelope.text("title"),
+                body: envelope.text("body"),
+                unlocked: macUnlocked(),
+                showText: showNotificationText
+            )
+            notify(shown.title, shown.body)
             note("Notification from the phone")
         case "otp":
             let otpFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
@@ -753,6 +771,19 @@ final class LinkModel: ObservableObject {
         macFinder = nil
     }
 
+    private func macUnlocked() -> Bool {
+        guard let handle = dlopen("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics", RTLD_LAZY) else {
+            return false
+        }
+        defer { dlclose(handle) }
+        guard let symbol = dlsym(handle, "CGSSessionCopyCurrentDictionary") else { return false }
+        typealias SessionFn = @convention(c) () -> Unmanaged<CFDictionary>?
+        let copy = unsafeBitCast(symbol, to: SessionFn.self)
+        guard let session = copy()?.takeRetainedValue() as? [String: Any] else { return false }
+        if let locked = session["CGSSessionScreenIsLocked"] as? Bool, locked { return false }
+        return true
+    }
+
     private func notify(_ title: String, _ body: String) {
         let content = UNMutableNotificationContent()
         content.title = title
@@ -846,6 +877,16 @@ struct DeskView: View {
                 get: { model.mirrorOn },
                 set: { model.setMirror($0) }
             ))
+            Toggle("Show notification text", isOn: Binding(
+                get: { model.showNotificationText },
+                set: { model.setShowNotificationText($0) }
+            ))
+            Text("Notification text is shown only while this Mac is unlocked and that switch is on. Otherwise only the app name is shown.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("This copy is not signed with an Apple Developer ID. After an update, macOS may forget Accessibility, Screen Recording, and Bluetooth. Open System Settings and allow BridgeLink again.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Picker("Clipboard from phone", selection: Binding(
                 get: { model.clipboardMode },
                 set: { model.setClipboardMode($0) }
@@ -897,7 +938,7 @@ struct DeskView: View {
         }
         .sheet(isPresented: $showAbout) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("BridgeLink 0.6.0").font(.headline)
+                Text("BridgeLink 0.7.0").font(.headline)
                 Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 Button("Close") { showAbout = false }
             }
