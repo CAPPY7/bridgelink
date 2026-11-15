@@ -15,12 +15,12 @@ Status words are only: Not started, Building, Built – self-tested, Final – o
 | 9 | Trackpad and keyboard | Built – self-tested | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M9 |
 | 10 | Clipboard sync | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M10 |
 | 11 | SMS | Built – self-tested | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M11 |
-| 12 | Screen mirror | Not started | none | none | none | M12 |
-| 13 | Control the phone | Not started | none | none | none | M13 |
-| 14 | Phone as webcam | Not started | none | none | none | M14 |
+| 12 | Screen mirror | Built – self-tested | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M12 |
+| 13 | Control the phone | Built – self-tested | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M13 |
+| 14 | Phone as webcam | Built – self-tested | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M14 |
 | 15 | Shared folder | Built – self-tested | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M15 |
 | 16 | Lock the Mac when you leave | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
-| 17 | Away from home | Not started | none | none | none | M17 |
+| 17 | Away from home | Built – self-tested | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M17 |
 | 18 | Unified inbox | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M18 |
 | 19 | Clipboard history | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M19 |
 | 20 | Scan to Mac | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M20 |

@@ -251,6 +251,7 @@ extension LinkModel {
             phase = .listening
             note("The phone forgot this Mac")
         default:
+            if handleSix(envelope, connection) { break }
             if handleFive(envelope, connection) { break }
             if handleEasy(envelope, connection) { break }
             note(envelope.type)
@@ -272,6 +273,7 @@ extension LinkModel {
         note("Paired with \(name)")
         sendMacBattery()
         startFive()
+        ensureRelayKey()
     }
 
     func finishSas(connection: NWConnection, id: UUID) {

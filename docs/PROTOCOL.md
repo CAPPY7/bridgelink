@@ -103,6 +103,20 @@ A sender waits up to one second for `file_have`. It skips that many bytes and co
 
 A shared path cannot start with a slash, contain `..`, or leave the folder. If both copies differ, the receiver keeps its file and saves the incoming one as `name (BridgeLink conflict).ext`. A shared file over 32 MB is skipped. Pointer kinds are `move`, `tap`, `right`, `scroll`, `drag`, `key`, `slide`, and `laser`. The Mac ignores them until Accessibility is on.
 
+## Types in 0.13.0
+
+| type | payload | Who sends it |
+|---|---|---|
+| mirror_start | `quality` low, medium, or high | Mac |
+| mirror_stop | empty | Either side. Closing the Mac window sends this |
+| control | `kind`, `x`, `y`, `x2`, `y2`, `text` | Mac. Kinds are tap, drag, scroll, text, back, home, recents |
+| cam_start | `facing`, `zoom`, `flash`, `mic` | Mac |
+| cam_stop | empty | Either side |
+| relay_key | `body` shared secret | Mac, only on the local TLS link, after pairing |
+| relay_set | `url` must be `wss://` | Either side |
+
+Picture and camera bytes use binary frames (type 2), not JSON. A binary payload is a 4 byte stream, 1 flag byte, 2 byte part, 2 byte part count, then bytes. Stream 1 is H.264. Flag 1 is a key frame. Flag 2 is a parameter set. Stream 2 is a JPEG. Stream 3 is 16-bit mic audio. The away relay never sees these bytes in the clear. Each side locks the whole frame with the key from `relay_key` before the relay forwards it.
+
 ## Pairing
 
 The Mac shows a QR code and a 6-digit PIN. The link inside the QR is:

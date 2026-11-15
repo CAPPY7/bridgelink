@@ -192,9 +192,13 @@ extension LinkModel {
                 let stillPending = self.liveID != id
                 if let data {
                     do {
-                        let messages = try buffer.push(data)
-                        for message in messages {
-                            self.handle(message, connection: connection, id: id, pending: stillPending)
+                        let incoming = try buffer.pushAll(data)
+                        for item in incoming {
+                            if let message = item.json {
+                                self.handle(message, connection: connection, id: id, pending: stillPending)
+                            } else if let binary = item.binary {
+                                self.takePicture(binary)
+                            }
                         }
                     } catch {
                         connection.cancel()
@@ -208,6 +212,7 @@ extension LinkModel {
                         self.live = nil
                         self.phase = .listening
                         self.note("Phone disconnected")
+                        self.tryRelay()
                     }
                     return
                 }

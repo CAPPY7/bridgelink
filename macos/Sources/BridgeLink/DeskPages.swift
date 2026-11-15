@@ -29,9 +29,9 @@ struct DeskDetail: View {
         case .shared:
             SharedPane()
         case .mirror:
-            EmptyNote(symbol: "rectangle.on.rectangle", title: "Screen mirror is not ready.", line: "The phone picture arrives in a later update. Notification mirror is under Notifications.")
+            MirrorPane()
         case .webcam:
-            EmptyNote(symbol: "video", title: "The phone camera is not a webcam yet.", line: "A live view inside BridgeLink arrives in a later update.")
+            WebcamPane()
         case .automations:
             AutomationsPane()
         case .devices: devices
@@ -172,9 +172,10 @@ struct DeskDetail: View {
             Text(StageFive.pointerSteps).font(.callout).foregroundStyle(.secondary)
             Toggle("Let the phone move the pointer and type", isOn: Binding(get: { model.trackpadOn }, set: { model.setTrackpad($0) }))
             Button("Show the Accessibility steps") { model.explainPointer() }
+            RelayPane()
             Text("The first open needs one extra step because this app is not from the Mac App Store. macOS 13 or 14: right-click the app, choose Open, then Open. macOS 15 or newer: System Settings, Privacy and Security, Open Anyway.")
                 .font(.callout).foregroundStyle(.secondary)
-            Text("BridgeLink 0.12.0").font(.headline)
+            Text("BridgeLink 0.13.0").font(.headline)
             Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 .foregroundStyle(.secondary)
             Button("Quit") { model.quit() }

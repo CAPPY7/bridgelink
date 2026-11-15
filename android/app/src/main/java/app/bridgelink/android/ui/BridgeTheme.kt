@@ -107,7 +107,7 @@ private fun PhoneShell(model: PhoneModel, actions: PhoneActions) {
                 Page.Messages -> MessagesPage(model, actions)
                 Page.Files -> FilesPage(model, actions)
                 Page.Remote -> RemotePage(model, actions)
-                Page.Mirror -> MirrorPage()
+                Page.Mirror -> MirrorPage(model, actions)
                 Page.Settings -> SettingsPage(model, actions)
             }
         }

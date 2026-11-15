@@ -39,6 +39,10 @@ enum ShotBook {
         model.folderPath = "BridgeLink Shared"
         model.rules = [StageFive.Rule(id: "connect-alert-1", when: "connect", thenAction: "alert", extra: "Phone is here", enabled: true)]
         model.trackpadOn = true
+        model.six.mirrorStatus = "Waiting for the phone to allow the screen."
+        model.six.camStatus = "The phone camera shows here."
+        model.six.quality = "medium"
+        model.six.relayUrl = "wss://relay.example.com"
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover.png", folder, .light)
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover-dark.png", folder, .dark)
         for tab in DeskTab.allCases {

@@ -62,19 +62,19 @@ Honest status of the **installable apps**. The demo is not counted. Status words
 | 9 | Trackpad, keyboard, slides | Built – self-tested. Drag, click, two-finger scroll, right-click, typing, slides, and a laser dot. The Mac needs Accessibility |
 | 10 | Clipboard sync | Built – self-tested. On or off, skips sensitive text, sends small pictures |
 | 11 | SMS | Built – self-tested. Read, send, banners, and a SIM choice. Allow SMS on the phone |
-| 12 | Screen mirror | Not started |
-| 13 | Control the phone while mirroring | Not started |
-| 14 | Phone as webcam | Not started |
+| 12 | Screen mirror | Built – self-tested. Phone screen in a Mac window. Closing the window stops it. Quality is low, medium, or high |
+| 13 | Control the phone while mirroring | Built – self-tested. Click, drag, scroll, and type through the phone accessibility service. Back, Home, and Recents. The Mac never unlocks the phone |
+| 14 | Phone as webcam | Built – self-tested. Live camera inside BridgeLink, with front or back, zoom, flash, and mic. A Zoom or FaceTime camera needs a paid Apple Developer ID, so that extension stays off |
 | 15 | Shared folder | Built – self-tested. Both ways, conflict copies, pause. Files over 32 MB are skipped |
 | 16 | Lock the Mac when you leave | Built – self-tested |
-| 17 | Away from home | Not started |
+| 17 | Away from home | Built – self-tested. A free relay forwards locked frames only. Pair once on Wi-Fi first |
 | 18 | Unified inbox | Built – self-tested |
 | 19 | Clipboard history | Built – self-tested |
 | 20 | Scan to Mac | Built – self-tested |
 | 21 | Automations | Built – self-tested. Up to eight when-this-then-that rules |
 | 22 | Quick drop | Built – self-tested. Quick Settings tile, menu-bar drop, and a floating drop zone |
 | 23 | Pairing | Built – self-tested. QR, several phones and Macs, rename, and forget |
-| 24 | End-to-end encryption | Built – self-tested. TLS on the local link. New features use that same link |
+| 24 | End-to-end encryption | Built – self-tested. TLS on the local link. The away relay only forwards frames that are already locked |
 | 25 | Key pin | Built – self-tested. If the Mac key changed, forget it and scan again |
 
 ## Build

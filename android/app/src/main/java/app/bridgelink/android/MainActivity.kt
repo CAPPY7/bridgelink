@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     val work by lazy { PhoneWork(this) }
     val easy by lazy { EasyWork(this) }
     val five by lazy { FiveWork(this) }
+    val six by lazy { SixWork(this) }
     var browser: MacBrowser? = null
 
     private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -51,12 +52,21 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         if (granted.values.all { it }) easy.saveLock(true) else model.status = "Bluetooth was not allowed, so the Mac will not lock when you leave."
     }
 
+    val screenConsent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        six.onScreen(result.resultCode, result.data)
+    }
+
+    val camPermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        if (granted.values.all { it }) six.openCamera() else model.status = "Camera was not allowed."
+    }
+
     private val events = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val next = intent?.getStringExtra(LinkService.EXTRA_STATUS)
             val line = intent?.getStringExtra(LinkService.EXTRA_LINE)
             if (next != null) {
                 model.status = next
+                six.onAsk(next)
                 if (next.startsWith("Playing ") || next.startsWith("Paused ") || next == "Nothing is playing") {
                     model.nowPlaying = next
                 }
@@ -78,6 +88,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         work.load()
         easy.load()
         five.refresh()
+        six.load()
         setContent { BridgeApp(model, this) }
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -176,6 +187,13 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun deleteRule(id: String) = five.deleteRule(id)
     override fun pointer(kind: String, x: Int, y: Int, text: String) = five.pointer(kind, x, y, text)
     override fun toggleTrackpad() = five.toggleTrackpad()
+    override fun shareScreen() = six.shareScreen()
+    override fun stopShare() = six.stopShare()
+    override fun startCamera() = six.startCamera()
+    override fun stopCamera() = six.stopCamera()
+    override fun saveRelay() = six.saveRelay()
+    override fun useRelay() = six.useRelay()
+    override fun controlSteps() = six.controlSteps()
 
     private fun startScan() {
         try {

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0
+
+- The Mac can show the phone screen in a window. The phone encodes H.264. The Mac decodes it. Low, medium, and high set the size and the frame rate. Closing the window stops the picture.
+- A click, drag, or scroll in that window taps the phone. Back, Home, and Recents are buttons. Typing needs a text field on the phone. Turn on BridgeLink under Accessibility. Android 13 and newer may need Allow restricted settings first. The Mac never unlocks the phone.
+- The phone camera can show live inside BridgeLink, front or back, with zoom, flash, and the mic. Share that window in a call. A camera that appears in Zoom, Meet, or FaceTime needs a paid Apple Developer ID, so that extension stays off.
+- Away from home can use a free relay after you pair once on the same Wi-Fi. The relay only forwards locked frames. It cannot read them. The address starts with wss://. Setup steps are in Setup for the owner.
+
 ## 0.12.0
 
 - Texts can be read and sent from the Mac. A new text shows a banner. If the phone has two SIMs, you can pick one. Allow SMS on the phone. A sideloaded app may need Allow restricted settings first.

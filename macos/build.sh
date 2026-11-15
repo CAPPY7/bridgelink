@@ -60,3 +60,8 @@ if result.returncode != 0:
 print("screenshots ok")
 PY
 echo "Built universal BridgeLink-mac.zip and BridgeLink.dmg"
+if [ -n "${APPLE_TEAM_ID:-}" ]; then
+  echo "APPLE_TEAM_ID is set. Camera Extension source is macos/CameraExtension. A paid Developer ID is still required before Zoom can see it."
+else
+  echo "Camera Extension left off. The phone camera shows inside BridgeLink. Zoom needs a paid Apple Developer ID."
+fi

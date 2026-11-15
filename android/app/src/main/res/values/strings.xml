@@ -33,4 +33,5 @@
     <string name="bad_link">That is not a BridgeLink pairing link</string>
     <string name="scan_failed">Scan cancelled. Paste the pairing link instead.</string>
     <string name="saved_macs">Saved Macs: %1$s</string>
+    <string name="touch_gate">BridgeLink uses this so a click in the Mac mirror window can tap, scroll, and type on this phone. It never unlocks the phone.</string>
 </resources>

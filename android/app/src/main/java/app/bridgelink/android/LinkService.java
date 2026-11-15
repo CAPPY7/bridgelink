@@ -126,6 +126,7 @@ public class LinkService extends Service {
     private volatile String lastNow = "";
     private LeaveWatch leave;
     private PhoneFive five;
+    private PhoneSix six;
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -171,6 +172,30 @@ public class LinkService extends Service {
             @Override
             public void status(String line) {
                 publish(line, null);
+            }
+        });
+        six = new PhoneSix(this, new PhoneSix.Out() {
+            @Override
+            public void frame(String type, JsonObject payload) throws Exception {
+                writeEnvelope(Envelope.make(type, "android", payload));
+            }
+
+            @Override
+            public void status(String line) {
+                publish(line, null);
+            }
+
+            @Override
+            public void relayUp() {
+                paired = true;
+                publish("Connected through the away relay. The relay cannot read the link.", null);
+            }
+
+            @Override
+            public void relayFrames(java.util.List<Frame> frames) {
+                for (Frame frame : frames) {
+                    if (frame.type == Frame.JSON) onLine(new String(frame.payload, StandardCharsets.UTF_8));
+                }
             }
         });
         running = this;
@@ -325,6 +350,7 @@ public class LinkService extends Service {
         generation.incrementAndGet();
         if (running == this) running = null;
         closeSocket();
+        if (six != null) six.stopRelay();
         outbox.close();
         super.onDestroy();
     }
@@ -457,7 +483,11 @@ public class LinkService extends Service {
                     publish("Reconnecting…", null);
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (linkState.phase != LinkState.Phase.FATAL) {
-                    publish("Disconnected", null);
+                    if (six != null && six.tryRelay()) {
+                        publish("Wi-Fi missed the Mac. Trying the away relay.", null);
+                    } else {
+                        publish("Disconnected", null);
+                    }
                 }
             }
         }
@@ -509,6 +539,7 @@ public class LinkService extends Service {
                     main.postDelayed(heartbeat, 20_000);
                     sendBattery();
                     if (five != null) five.onPaired();
+                    if (six != null && attempt != null && attempt.channel != null) six.stopRelay();
                 }
                 case "sas" -> {
                     String commit = message.text("commit");
@@ -643,6 +674,7 @@ public class LinkService extends Service {
                 }
                 default -> {
                     if (five != null && five.handle(message)) break;
+                    if (six != null && six.handle(message)) break;
                     JsonObject payload = new JsonObject();
                     payload.addProperty("code", "unsupported_type");
                     payload.addProperty("body", "This phone does not handle " + message.type);
@@ -745,6 +777,10 @@ public class LinkService extends Service {
                 if (five != null && ("pointer".equals(kind) || "sms_push".equals(kind) || "folder_sync".equals(kind)
                         || "folder_pause".equals(kind) || "auto".equals(kind) || "wifi".equals(kind) || "input_on".equals(kind))) {
                     five.command(kind, text);
+                    return;
+                }
+                if (six != null && six.known(kind)) {
+                    six.command(kind, text);
                     return;
                 }
                 payload.addProperty("body", text);
@@ -960,12 +996,34 @@ public class LinkService extends Service {
     }
 
     private void writeEnvelope(Envelope envelope) throws Exception {
+        writeRaw(Frame.encode(Frame.JSON, envelope.toJsonString().getBytes(StandardCharsets.UTF_8)));
+    }
+
+    void writeRaw(byte[] framed) throws Exception {
         Attempt current = attempt;
-        if (current == null || current.channel == null || current.closed) {
-            throw new IOException("not connected");
+        if (current != null && current.channel != null && !current.closed) {
+            current.channel.write(framed);
+            return;
         }
-        byte[] frame = Frame.encode(Frame.JSON, envelope.toJsonString().getBytes(StandardCharsets.UTF_8));
-        current.channel.write(frame);
+        if (six != null && six.relaySend(framed)) return;
+        throw new IOException("not connected");
+    }
+
+    public static void sendRaw(byte[] framed) {
+        LinkService live = running;
+        if (live == null || framed == null) return;
+        live.outbox.submit(() -> {
+            try {
+                live.writeRaw(framed);
+            } catch (Exception error) {
+                live.publish("The picture could not be sent.", null);
+            }
+        });
+    }
+
+    public static void postStatus(String line) {
+        LinkService live = running;
+        if (live != null && line != null) live.publish(line, null);
     }
 
     private void closeSocket() {

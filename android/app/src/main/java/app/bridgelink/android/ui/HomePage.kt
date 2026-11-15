@@ -201,15 +201,3 @@ fun RemotePage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Type", "type-send", { actions.pointer("key", 0, 0, model.typeText) })
     }
 }
-
-@Composable
-fun MirrorPage() {
-    PageScroll {
-        Text("Mirror", style = MaterialTheme.typography.headlineMedium)
-        EmptyState(
-            Icons.Filled.FolderOpen,
-            "Screen mirror is not on this phone yet.",
-            "It arrives in a later update. Notification mirror is under Alerts.",
-        )
-    }
-}

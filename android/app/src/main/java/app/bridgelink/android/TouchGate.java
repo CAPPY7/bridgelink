@@ -1,0 +1,88 @@
+package app.bridgelink.android;
+
+import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
+import android.graphics.Path;
+import android.os.Bundle;
+import android.view.accessibility.AccessibilityNodeInfo;
+
+import app.bridgelink.android.protocol.StageSix;
+
+/** Turns mirror clicks into phone taps. It never unlocks the phone. */
+public final class TouchGate extends AccessibilityService {
+    private static volatile TouchGate live;
+
+    public static boolean on() {
+        return live != null;
+    }
+
+    public static String perform(android.content.Context context, StageSix.Tap tap) {
+        TouchGate gate = live;
+        if (gate == null || tap == null) return StageSix.CONTROL_STEPS;
+        int width = context.getResources().getDisplayMetrics().widthPixels;
+        int height = context.getResources().getDisplayMetrics().heightPixels;
+        int[] start = StageSix.phonePixel(width, height, tap.x, tap.y);
+        int[] end = StageSix.phonePixel(width, height, tap.x2, tap.y2);
+        boolean ok = switch (tap.kind) {
+            case "back" -> gate.performGlobalAction(GLOBAL_ACTION_BACK);
+            case "home" -> gate.performGlobalAction(GLOBAL_ACTION_HOME);
+            case "recents" -> gate.performGlobalAction(GLOBAL_ACTION_RECENTS);
+            case "text" -> gate.type(tap.text);
+            case "drag", "scroll" -> gate.stroke(start[0], start[1], end[0], end[1], 180);
+            default -> gate.stroke(start[0], start[1], start[0], start[1], 40);
+        };
+        if ("text".equals(tap.kind) && !ok) return "Tap a text field on the phone, then type again.";
+        return ok ? "Sent" : "That touch did not land.";
+    }
+
+    @Override
+    protected void onServiceConnected() {
+        live = this;
+    }
+
+    @Override
+    public void onDestroy() {
+        if (live == this) live = null;
+        super.onDestroy();
+    }
+
+    @Override
+    public void onAccessibilityEvent(android.view.accessibility.AccessibilityEvent event) {
+    }
+
+    @Override
+    public void onInterrupt() {
+    }
+
+    private boolean stroke(int x1, int y1, int x2, int y2, long ms) {
+        Path path = new Path();
+        path.moveTo(x1, y1);
+        if (x1 != x2 || y1 != y2) path.lineTo(Math.max(0, x2), Math.max(0, y2));
+        GestureDescription.StrokeDescription stroke = new GestureDescription.StrokeDescription(path, 0, Math.max(1, ms));
+        GestureDescription gesture = new GestureDescription.Builder().addStroke(stroke).build();
+        return dispatchGesture(gesture, null, null);
+    }
+
+    private boolean type(String text) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        AccessibilityNodeInfo focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focus == null) focus = findEdit(root);
+        if (focus == null) return false;
+        CharSequence existing = focus.getText();
+        Bundle args = new Bundle();
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                (existing == null ? "" : existing.toString()) + text);
+        return focus.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+    }
+
+    private static AccessibilityNodeInfo findEdit(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isEditable()) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = findEdit(node.getChild(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+}

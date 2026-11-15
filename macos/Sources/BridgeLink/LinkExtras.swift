@@ -13,8 +13,14 @@ import UserNotifications
 
 extension LinkModel {
     func send(type: String, payload: [String: String], on connection: NWConnection?) {
-        let frame = encodeFrame(json: EnvelopeCodec.json(type: type, from: "mac", payload: payload))
-        connection?.send(content: frame, completion: .contentProcessed { _ in })
+        let json = EnvelopeCodec.json(type: type, from: "mac", payload: payload)
+        if connection != nil {
+            connection?.send(content: encodeFrame(json: json), completion: .contentProcessed { _ in })
+            return
+        }
+        if let away, away.isLive {
+            away.sendJson(json)
+        }
     }
 
     func note(_ line: String) {

@@ -55,6 +55,13 @@ class PhoneModel {
     var typeText by mutableStateOf("")
     var trackpadOn by mutableStateOf(false)
     var dragMode by mutableStateOf(false)
+    var mirrorQuality by mutableStateOf("medium")
+    var mirrorStatus by mutableStateOf("The Mac window shows this phone after you allow the screen.")
+    var camFacing by mutableStateOf("back")
+    var camZoom by mutableStateOf("1")
+    var camFlash by mutableStateOf(false)
+    var camMic by mutableStateOf(false)
+    var relayUrl by mutableStateOf("")
 }
 
 data class ClipRow(val id: String, val text: String, val pinned: Boolean)
@@ -107,4 +114,11 @@ interface PhoneActions {
     fun deleteRule(id: String)
     fun pointer(kind: String, x: Int, y: Int, text: String)
     fun toggleTrackpad()
+    fun shareScreen()
+    fun stopShare()
+    fun startCamera()
+    fun stopCamera()
+    fun saveRelay()
+    fun useRelay()
+    fun controlSteps()
 }

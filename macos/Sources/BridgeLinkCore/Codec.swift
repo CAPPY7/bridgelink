@@ -60,6 +60,11 @@ public enum EnvelopeCodec {
     }
 }
 
+public struct Incoming {
+    public let json: Data?
+    public let binary: Data?
+}
+
 public struct FrameBuffer {
     public static let maxBytes = 1024 * 1024
     private var pending = Data()
@@ -67,8 +72,12 @@ public struct FrameBuffer {
     public init() {}
 
     public mutating func push(_ chunk: Data) throws -> [Data] {
+        try pushAll(chunk).compactMap { $0.json }
+    }
+
+    public mutating func pushAll(_ chunk: Data) throws -> [Incoming] {
         pending.append(chunk)
-        var messages: [Data] = []
+        var messages: [Incoming] = []
         while pending.count >= 5 {
             let start = pending.startIndex
             let type = pending[start]
@@ -78,8 +87,11 @@ public struct FrameBuffer {
                 | Int(pending[start + 4])
             if length < 0 || length > FrameBuffer.maxBytes { throw CodecError.badLength }
             if pending.count < 5 + length { break }
+            let payload = pending.subdata(in: start + 5..<start + 5 + length)
             if type == FrameKind.json {
-                messages.append(pending.subdata(in: start + 5..<start + 5 + length))
+                messages.append(Incoming(json: payload, binary: nil))
+            } else if type == FrameKind.binary {
+                messages.append(Incoming(json: nil, binary: payload))
             }
             pending.removeSubrange(start..<start + 5 + length)
         }

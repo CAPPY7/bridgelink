@@ -78,6 +78,8 @@ final class LinkModel: ObservableObject {
     @Published var folderPaused = false
     @Published var folderPath = ""
     @Published var rules: [StageFive.Rule] = []
+    let six = SixHold()
+    var away: AwayLink?
     @Published var ruleWhen = "connect"
     @Published var ruleThen = "alert"
     @Published var ruleExtra = ""
@@ -211,7 +213,8 @@ final class LinkModel: ObservableObject {
     }
 
     func mirrorLater() {
-        note("Screen mirror arrives in a later update.")
+        showDesk()
+        note("Open Mirror in the window. Allow the screen on the phone when it asks.")
     }
 
     func sendDropped(_ urls: [URL]) {

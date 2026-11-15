@@ -11,7 +11,15 @@
 
 ## What you cannot do yet
 
-Screen mirror, controlling the phone from that mirror, using the phone as a webcam, and connecting when the phone and Mac are on different networks. The browser preview can imitate some of those. It is not connected to your devices.
+Sparkle updates, a first-run wizard, and an in-app updater. Screen mirror, phone control, the camera window, and away-from-home are in 0.13.0. The browser preview can imitate some of those. It is not connected to your devices.
+
+## Screen mirror, camera, and away from home
+
+On the Mac, open Mirror and tap Start mirror. On the phone, allow the screen when Android asks. Closing the Mirror page stops the picture. Click the picture to tap the phone. Turn on BridgeLink under Accessibility first. Android 13 and newer may need Allow restricted settings.
+
+Webcam shows the phone camera inside BridgeLink. It does not appear as a Zoom camera unless you have a paid Apple Developer ID.
+
+Away from home needs the relay steps in Setup for the owner, and one pairing on the same Wi-Fi first.
 
 ## Day to day
 
