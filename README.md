@@ -54,7 +54,7 @@ Honest status of the **installable apps**. The demo is not counted. Status words
 | 1 | Send files, links, and text | Built – self-tested. Files, folders as zip, up to 4 GB, progress, cancel, and resume |
 | 2 | Share sheet and drag-drop | Built – self-tested. Android share sends many files. Mac drop, drop zone, Finder Services, and Share |
 | 3 | Notification mirroring | Built – self-tested. Banners, reply when the app allows it, dismiss both ways, per-app block, Do Not Disturb option |
-| 4 | Media control | Not started |
+| 4 | Media control | Built – self-tested |
 | 5 | Battery status | Built – self-tested. Both ways, plus low and full alerts |
 | 6 | Find phone | Built – self-tested. Rings on the alarm stream so silent mode does not hide it. Either side can stop it |
 | 7 | OTP auto-copy | Built – self-tested. Codes from notifications and SMS, cleared on the Mac after 60 seconds |
@@ -66,11 +66,11 @@ Honest status of the **installable apps**. The demo is not counted. Status words
 | 13 | Control the phone while mirroring | Not started |
 | 14 | Phone as webcam | Not started |
 | 15 | Shared folder | Not started |
-| 16 | Lock the Mac when you leave | Not started |
+| 16 | Lock the Mac when you leave | Built – self-tested |
 | 17 | Away from home | Not started |
-| 18 | Unified inbox | Not started |
-| 19 | Clipboard history | Not started |
-| 20 | Scan to Mac | Not started |
+| 18 | Unified inbox | Built – self-tested |
+| 19 | Clipboard history | Built – self-tested |
+| 20 | Scan to Mac | Built – self-tested |
 | 21 | Automations | Not started |
 | 22 | Quick drop | Built – self-tested. Quick Settings tile, menu-bar drop, and a floating drop zone |
 | 23 | Pairing | Built – self-tested. QR, several phones and Macs, rename, and forget |

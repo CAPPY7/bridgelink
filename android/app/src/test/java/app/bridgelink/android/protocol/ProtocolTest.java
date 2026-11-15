@@ -307,6 +307,73 @@ public class ProtocolTest {
     }
 
     @Test
+    public void stageFourRules() {
+        assertEquals("5-c21", StageFour.clipId("ab", 5));
+        assertEquals(40, StageFour.clampVolume(40));
+        assertEquals(0, StageFour.clampVolume(-3));
+        assertEquals(100, StageFour.clampVolume(140));
+        assertEquals(-70, StageFour.threshold(70));
+        assertEquals(-40, StageFour.threshold(10));
+        assertEquals(-95, StageFour.threshold(200));
+        assertEquals(5, StageFour.delaySeconds(1));
+        assertFalse(StageFour.lockRequest("unlock"));
+        assertTrue(StageFour.lockRequest("away"));
+        assertFalse(StageFour.shouldLock(false, -90, true, -70, 60_000, 30_000, false, false, false));
+        assertFalse(StageFour.shouldLock(true, -90, false, -70, 60_000, 30_000, false, false, false));
+        assertFalse(StageFour.shouldLock(true, -40, true, -70, 60_000, 30_000, false, false, false));
+        assertFalse(StageFour.shouldLock(true, 0, true, -70, 60_000, 30_000, true, false, false));
+        assertFalse(StageFour.shouldLock(true, 0, true, -70, 60_000, 30_000, false, true, false));
+        assertFalse(StageFour.shouldLock(true, 0, true, -70, 1_000, 30_000, false, false, false));
+        assertTrue(StageFour.shouldLock(true, 0, true, -70, 30_000, 30_000, false, false, false));
+        assertTrue(StageFour.shouldLock(true, -90, true, -70, 30_000, 30_000, false, false, false));
+        assertFalse(StageFour.shouldLock(true, -90, true, -70, 30_000, 30_000, false, false, true));
+        assertEquals(0, StageFour.awayFor(5_000, -40, -70, 1_000, true));
+        assertEquals(6_000, StageFour.awayFor(5_000, -80, -70, 1_000, true));
+        assertEquals(0, StageFour.awayFor(5_000, 0, -70, 1_000, false));
+        assertNull(StageFour.splitCommand("shutdown"));
+        assertEquals("pause", StageFour.splitCommand("pause")[0]);
+        assertEquals("", StageFour.splitCommand("pause")[1]);
+        assertEquals("100", StageFour.splitCommand("volume:140")[1]);
+        assertNull(StageFour.splitCommand("volume:loud"));
+        assertEquals("1,70,30,0", StageFour.formatSetup(true, 70, 30, false));
+        assertEquals(95, StageFour.parseSetup("1,200,1,2")[1]);
+        assertEquals(5, StageFour.parseSetup("1,200,1,2")[2]);
+        assertEquals("Playing Sunny - Ada", StageFour.nowLine("Sunny", "Ada", true));
+        assertEquals("Nothing is playing", StageFour.nowLine(" ", "", false));
+        assertEquals("scan.pdf", StageFour.fileTitle("Saved scan.pdf in Downloads/BridgeLink"));
+        assertFalse(StageFour.artFits(StageFour.ART_CAP + 1));
+        assertTrue(StageFour.artFits(32));
+        java.util.List<StageFour.Clip> clips = StageFour.add(java.util.List.of(), "hello", false, 5);
+        clips = StageFour.add(clips, "password: x", true, 6);
+        clips = StageFour.add(clips, "123456", false, 7);
+        assertEquals(1, clips.size());
+        clips = StageFour.add(clips, "line one\nline two", false, 9);
+        assertEquals("line one\nline two", StageFour.decodeClips(StageFour.encodeClips(clips)).get(0).text);
+        String pinned = clips.get(1).id;
+        clips = StageFour.pin(clips, pinned, true);
+        for (int i = 0; i < 120; i++) clips = StageFour.add(clips, "item " + i, false, 20 + i);
+        assertEquals(StageFour.CLIP_CAP, clips.size());
+        boolean found = false;
+        for (StageFour.Clip clip : clips) if (clip.id.equals(pinned) && clip.pinned) found = true;
+        assertTrue(found);
+        clips = StageFour.delete(clips, pinned);
+        found = false;
+        for (StageFour.Clip clip : clips) if (clip.id.equals(pinned)) found = true;
+        assertFalse(found);
+        assertEquals(0, StageFour.search(clips, "no-such-clip").size());
+        java.util.List<StageFour.Item> inbox = StageFour.addInbox(java.util.List.of(), "notify", "Mail", "hi", false, 1);
+        inbox = StageFour.addInbox(inbox, "file", "a.pdf", "Saved", false, 2);
+        inbox = StageFour.addInbox(inbox, "sms", "Ada", "password: secret", true, 3);
+        inbox = StageFour.addInbox(inbox, "notify", "Bank", "482193", false, 4);
+        assertEquals("Hidden", inbox.get(0).detail);
+        assertEquals("Hidden", inbox.get(1).detail);
+        assertEquals(1, StageFour.filter(inbox, "file", "").size());
+        assertEquals(1, StageFour.filter(inbox, "all", "pdf").size());
+        assertEquals("a.pdf", StageFour.decodeInbox(StageFour.encodeInbox(inbox)).get(2).title);
+        assertEquals(StageFour.BLE_UUID, "f1a0b4c0-6d3e-4a5b-8c7d-9e0f1a2b3c4d");
+    }
+
+    @Test
     public void featuresAgreeOnResumeClipboardOtpAndLock() throws Exception {
         assertEquals(List.of("files", "clipboard"), Features.shared(List.of("files", "sms", "clipboard"), List.of("clipboard", "files")));
         assertFalse(Features.enabled("", "sms", false));

@@ -20,6 +20,13 @@ struct PopoverView: View {
                 Label("Mac \(model.macBattery)", systemImage: "laptopcomputer")
             }
             .font(.callout)
+            Text(model.nowPlaying).font(.callout).lineLimit(2)
+            HStack {
+                Button("Play on phone") { model.sendMedia("play") }
+                Button("Pause") { model.sendMedia("pause") }
+                Button("Next") { model.sendMedia("next") }
+            }
+            .buttonStyle(.bordered)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 Button("Send file") { model.pickFile() }
                 Button("Send clipboard") { model.sendClipboard() }

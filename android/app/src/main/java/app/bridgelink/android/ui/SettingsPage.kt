@@ -64,6 +64,32 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Keep me connected", "battery", actions::batterySettings, tonal = true)
         BigButton("Send diagnostics", "diagnostics", actions::diagnostics, tonal = true)
         BigButton("Stop ringing", "stop-ring", actions::stopRing, tonal = true)
+        Text("Lock the Mac when you leave", style = MaterialTheme.typography.titleMedium)
+        Text(
+            if (model.lockOn) "On. The phone watches the Mac Bluetooth signal." else "Off.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "When the signal stays weak, the Mac locks. This phone never unlocks the Mac. Charging, or At my desk, skips the lock.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = model.lockFar,
+            onValueChange = { model.lockFar = it },
+            modifier = Modifier.fillMaxWidth().testTag("lock-far"),
+            label = { Text("How far, 40 close to 95 far") },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = model.lockDelay,
+            onValueChange = { model.lockDelay = it },
+            modifier = Modifier.fillMaxWidth().testTag("lock-delay"),
+            label = { Text("Wait this many seconds") },
+            singleLine = true,
+        )
+        BigButton(if (model.lockOn) "Turn leave-lock off" else "Turn leave-lock on", "lock-toggle", actions::toggleLock)
+        BigButton(if (model.atDesk) "I left the desk" else "I am at my desk", "at-desk", actions::toggleDesk, tonal = true)
+        BigButton("Save lock settings", "lock-save", actions::saveLock, tonal = true)
         if (model.version.isNotEmpty()) {
             Text("BridgeLink " + model.version, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

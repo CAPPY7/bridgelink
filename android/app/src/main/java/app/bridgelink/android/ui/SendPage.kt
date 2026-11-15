@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -43,6 +44,30 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Send files", "send-file", actions::pickFile, tonal = true)
         BigButton("Send clipboard", "clipboard", actions::sendClipboard, tonal = true)
         BigButton("Cancel send", "cancel-file", actions::cancelFile, tonal = true)
+        Text("Clipboard history", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "The last 100 copies stay on this phone. Passwords, card numbers, and codes are not kept. Pictures are not kept.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = model.clipQuery,
+            onValueChange = { model.clipQuery = it },
+            modifier = Modifier.fillMaxWidth().testTag("clip-query"),
+            label = { Text("Search history") },
+            singleLine = true,
+        )
+        val shown = model.clips.filter { row ->
+            model.clipQuery.isBlank() || row.text.contains(model.clipQuery, ignoreCase = true)
+        }.take(12)
+        if (shown.isEmpty()) {
+            Text("Nothing in clipboard history yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        shown.forEach { row ->
+            Text((if (row.pinned) "Pinned. " else "") + row.text.replace('\n', ' '), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            BigButton(if (row.pinned) "Unpin" else "Pin", "pin-" + row.id, { actions.pinClip(row.id) }, tonal = true)
+            BigButton("Use", "use-" + row.id, { actions.useClip(row.id) }, tonal = true)
+            BigButton("Delete", "delete-" + row.id, { actions.deleteClip(row.id) }, tonal = true)
+        }
     }
 }
 
@@ -88,7 +113,12 @@ fun FilesPage(model: PhoneModel, actions: PhoneActions) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         BigButton("Send files", "files-send", actions::pickFile)
+        BigButton("Scan to Mac", "scan-doc", actions::scanDoc)
         BigButton("Cancel send", "files-cancel", actions::cancelFile, tonal = true)
+        Text(
+            "Scan makes a PDF when Google Play services can open the document scanner. Otherwise pick a photo. The Mac saves it and opens it.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         val files = model.lines.filter { line ->
             val text = line.lowercase()
             text.contains("file") || text.contains("download")

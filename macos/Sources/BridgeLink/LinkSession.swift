@@ -165,6 +165,7 @@ extension LinkModel {
                 Task { @MainActor in
                     self?.note(line)
                     self?.notify("File from the phone", line)
+                    self?.rememberInbox(kind: "file", title: StageFour.fileTitle(line), detail: "Saved on this Mac")
                 }
             }
         case "file_cancel":
@@ -196,6 +197,7 @@ extension LinkModel {
                 showText: showNotificationText
             )
             notify(shown.title, shown.body)
+            rememberInbox(kind: "notify", title: shown.title, detail: shown.body)
             note("Notification from the phone")
         case "otp":
             let otpFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
@@ -237,6 +239,7 @@ extension LinkModel {
             phase = .listening
             note("The phone forgot this Mac")
         default:
+            if handleEasy(envelope, connection) { break }
             note(envelope.type)
             send(type: "error", payload: ["code": "unsupported_type", "body": "Unsupported"], on: connection)
         }
@@ -316,6 +319,7 @@ extension LinkModel {
         board.clearContents()
         board.setString(text, forType: .string)
         lastEcho = Features.echoKey(text)
+        rememberClip(text)
         note("Clipboard updated")
         notify("Clipboard from the phone", "Clipboard updated")
     }

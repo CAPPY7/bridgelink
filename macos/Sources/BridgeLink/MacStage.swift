@@ -79,9 +79,13 @@ extension LinkModel {
             if clipboardMode == "auto", case .paired = phase, !text.isEmpty || image != nil {
                 sendClipboard()
             }
+            if !text.isEmpty { rememberClip(text) }
         }
         focusTicks += 1
-        if focusTicks % 8 == 0 { sendMacFocus() }
+        if focusTicks % 8 == 0 {
+            sendMacFocus()
+            pollMacMedia()
+        }
     }
 
     func sendMacFocus() {

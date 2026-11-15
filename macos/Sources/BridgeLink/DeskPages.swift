@@ -22,7 +22,7 @@ struct DeskDetail: View {
         case .home: home
         case .notifications: notifications
         case .messages:
-            EmptyNote(symbol: "message", title: "Text messages are not on this Mac yet.", line: "They arrive in a later update. You can still send a note from Home.")
+            InboxPane()
         case .files: files
         case .clipboard: clipboard
         case .shared:
@@ -68,6 +68,7 @@ struct DeskDetail: View {
             }
             Text("Recent").font(.headline)
             recent(5)
+            MediaButtons()
         }
     }
 
@@ -118,6 +119,7 @@ struct DeskDetail: View {
                 Button("Open link from phone") { model.openPendingLink() }
                 Text(model.pendingLink).font(.callout).lineLimit(2).textSelection(.enabled)
             }
+            ClipHistoryPane()
         }
     }
 
@@ -163,6 +165,7 @@ struct DeskDetail: View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { _ in model.toggleLogin() }))
             Button("Send diagnostics") { model.saveDiagnostics() }
+            LockPane()
             Text("The first open needs one extra step because this app is not from the Mac App Store. macOS 13 or 14: right-click the app, choose Open, then Open. macOS 15 or newer: System Settings, Privacy and Security, Open Anyway.")
                 .font(.callout).foregroundStyle(.secondary)
             Text("BridgeLink 0.10.0").font(.headline)

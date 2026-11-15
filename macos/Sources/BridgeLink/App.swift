@@ -51,6 +51,20 @@ final class LinkModel: ObservableObject {
     @Published var canReply = false
     @Published var replyDraft = ""
     @Published var renameDraft = ""
+    @Published var nowPlaying = "Nothing is playing"
+    @Published var nowArt = ""
+    @Published var clips: [StageFour.Clip] = []
+    @Published var clipQuery = ""
+    @Published var inbox: [StageFour.Item] = []
+    @Published var inboxQuery = ""
+    @Published var inboxFilter = "all"
+    @Published var lockOn = UserDefaults.standard.bool(forKey: "lockOn")
+    @Published var atDesk = UserDefaults.standard.bool(forKey: "atDesk")
+    @Published var lockFar = Self.savedInt("lockFar", 70)
+    @Published var lockDelay = Self.savedInt("lockDelay", 30)
+    @Published var volumeText = "40"
+    var beacon: LeaveBeacon?
+    var lastMacNow = ""
     let fileCancel = CancelFlag()
     var phoneLowAlerted = false
     var phoneFullAlerted = false
@@ -94,6 +108,12 @@ final class LinkModel: ObservableObject {
     var gate: PairingGate
     var gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
 
+    static func savedInt(_ key: String, _ fallback: Int) -> Int {
+        if UserDefaults.standard.object(forKey: key) == nil { return fallback }
+        let value = UserDefaults.standard.integer(forKey: key)
+        return value == 0 ? fallback : value
+    }
+
     init() {
         let token = PairingGate.newToken()
         pin = token
@@ -104,6 +124,7 @@ final class LinkModel: ObservableObject {
         refreshAddresses()
         refreshMacBatteryLabel()
         if ProcessInfo.processInfo.environment["BRIDGELINK_SHOTS"] != nil { return }
+        loadEasy()
         start()
         watchNetwork()
         armPinClock()
@@ -325,6 +346,7 @@ final class LinkModel: ObservableObject {
             return
         }
         if Features.isEcho(lastEcho, text) { return }
+        rememberClip(text)
         send(type: "clipboard", payload: ["body": text], on: live)
         note("Sent clipboard")
     }

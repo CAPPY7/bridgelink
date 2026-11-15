@@ -1,4 +1,5 @@
 import AppKit
+import BridgeLinkCore
 import SwiftUI
 
 /// Draws the real SwiftUI screens to PNG files. Used by the Mac build, not by a person.
@@ -26,6 +27,13 @@ enum ShotBook {
         model.pairedSummary = "Pixel"
         model.launchAtLogin = false
         model.mirrorOn = true
+        model.nowPlaying = "Playing Sunny - Ada"
+        model.clips = StageFour.add([], "Grocery list", false, 5)
+        model.inbox = StageFour.addInbox([], "file", "scan.pdf", "Saved on this Mac", false, 2)
+        model.inbox = StageFour.addInbox(model.inbox, "notify", "Mail", "Package arrived", false, 3)
+        model.lockOn = true
+        model.lockFar = 70
+        model.lockDelay = 30
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover.png", folder, .light)
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover-dark.png", folder, .dark)
         for tab in DeskTab.allCases {

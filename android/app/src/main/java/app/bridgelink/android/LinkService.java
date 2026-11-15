@@ -37,6 +37,7 @@ import com.google.gson.JsonObject;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
+import app.bridgelink.android.protocol.StageFour;
 import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Frame;
 import app.bridgelink.android.protocol.FrameChannel;
@@ -122,6 +123,8 @@ public class LinkService extends Service {
     private boolean lastDnd;
     private volatile String sasPhoneNonce = "";
     private volatile String macCommit = "";
+    private volatile String lastNow = "";
+    private LeaveWatch leave;
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -131,6 +134,8 @@ public class LinkService extends Service {
                 return;
             }
             send("ping", "");
+            if (leave != null) leave.tick();
+            sendNowPlaying();
             main.postDelayed(this, 20_000);
         }
     };
@@ -166,6 +171,18 @@ public class LinkService extends Service {
         };
         registerReceiver(batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         watchClipboard();
+        leave = new LeaveWatch(this, new LeaveWatch.Sink() {
+            @Override
+            public void lock() {
+                send("lock", "away");
+            }
+
+            @Override
+            public void status(String text) {
+                publish(text, null);
+            }
+        });
+        leave.start();
         flushParked();
     }
 
@@ -204,6 +221,7 @@ public class LinkService extends Service {
             else if ("notify_dismiss".equals(kind)) sendDismiss(intent.getStringExtra("key"));
             else if ("otp".equals(kind)) sendOtp(intent.getStringExtra(EXTRA_BODY));
             else if ("cancel-file".equals(kind)) fileCancel.set(true);
+            else if ("lock-refresh".equals(kind) && leave != null) leave.start();
             else send(kind, intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
             stopRing();
@@ -260,6 +278,7 @@ public class LinkService extends Service {
     @Override
     public void onDestroy() {
         stopRing();
+        if (leave != null) leave.stop();
         if (networkCallback != null) {
             ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             if (manager != null) {
@@ -577,6 +596,23 @@ public class LinkService extends Service {
                     files.cancel(message.text("id"));
                     publish("File cancelled", null);
                 }
+                case "media" -> {
+                    MediaControl.Result result = MediaControl.fromMac(this, message.text("action"), message.text("volume"));
+                    publish(result.status, null);
+                    if (result.reply != null) writeEnvelope(Envelope.make("media_now", "android", result.reply));
+                }
+                case "media_now" -> publish(StageFour.nowLine(
+                        message.text("title"), message.text("artist"), "1".equals(message.text("playing"))), null);
+                case "lock_setup" -> {
+                    int[] setup = StageFour.parseSetup(message.text("body"));
+                    if (setup == null) {
+                        publish("Lock settings were not understood", null);
+                    } else {
+                        LeaveWatch.saveSetup(this, setup);
+                        if (leave != null) leave.start();
+                        publish(setup[0] == 1 ? "Lock when you leave is on" : "Lock when you leave is off", null);
+                    }
+                }
                 default -> {
                     JsonObject payload = new JsonObject();
                     payload.addProperty("code", "unsupported_type");
@@ -642,6 +678,38 @@ public class LinkService extends Service {
                 String text = body == null ? "" : body;
                 if ("clipboard".equals(kind)) {
                     sendClipboardNow(true);
+                    return;
+                }
+                if ("media".equals(kind)) {
+                    String[] parts = StageFour.splitCommand(text);
+                    if (parts == null) {
+                        publish("That media button is not supported", null);
+                        return;
+                    }
+                    payload.addProperty("action", parts[0]);
+                    payload.addProperty("volume", parts[1]);
+                    writeEnvelope(Envelope.make("media", "android", payload));
+                    publish("Sent a media command", null);
+                    return;
+                }
+                if ("lock".equals(kind)) {
+                    if (!StageFour.lockRequest(text.isEmpty() ? "away" : text)) {
+                        publish("This phone never unlocks the Mac", null);
+                        return;
+                    }
+                    payload.addProperty("reason", "away");
+                    writeEnvelope(Envelope.make("lock", "android", payload));
+                    publish("Asked the Mac to lock", null);
+                    return;
+                }
+                if ("lock_setup".equals(kind)) {
+                    if (StageFour.parseSetup(text) == null) {
+                        publish("Lock settings were not understood", null);
+                        return;
+                    }
+                    payload.addProperty("body", text);
+                    writeEnvelope(Envelope.make("lock_setup", "android", payload));
+                    publish("Sent lock settings", null);
                     return;
                 }
                 payload.addProperty("body", text);
@@ -736,6 +804,27 @@ public class LinkService extends Service {
     private boolean lastCharging;
     private boolean sawBattery;
 
+    private void sendNowPlaying() {
+        outbox.submit(() -> {
+            if (!paired) return;
+            try {
+                JsonObject now = MediaControl.snapshot(this);
+                String key = now.get("title").getAsString() + "|" + now.get("playing").getAsString() + "|" + now.get("volume").getAsString();
+                if (key.equals(lastNow)) return;
+                lastNow = key;
+                writeEnvelope(Envelope.make("media_now", "android", now));
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    private static String clipboardText(ClipboardManager clipboard) {
+        if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.getPrimaryClip() == null) return "";
+        ClipData clip = clipboard.getPrimaryClip();
+        if (clip.getItemCount() == 0 || clip.getItemAt(0).getText() == null) return "";
+        return clip.getItemAt(0).getText().toString();
+    }
+
     private void sendBattery() {
         try {
             Intent sticky = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
@@ -753,6 +842,7 @@ public class LinkService extends Service {
             sawBattery = true;
             lastBattery = percent;
             lastCharging = charging;
+            if (leave != null) leave.setCharging(charging);
             outbox.submit(() -> {
                 if (!paired) return;
                 try {
@@ -909,6 +999,7 @@ public class LinkService extends Service {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         if (clipboard == null) return;
         clipboard.addPrimaryClipChangedListener(() -> {
+            ClipStore.addText(this, clipboardText(clipboard));
             if (!paired) return;
             if (!Features.enabled(Prefs.open(this).getString("flags", ""), "clipboard", false)) return;
             sendClipboardNow(false);
@@ -944,6 +1035,7 @@ public class LinkService extends Service {
                     JsonObject payload = new JsonObject();
                     payload.addProperty("body", value);
                     writeEnvelope(Envelope.make("clipboard", "android", payload));
+                    ClipStore.addText(this, value);
                     publish("Sent clipboard", null);
                 } catch (Exception error) {
                     publish("Send failed. Try again.", null);

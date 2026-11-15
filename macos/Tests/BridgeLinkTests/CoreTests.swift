@@ -178,6 +178,53 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(book.devices.first?.name, "Kitchen phone")
     }
 
+    func testStageFourRules() {
+        XCTAssertEqual(StageFour.clipId("ab", 5), "5-c21")
+        XCTAssertEqual(StageFour.clampVolume(140), 100)
+        XCTAssertEqual(StageFour.threshold(70), -70)
+        XCTAssertEqual(StageFour.threshold(10), -40)
+        XCTAssertFalse(StageFour.lockRequest("unlock"))
+        XCTAssertTrue(StageFour.lockRequest("away"))
+        XCTAssertFalse(StageFour.shouldLock(enabled: true, rssi: -40, heard: true, threshold: -70, awayMs: 60_000, delayMs: 30_000, charging: false, atDesk: false, alreadyLocked: false))
+        XCTAssertFalse(StageFour.shouldLock(enabled: true, rssi: 0, heard: true, threshold: -70, awayMs: 30_000, delayMs: 30_000, charging: true, atDesk: false, alreadyLocked: false))
+        XCTAssertTrue(StageFour.shouldLock(enabled: true, rssi: 0, heard: true, threshold: -70, awayMs: 30_000, delayMs: 30_000, charging: false, atDesk: false, alreadyLocked: false))
+        XCTAssertFalse(StageFour.shouldLock(enabled: true, rssi: -90, heard: true, threshold: -70, awayMs: 30_000, delayMs: 30_000, charging: false, atDesk: false, alreadyLocked: true))
+        XCTAssertEqual(StageFour.awayFor(previous: 5_000, rssi: -40, threshold: -70, elapsed: 1_000, heard: true), 0)
+        XCTAssertEqual(StageFour.awayFor(previous: 5_000, rssi: -80, threshold: -70, elapsed: 1_000, heard: true), 6_000)
+        XCTAssertNil(StageFour.splitCommand("shutdown"))
+        XCTAssertEqual(StageFour.splitCommand("pause")?.action, "pause")
+        XCTAssertEqual(StageFour.splitCommand("volume:140")?.volume, "100")
+        XCTAssertEqual(StageFour.formatSetup(on: true, far: 70, delay: 30, desk: false), "1,70,30,0")
+        XCTAssertEqual(StageFour.parseSetup("1,200,1,2")?.far, 95)
+        XCTAssertEqual(StageFour.nowLine("Sunny", "Ada", true), "Playing Sunny - Ada")
+        XCTAssertEqual(StageFour.nowLine(" ", "", false), "Nothing is playing")
+        XCTAssertEqual(StageFour.fileTitle("Saved scan.pdf in Downloads/BridgeLink"), "scan.pdf")
+        var clips = StageFour.add([], "hello", false, 5)
+        clips = StageFour.add(clips, "password: x", true, 6)
+        clips = StageFour.add(clips, "123456", false, 7)
+        XCTAssertEqual(clips.count, 1)
+        clips = StageFour.add(clips, "line one\nline two", false, 9)
+        XCTAssertEqual(StageFour.decodeClips(StageFour.encodeClips(clips)).first?.text, "line one\nline two")
+        let pinned = clips[1].id
+        clips = StageFour.pin(clips, pinned, true)
+        for index in 0..<120 {
+            clips = StageFour.add(clips, "item \(index)", false, Int64(20 + index))
+        }
+        XCTAssertEqual(clips.count, StageFour.clipCap)
+        XCTAssertTrue(clips.contains { $0.id == pinned && $0.pinned })
+        clips = StageFour.delete(clips, pinned)
+        XCTAssertFalse(clips.contains { $0.id == pinned })
+        var inbox = StageFour.addInbox([], "notify", "Mail", "hi", false, 1)
+        inbox = StageFour.addInbox(inbox, "file", "a.pdf", "Saved", false, 2)
+        inbox = StageFour.addInbox(inbox, "sms", "Ada", "password: secret", true, 3)
+        inbox = StageFour.addInbox(inbox, "notify", "Bank", "482193", false, 4)
+        XCTAssertEqual(inbox[0].detail, "Hidden")
+        XCTAssertEqual(inbox[1].detail, "Hidden")
+        XCTAssertEqual(StageFour.filter(inbox, "file", "").count, 1)
+        XCTAssertEqual(StageFour.filter(inbox, "all", "pdf").count, 1)
+        XCTAssertEqual(StageFour.decodeInbox(StageFour.encodeInbox(inbox))[2].title, "a.pdf")
+    }
+
     func testFeaturesMatchThePhoneRules() throws {
         XCTAssertEqual(Features.shared(["files", "sms", "clipboard"], ["clipboard", "files"]), ["files", "clipboard"])
         XCTAssertFalse(Features.enabled("", "sms", fallback: false))

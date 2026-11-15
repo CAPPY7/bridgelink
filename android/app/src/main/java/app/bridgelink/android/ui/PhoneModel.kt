@@ -32,7 +32,17 @@ class PhoneModel {
     var version by mutableStateOf("")
     var macName by mutableStateOf("")
     var blockApp by mutableStateOf("")
+    var nowPlaying by mutableStateOf("Nothing is playing")
+    var clips by mutableStateOf(listOf<ClipRow>())
+    var clipQuery by mutableStateOf("")
+    var lockOn by mutableStateOf(false)
+    var atDesk by mutableStateOf(false)
+    var lockFar by mutableStateOf("70")
+    var lockDelay by mutableStateOf("30")
+    var volume by mutableStateOf("40")
 }
+
+data class ClipRow(val id: String, val text: String, val pinned: Boolean)
 
 /** Buttons on the screen. MainActivity does the real work. */
 interface PhoneActions {
@@ -59,4 +69,12 @@ interface PhoneActions {
     fun blockNotify()
     fun repair()
     fun dndAccess()
+    fun media(action: String)
+    fun scanDoc()
+    fun useClip(id: String)
+    fun pinClip(id: String)
+    fun deleteClip(id: String)
+    fun toggleLock()
+    fun toggleDesk()
+    fun saveLock()
 }

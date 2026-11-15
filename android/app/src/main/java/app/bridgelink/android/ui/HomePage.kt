@@ -12,7 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -71,13 +73,30 @@ fun MessagesPage() {
 }
 
 @Composable
-fun RemotePage() {
+fun RemotePage(model: PhoneModel, actions: PhoneActions) {
     PageScroll {
         Text("Remote", style = MaterialTheme.typography.headlineMedium)
+        Text(model.nowPlaying, style = MaterialTheme.typography.titleMedium)
+        Text(
+            "These buttons control music on the Mac. The Mac can also control music on this phone when notification access is on.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        BigButton("Play", "media-play", { actions.media("play") })
+        BigButton("Pause", "media-pause", { actions.media("pause") }, tonal = true)
+        BigButton("Next", "media-next", { actions.media("next") }, tonal = true)
+        BigButton("Previous", "media-prev", { actions.media("previous") }, tonal = true)
+        OutlinedTextField(
+            value = model.volume,
+            onValueChange = { model.volume = it },
+            modifier = Modifier.fillMaxWidth().testTag("volume"),
+            label = { Text("Mac volume, 0 to 100") },
+            singleLine = true,
+        )
+        BigButton("Set Mac volume", "media-volume", { actions.media("volume:" + model.volume) }, tonal = true)
         EmptyState(
             Icons.Filled.Smartphone,
             "The trackpad is not on this phone yet.",
-            "Keyboard, slides, and media buttons arrive in a later update.",
+            "Keyboard and slides arrive in a later update. Media buttons work now.",
         )
     }
 }

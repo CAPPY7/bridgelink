@@ -7,7 +7,7 @@ Status words are only: Not started, Building, Built – self-tested, Final – o
 | 1 | Files, links, and text | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M1 |
 | 2 | Share sheet and drag-drop | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M2 |
 | 3 | Notification mirroring | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M3 |
-| 4 | Media control | Not started | none | none | none | M4 |
+| 4 | Media control | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M4 |
 | 5 | Battery | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M5 |
 | 6 | Find phone and Mac | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M6 |
 | 7 | OTP auto-copy | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M7 |
@@ -19,11 +19,11 @@ Status words are only: Not started, Building, Built – self-tested, Final – o
 | 13 | Control the phone | Not started | none | none | none | M13 |
 | 14 | Phone as webcam | Not started | none | none | none | M14 |
 | 15 | Shared folder | Not started | none | none | none | M15 |
-| 16 | Lock the Mac when you leave | Not started | none | none | none | M16 |
+| 16 | Lock the Mac when you leave | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
 | 17 | Away from home | Not started | none | none | none | M17 |
-| 18 | Unified inbox | Not started | none | none | none | M18 |
-| 19 | Clipboard history | Not started | none | none | none | M19 |
-| 20 | Scan to Mac | Not started | none | none | none | M20 |
+| 18 | Unified inbox | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M18 |
+| 19 | Clipboard history | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M19 |
+| 20 | Scan to Mac | Built – self-tested | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M20 |
 | 21 | Automations | Not started | none | none | none | M21 |
 | 22 | Quick drop | Built – self-tested | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M22 |
 | 23 | Pairing | Built – self-tested | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testRelayCannotReuseAMatchCode | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M23 |
