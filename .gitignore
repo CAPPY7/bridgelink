@@ -21,6 +21,9 @@ macos/BridgeLink.app
 macos/*.zip
 *.apk
 *.keystore
+*.p12
+*.pem
+owner-backup/
 attachments/
 AGENTS.md
 startup.sh
