@@ -61,6 +61,8 @@ final class LinkModel: ObservableObject {
     @Published var renameDraft = ""
     @Published var nowPlaying = "Nothing is playing"
     @Published var nowArt = ""
+    var mediaWatch = false
+    var mediaBusy = false
     @Published var clips: [StageFour.Clip] = []
     @Published var clipQuery = ""
     @Published var inbox: [StageFour.Item] = []

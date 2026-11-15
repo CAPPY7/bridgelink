@@ -3,6 +3,15 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testMediaWatchPollsOnlyWhileTheRemotePageIsOpen() {
+        XCTAssertFalse(MediaWatch.shouldPoll(false, true, false))
+        XCTAssertFalse(MediaWatch.shouldPoll(true, false, false))
+        XCTAssertFalse(MediaWatch.shouldPoll(true, true, true))
+        XCTAssertTrue(MediaWatch.shouldPoll(true, true, false))
+        XCTAssertEqual(MediaWatch.command("watch")?.action, "watch")
+        XCTAssertNil(MediaWatch.command("play"))
+    }
+
     func testSendWindowStopsTheSeventhChunk() {
         let window = SendWindow()
         for _ in 0..<SendWindow.maxInFlight {

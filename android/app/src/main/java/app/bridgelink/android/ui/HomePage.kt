@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.Modifier
@@ -121,6 +122,10 @@ fun MessagesPage(model: PhoneModel, actions: PhoneActions) {
 
 @Composable
 fun RemotePage(model: PhoneModel, actions: PhoneActions) {
+    DisposableEffect(Unit) {
+        actions.media("watch")
+        onDispose { actions.media("idle") }
+    }
     PageScroll {
         Text("Remote", style = MaterialTheme.typography.headlineMedium)
         Text(model.nowPlaying, style = MaterialTheme.typography.titleMedium)

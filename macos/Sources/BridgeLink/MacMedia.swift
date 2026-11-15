@@ -35,7 +35,9 @@ enum MacMedia {
         default:
             return "That media button is not supported"
         }
-        postMediaKey(key)
+        DispatchQueue.main.async {
+            postMediaKey(key)
+        }
         return "Sent \(verb) to the Mac"
     }
 
@@ -112,7 +114,14 @@ enum MacShell {
         task.standardError = Pipe()
         do {
             try task.run()
-            task.waitUntilExit()
+            let deadline = Date().addingTimeInterval(3)
+            while task.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+            if task.isRunning {
+                task.terminate()
+                return nil
+            }
         } catch {
             return nil
         }

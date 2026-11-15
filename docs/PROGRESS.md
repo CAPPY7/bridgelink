@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass. H4 is done. Next is H5: media scripts must not freeze the Mac.
+Fix-all pass. H5 is done. Next is H6: do not decode video on the Mac main thread.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -42,6 +42,7 @@ Fix-all pass. H4 is done. Next is H5: media scripts must not freeze the Mac.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.
 - H3. One write deadline thread serves every frame on a connection.
 - H4. The Mac keeps at most 6 file chunks in flight and does not block incoming files on that send.
+- H5. Music and Spotify scripts run off the main thread, and only while the phone's Remote page is open.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

@@ -31,3 +31,4 @@ H1. Stopping the screen mirror could release the encoder while the drain thread 
 H2. Video and camera frames piled up with no limit on a slow link. Fixed: only 3 picture frames wait. Extra non-key frames are dropped, and the phone asks the encoder for a new key frame.
 H3. Every frame started a new watchdog thread. Fixed: one deadline thread watches the current write for the life of the connection.
 H4. The Mac queued a whole file in memory before the network finished each chunk. Fixed: at most 6 chunks are in flight, and the next chunk waits until a send finishes. Incoming files use a separate queue.
+H5. Asking Music or Spotify froze the Mac, and it asked even when nobody was looking. Fixed: those scripts run in the background, stop after 3 seconds, and run only while the phone's Remote page is open.

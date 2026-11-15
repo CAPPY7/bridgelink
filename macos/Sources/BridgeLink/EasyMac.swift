@@ -89,18 +89,32 @@ extension LinkModel {
     }
 
     func pollMacMedia() {
-        guard case .paired = phase else { return }
-        let sample = MacMedia.now()
-        let line = StageFour.nowLine(sample.title, sample.artist, sample.playing == "1")
-        if line == lastMacNow { return }
-        lastMacNow = line
-        nowPlaying = line
-        send(type: "media_now", payload: [
-            "title": sample.title,
-            "artist": sample.artist,
-            "playing": sample.playing,
-            "volume": sample.volume,
-        ], on: live)
+        let open = mediaWatch
+        let paired: Bool
+        if case .paired = phase { paired = true } else { paired = false }
+        guard MediaWatch.shouldPoll(open, paired, mediaBusy) else { return }
+        mediaBusy = true
+        Task.detached { [weak self] in
+            let sample = MacMedia.now()
+            await MainActor.run {
+                guard let self else { return }
+                self.mediaBusy = false
+                let stillOpen = self.mediaWatch
+                let stillPaired: Bool
+                if case .paired = self.phase { stillPaired = true } else { stillPaired = false }
+                guard MediaWatch.shouldPoll(stillOpen, stillPaired, false) else { return }
+                let line = StageFour.nowLine(sample.title, sample.artist, sample.playing == "1")
+                if line == self.lastMacNow { return }
+                self.lastMacNow = line
+                self.nowPlaying = line
+                self.send(type: "media_now", payload: [
+                    "title": sample.title,
+                    "artist": sample.artist,
+                    "playing": sample.playing,
+                    "volume": sample.volume,
+                ], on: self.live)
+            }
+        }
     }
 
     func setLock(on: Bool) {
@@ -134,16 +148,29 @@ extension LinkModel {
     func handleEasy(_ envelope: ParsedEnvelope, _ connection: NWConnection) -> Bool {
         switch envelope.type {
         case "media":
-            let line = MacMedia.perform(envelope.text("action"), envelope.text("volume"))
-            note(line)
-            let sample = MacMedia.now()
-            nowPlaying = StageFour.nowLine(sample.title, sample.artist, sample.playing == "1")
-            send(type: "media_now", payload: [
-                "title": sample.title,
-                "artist": sample.artist,
-                "playing": sample.playing,
-                "volume": sample.volume,
-            ], on: connection)
+            if let watch = MediaWatch.command(envelope.text("action")) {
+                mediaWatch = watch.action == "watch"
+                if mediaWatch { pollMacMedia() }
+                return true
+            }
+            let action = envelope.text("action")
+            let volume = envelope.text("volume")
+            let connection = connection
+            Task.detached { [weak self] in
+                let line = MacMedia.perform(action, volume)
+                let sample = MacMedia.now()
+                await MainActor.run {
+                    guard let self else { return }
+                    self.note(line)
+                    self.nowPlaying = StageFour.nowLine(sample.title, sample.artist, sample.playing == "1")
+                    self.send(type: "media_now", payload: [
+                        "title": sample.title,
+                        "artist": sample.artist,
+                        "playing": sample.playing,
+                        "volume": sample.volume,
+                    ], on: connection)
+                }
+            }
             return true
         case "media_now":
             nowPlaying = StageFour.nowLine(envelope.text("title"), envelope.text("artist"), envelope.text("playing") == "1")

@@ -38,6 +38,7 @@ import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.MediaQueue;
+import app.bridgelink.android.protocol.MediaWatch;
 import app.bridgelink.android.protocol.StageFour;
 import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Frame;
@@ -779,7 +780,8 @@ public class LinkService extends Service {
                     return;
                 }
                 if ("media".equals(kind)) {
-                    String[] parts = StageFour.splitCommand(text);
+                    String[] watch = MediaWatch.command(text);
+                    String[] parts = watch != null ? watch : StageFour.splitCommand(text);
                     if (parts == null) {
                         publish("That media button is not supported", null);
                         return;
@@ -787,7 +789,7 @@ public class LinkService extends Service {
                     payload.addProperty("action", parts[0]);
                     payload.addProperty("volume", parts[1]);
                     writeEnvelope(Envelope.make("media", "android", payload));
-                    publish("Sent a media command", null);
+                    if (watch == null) publish("Sent a media command", null);
                     return;
                 }
                 if ("lock".equals(kind)) {
