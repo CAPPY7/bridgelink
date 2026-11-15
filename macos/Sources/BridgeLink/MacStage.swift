@@ -86,7 +86,7 @@ extension LinkModel {
 
     func sendMacFocus() {
         guard dndSync, case .paired = phase else { return }
-        let on = INFocusStatusCenter.default.focusStatus.isFocused
+        let on = INFocusStatusCenter.default.focusStatus.isFocused == true
         if sawFocus && on == lastFocus { return }
         sawFocus = true
         lastFocus = on
