@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-/// Share menu item. It only writes file paths. The main app sends them.
+/// Not shipped. A dylib cannot be a share extension. Use Finder Services, the Dock drop, or the drop zone.
 @objc(ShareExt)
 final class ShareExt: NSObject, NSExtensionRequestHandling {
     func beginRequest(with context: NSExtensionContext) {

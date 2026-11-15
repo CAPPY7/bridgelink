@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass. H10 is done. Next is H11: do not ship a share extension that cannot load.
+Fix-all pass. H11 is done. Next is H12: a second phone must not kick the first one off.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -48,6 +48,7 @@ Fix-all pass. H10 is done. Next is H11: do not ship a share extension that canno
 - H8. Notification mirroring changes only the notify and otp switches.
 - H9. The Mac locks itself after the phone link has been gone for the delay. It never unlocks.
 - H10. Locking sleeps the display and does not change Mac system settings.
+- H11. The broken share extension is not shipped. Finder Services, Dock drop, and the drop zone remain.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

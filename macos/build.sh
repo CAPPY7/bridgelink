@@ -33,13 +33,9 @@ if [ -f AppIcon.png ]; then
   iconutil -c icns "$ICONSET" -o build/AppIcon.icns
   cp build/AppIcon.icns BridgeLink.app/Contents/Resources/AppIcon.icns
 fi
-swiftc -emit-library -module-name BridgeLinkShare -O -target arm64-apple-macosx13.0 -o build/Share-arm64 share/ShareExt.swift
-swiftc -emit-library -module-name BridgeLinkShare -O -target x86_64-apple-macosx13.0 -o build/Share-x64 share/ShareExt.swift
-lipo -create -output build/Share build/Share-arm64 build/Share-x64
-mkdir -p BridgeLink.app/Contents/PlugIns/Share.appex/Contents/MacOS
-cp build/Share BridgeLink.app/Contents/PlugIns/Share.appex/Contents/MacOS/Share
-cp share/Info.plist BridgeLink.app/Contents/PlugIns/Share.appex/Contents/Info.plist
-chmod +x BridgeLink.app/Contents/PlugIns/Share.appex/Contents/MacOS/Share
+# The share menu is not bundled. A dylib is not an app extension, and a free
+# extension cannot write Application Support. Use Finder Services, the Dock
+# drop, or the drop zone instead.
 bash sign.sh BridgeLink.app
 ditto -c -k --keepParent BridgeLink.app BridgeLink-mac.zip
 bash make-dmg.sh

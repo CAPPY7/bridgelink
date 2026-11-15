@@ -20,6 +20,7 @@ jobs:
         run: |
           python3 scripts/check-versions.py
           python3 scripts/check-matrix.py
+          python3 scripts/check-share.py
       - name: Unit tests, lint, and release APK
         working-directory: android
         run: |
