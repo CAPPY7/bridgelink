@@ -471,6 +471,9 @@ public class LinkService extends Service {
             }
         } finally {
             main.removeCallbacks(heartbeat);
+            boolean userStopped = mine.closed || generation.get() != mine.gen;
+            String liveToken = Prefs.open(this).getString("token", "");
+            boolean tokenSaved = liveToken != null && liveToken.length() >= 16;
             mine.close();
             if (attempt == mine) {
                 attempt = null;
@@ -478,11 +481,11 @@ public class LinkService extends Service {
                 String next = mine.hopTo;
                 if (next != null && !next.isEmpty()) {
                     main.post(() -> openAttempt(next, port, code));
-                } else if (linkState.retryScheduled && !address.isEmpty()) {
+                } else if (linkState.afterClose(userStopped, tokenSaved) && !address.isEmpty()) {
                     long delay = linkState.delayMs();
                     publish("Reconnecting…", null);
                     main.postDelayed(() -> connect(address, port, code), delay);
-                } else if (linkState.phase != LinkState.Phase.FATAL) {
+                } else if (!userStopped && linkState.phase != LinkState.Phase.FATAL) {
                     if (six != null && six.tryRelay()) {
                         publish("Wi-Fi missed the Mac. Trying the away relay.", null);
                     } else {
@@ -1399,7 +1402,6 @@ public class LinkService extends Service {
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(Network network) {
-                if (paired) return;
                 SharedPreferences prefs = Prefs.open(LinkService.this);
                 String host = prefs.getString("host", "");
                 String token = prefs.getString("token", "");
@@ -1410,9 +1412,10 @@ public class LinkService extends Service {
                 } catch (Exception ignored) {
                 }
                 int chosen = port;
+                String chosenHost = host;
                 main.post(() -> {
-                    if (linkState.phase == LinkState.Phase.CONNECTING || linkState.phase == LinkState.Phase.PAIRED) return;
-                    connect(host, chosen, "");
+                    if (!LinkState.networkShouldConnect(linkState.phase, paired)) return;
+                    connect(chosenHost, chosen, "");
                 });
             }
         };

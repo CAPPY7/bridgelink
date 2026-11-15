@@ -192,11 +192,66 @@ public class ProtocolTest {
         assertEquals(LinkState.Phase.FATAL, state.phase);
         assertTrue(LinkState.isFatalCode("bad_proof"));
         assertTrue(LinkState.isFatalCode("bad_code"));
+        assertTrue(LinkState.isFatalCode("key_changed"));
         assertFalse(LinkState.isFatalCode("timeout"));
         state.begin();
         state.retryable("timeout");
         assertTrue(state.retryScheduled);
         assertEquals(500L, state.delayMs());
+    }
+
+    @Test
+    public void cleanCloseAfterPairedSchedulesReconnect() {
+        LinkState state = new LinkState();
+        state.begin();
+        state.paired();
+        assertEquals(LinkState.Phase.PAIRED, state.phase);
+        assertTrue(state.afterClose(false, true));
+        assertTrue(state.retryScheduled);
+        assertEquals(LinkState.Phase.BACKOFF, state.phase);
+        assertEquals(500L, state.delayMs());
+        assertFalse(LinkState.Phase.PAIRED == state.phase);
+
+        LinkState again = new LinkState();
+        again.begin();
+        again.paired();
+        again.retryable("timeout");
+        int attempt = again.attempt;
+        assertTrue(again.afterClose(false, true));
+        assertEquals(attempt, again.attempt);
+
+        LinkState fatal = new LinkState();
+        fatal.begin();
+        fatal.paired();
+        fatal.failFatal("bad key");
+        assertFalse(fatal.afterClose(false, true));
+        assertFalse(fatal.retryScheduled);
+        assertEquals(LinkState.Phase.FATAL, fatal.phase);
+
+        LinkState badCode = new LinkState();
+        badCode.begin();
+        badCode.failFatal("bad code");
+        assertFalse(badCode.afterClose(false, true));
+
+        LinkState stopped = new LinkState();
+        stopped.begin();
+        stopped.paired();
+        assertFalse(stopped.afterClose(true, true));
+        assertFalse(stopped.retryScheduled);
+        assertEquals(LinkState.Phase.IDLE, stopped.phase);
+
+        LinkState noToken = new LinkState();
+        noToken.begin();
+        noToken.paired();
+        assertFalse(noToken.afterClose(false, false));
+        assertNotEquals(LinkState.Phase.PAIRED, noToken.phase);
+
+        assertFalse(LinkState.networkShouldConnect(LinkState.Phase.PAIRED, true));
+        assertTrue(LinkState.networkShouldConnect(LinkState.Phase.PAIRED, false));
+        assertTrue(LinkState.networkShouldConnect(LinkState.Phase.IDLE, false));
+        assertTrue(LinkState.networkShouldConnect(LinkState.Phase.BACKOFF, false));
+        assertFalse(LinkState.networkShouldConnect(LinkState.Phase.CONNECTING, false));
+        assertFalse(LinkState.networkShouldConnect(LinkState.Phase.FATAL, false));
     }
 
     @Test
@@ -724,6 +779,16 @@ public class ProtocolTest {
         assertEquals(0, bag.size());
         byte[] avcc = StageSix.toAvcc(nal);
         assertEquals(3, java.nio.ByteBuffer.wrap(avcc).getInt());
+    }
+
+    @Test
+    public void releaseCompare() {
+        assertEquals(1, ReleaseCheck.compare("0.13.0", "1.0.0"));
+        assertEquals(0, ReleaseCheck.compare("1.0.0", "1.0.0"));
+        assertEquals(-1, ReleaseCheck.compare("1.1.0", "1.0.0"));
+        assertEquals(0, ReleaseCheck.compare("1.0", "1.0.0"));
+        assertEquals("1.0.0", ReleaseCheck.shortVersion("<item sparkle:shortVersionString=\"1.0.0\" sparkle:version=\"13\">"));
+        assertEquals("", ReleaseCheck.shortVersion("nope"));
     }
 
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */

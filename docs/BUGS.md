@@ -17,3 +17,7 @@ Each line is one problem. Fixed ones say Fixed and the idea of the change.
 13. There was no way to save a safe log. Fixed: both apps have Send diagnostics. The file has version, connection, and port. It has no keys and no message text.
 14. LinkService.java is still longer than 400 lines. Left open on purpose this round so the connection fixes stay in one place. Split it in the next pass before adding features.
 15. The Mac app still cannot skip Apple's first-open warning. That is not a bug. A free sideload cannot be notarized. The disk image explains the one extra step.
+
+## v0.13 audit
+
+C1. The phone stayed Disconnected after the Mac closed the link with no error, until you tapped Connect. Fixed: a clean close with a saved token schedules the same backoff reconnect, and a bad key or a bad code does not.
