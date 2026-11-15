@@ -46,6 +46,7 @@ import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Frame;
 import app.bridgelink.android.protocol.FrameChannel;
 import app.bridgelink.android.protocol.HelloPlan;
+import app.bridgelink.android.protocol.HostMerge;
 import app.bridgelink.android.protocol.LinkFailure;
 import app.bridgelink.android.protocol.LinkState;
 import app.bridgelink.android.protocol.MacBook;
@@ -541,7 +542,8 @@ public class LinkService extends Service {
             @Override
             public void onHost(String host) {
                 if (host == null || host.isEmpty()) return;
-                Prefs.open(LinkService.this).edit().putString("host", host).putString("hosts", host).apply();
+                String saved = Prefs.open(LinkService.this).getString("hosts", "");
+                Prefs.open(LinkService.this).edit().putString("host", host).putString("hosts", HostMerge.merge(saved, host)).apply();
                 lastHost = host;
                 publish("Found the Mac at " + host, null);
                 main.post(() -> connect(host, lastPort, ""));

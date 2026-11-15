@@ -44,3 +44,4 @@ H14. Phone automations only wrote a status line, and Home Wi-Fi fired for every 
 H15. A release could ship an ad-hoc Mac app and skip version checks. Fixed: the release checks the version and the tag, checks the APK signature, writes SHA256SUMS, and refuses an ad-hoc Mac app when the Mac signing secrets are set.
 H16. Partly fixed. First-run setup, Check for update, and Reset BridgeLink are in both apps. Check for update opens the release page. The Sparkle framework is not linked, because that needs an EdDSA secret that is not here. It does not install the update by itself.
 M1. The phone kept dialing an old Mac address. Fixed: after two misses it looks for BridgeLink on the Wi-Fi and accepts only the Mac whose key matches the one you saved.
+M2. Tapping Connect replaced the list of Mac addresses with one address. Fixed: the typed address is added, and the other saved addresses stay.

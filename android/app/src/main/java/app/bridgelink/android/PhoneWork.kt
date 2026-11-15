@@ -16,6 +16,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import app.bridgelink.android.protocol.Features
+import app.bridgelink.android.protocol.HostMerge
 import app.bridgelink.android.protocol.MacList
 import app.bridgelink.android.protocol.MacTokens
 import app.bridgelink.android.protocol.PairGate
@@ -62,9 +63,11 @@ class PhoneWork(private val activity: MainActivity) {
     fun connect() {
         val host = model.host.trim()
         val portText = model.port.trim()
-        Prefs.open(activity).edit()
+        val prefs = Prefs.open(activity)
+        val merged = HostMerge.merge(prefs.getString("hosts", "") ?: "", host)
+        prefs.edit()
             .putString("host", host)
-            .putString("hosts", host)
+            .putString("hosts", merged)
             .putString("port", portText)
             .remove("pin")
             .apply()
