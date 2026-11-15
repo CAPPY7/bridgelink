@@ -827,6 +827,28 @@ public class ProtocolTest {
     }
 
     @Test
+    public void everyFeatureMessageRoundTrips() {
+        String[] types = {
+                "text", "clipboard", "clipboard_image", "link", "ping", "pong",
+                "file_begin", "file_chunk", "file_end", "file_have", "file_cancel",
+                "notify", "notify_reply", "notify_dismiss", "otp", "battery",
+                "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
+                "dnd", "sms", "folder", "pointer", "mirror_start", "mirror_stop",
+                "cam_start", "cam_stop", "control", "relay_key", "relay_set",
+                "relay_use", "relay_auth", "forget", "hello", "paired", "error"
+        };
+        assertEquals(FeatureMessages.TYPES.length, types.length);
+        for (String type : types) {
+            assertTrue(FeatureMessages.known(type));
+            com.google.gson.JsonObject payload = new com.google.gson.JsonObject();
+            payload.addProperty("body", type);
+            Envelope back = Envelope.parse(Envelope.make(type, "android", payload).toJsonString());
+            assertEquals(type, back.type);
+            assertEquals(type, back.text("body"));
+        }
+    }
+
+    @Test
     public void forgottenPhoneLosesOnlyItsRelaySecret() {
         String book = RelaySecrets.put("{}", "phone-a", "phone-a-secret-ok1");
         book = RelaySecrets.put(book, "phone-b", "phone-b-secret-ok2");

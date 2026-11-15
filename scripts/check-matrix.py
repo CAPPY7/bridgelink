@@ -58,6 +58,25 @@ for row in rows:
         if name not in blob:
             errors.append(f"feature {row[0]} lists missing test {name}")
 
+messages = (root / "android/app/src/main/java/app/bridgelink/android/protocol/FeatureMessages.java").read_text()
+tests = ""
+for path in root.rglob("*Test*.java"):
+    if "build" in path.parts:
+        continue
+    try:
+        tests += path.read_text()
+    except OSError:
+        pass
+for path in (root / "macos/Tests").rglob("*.swift"):
+    try:
+        tests += path.read_text()
+    except OSError:
+        pass
+import re
+for kind in re.findall(r'"([a-z_]+)"', messages):
+    if kind not in tests:
+        errors.append(f"message {kind} is not named in a test")
+
 if errors:
     print("\n".join(errors))
     sys.exit(1)
