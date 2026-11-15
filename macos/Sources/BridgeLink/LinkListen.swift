@@ -184,27 +184,33 @@ extension LinkModel {
     }
 
     func receive(_ connection: NWConnection, id: UUID, buffer: FrameBuffer) {
+        let pump = six.pump
         var buffer = buffer
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, isComplete, error in
+            guard let self else { return }
+            var failed = false
+            var items: [Incoming] = []
+            if let data {
+                do {
+                    items = try buffer.pushAll(data)
+                } catch {
+                    failed = true
+                }
+            }
+            let lanes = PictureLane.route(items)
+            pump.submit(lanes.pictures)
+            let jsons = lanes.json
             Task { @MainActor in
                 guard let self else { return }
                 if self.liveID != id && self.pendingID != id { return }
                 let stillPending = self.liveID != id
-                if let data {
-                    do {
-                        let incoming = try buffer.pushAll(data)
-                        for item in incoming {
-                            if let message = item.json {
-                                self.handle(message, connection: connection, id: id, pending: stillPending)
-                            } else if let binary = item.binary {
-                                self.takePicture(binary)
-                            }
-                        }
-                    } catch {
-                        connection.cancel()
-                        self.note("Closed a connection that sent too much data.")
-                        return
-                    }
+                if failed {
+                    connection.cancel()
+                    self.note("Closed a connection that sent too much data.")
+                    return
+                }
+                for message in jsons {
+                    self.handle(message, connection: connection, id: id, pending: stillPending)
                 }
                 if isComplete || error != nil {
                     if self.pendingID == id && self.liveID != id { self.pending = nil }

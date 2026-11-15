@@ -6,6 +6,65 @@ import CoreVideo
 import Foundation
 import VideoToolbox
 
+/// Decodes mirror and camera bytes off the main thread. The picture is published on the main thread.
+final class PicturePump: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "app.bridgelink.picture")
+    private let video: H264Decoder
+    private let audio: PcmPlay
+    private var mirrorParts: [Data] = []
+    private var camParts: [Data] = []
+    private var sps: Data?
+    private var pps: Data?
+    var onCamera: ((NSImage) -> Void)?
+
+    init(video: H264Decoder, audio: PcmPlay) {
+        self.video = video
+        self.audio = audio
+    }
+
+    func submit(_ blobs: [Data]) {
+        if blobs.isEmpty { return }
+        let copy = blobs
+        queue.async { [weak self] in
+            guard let self else { return }
+            for blob in copy { self.decode(blob) }
+        }
+    }
+
+    private func decode(_ raw: Data) {
+        guard let piece = StageSix.unpack(raw) else { return }
+        if piece.stream == 1 && piece.flags & 2 != 0 {
+            guard piece.data.count > 4 else { return }
+            let nal = piece.data.dropFirst(4)
+            let type = Int(nal.first ?? 0) & 0x1f
+            if type == 7 { sps = Data(nal) }
+            if type == 8 { pps = Data(nal) }
+            if let sps, let pps { video.setParameterSets(sps: sps, pps: pps) }
+            return
+        }
+        if piece.stream == 1 {
+            guard let whole = StageSix.assemble(&mirrorParts, part: piece.part, parts: piece.parts, data: piece.data) else { return }
+            guard let avcc = StageSix.toAvcc(whole) else { return }
+            video.decode(avcc: avcc, key: piece.flags & 1 != 0)
+            return
+        }
+        if piece.stream == 2 {
+            guard let whole = StageSix.assemble(&camParts, part: piece.part, parts: piece.parts, data: piece.data) else { return }
+            if let image = NSImage(data: whole) {
+                let shot = image
+                let callback = onCamera
+                DispatchQueue.main.async { callback?(shot) }
+            }
+            return
+        }
+        if piece.stream == 3 {
+            let clip = piece.data
+            let player = audio
+            DispatchQueue.main.async { player.play(clip) }
+        }
+    }
+}
+
 /// Turns phone H.264 into a picture, and plays short mic clips.
 final class H264Decoder {
     var onImage: ((NSImage) -> Void)?

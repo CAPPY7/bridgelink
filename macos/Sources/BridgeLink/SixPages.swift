@@ -21,14 +21,19 @@ final class SixHold: ObservableObject {
     @Published var typeText = ""
     let video = H264Decoder()
     let audio = PcmPlay()
+    let pump: PicturePump
     var mirrorParts: [Data] = []
     var camParts: [Data] = []
     var sps: Data?
     var pps: Data?
 
     init() {
+        pump = PicturePump(video: video, audio: audio)
         video.onImage = { [weak self] image in
             Task { @MainActor in self?.mirror = image }
+        }
+        pump.onCamera = { [weak self] image in
+            Task { @MainActor in self?.camera = image }
         }
     }
 }

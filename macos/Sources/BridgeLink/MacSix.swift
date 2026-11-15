@@ -51,43 +51,28 @@ extension LinkModel {
     }
 
     func acceptRelay(_ framed: Data) {
-        var buffer = FrameBuffer()
-        guard let items = try? buffer.pushAll(framed) else { return }
-        let sink = NWConnection(host: "127.0.0.1", port: 9, using: .tcp)
-        replyOnRelay = true
-        for item in items {
-            if let json = item.json {
-                handle(json, connection: sink, id: liveID, pending: false)
-            } else if let binary = item.binary {
-                takePicture(binary)
+        let pump = six.pump
+        let framed = framed
+        Task.detached { [weak self] in
+            var buffer = FrameBuffer()
+            guard let items = try? buffer.pushAll(framed) else { return }
+            let lanes = PictureLane.route(items)
+            pump.submit(lanes.pictures)
+            let jsons = lanes.json
+            await MainActor.run {
+                guard let self else { return }
+                let sink = NWConnection(host: "127.0.0.1", port: 9, using: .tcp)
+                self.replyOnRelay = true
+                for json in jsons {
+                    self.handle(json, connection: sink, id: self.liveID, pending: false)
+                }
+                self.replyOnRelay = false
             }
         }
-        replyOnRelay = false
     }
 
     func takePicture(_ raw: Data) {
-        guard let piece = StageSix.unpack(raw) else { return }
-        if piece.stream == 1 && piece.flags & 2 != 0 {
-            guard piece.data.count > 4 else { return }
-            let nal = piece.data.dropFirst(4)
-            let type = Int(nal.first ?? 0) & 0x1f
-            if type == 7 { six.sps = Data(nal) }
-            if type == 8 { six.pps = Data(nal) }
-            if let sps = six.sps, let pps = six.pps { six.video.setParameterSets(sps: sps, pps: pps) }
-            return
-        }
-        if piece.stream == 1 {
-            guard let whole = StageSix.assemble(&six.mirrorParts, part: piece.part, parts: piece.parts, data: piece.data) else { return }
-            guard let avcc = StageSix.toAvcc(whole) else { return }
-            six.video.decode(avcc: avcc, key: piece.flags & 1 != 0)
-            return
-        }
-        if piece.stream == 2 {
-            guard let whole = StageSix.assemble(&six.camParts, part: piece.part, parts: piece.parts, data: piece.data) else { return }
-            if let image = NSImage(data: whole) { six.camera = image }
-            return
-        }
-        if piece.stream == 3 { six.audio.play(piece.data) }
+        six.pump.submit([raw])
     }
 
     func startMirror() {

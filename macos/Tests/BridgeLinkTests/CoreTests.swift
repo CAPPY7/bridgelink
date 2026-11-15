@@ -3,6 +3,16 @@ import Darwin
 import XCTest
 
 final class CoreTests: XCTestCase {
+    func testPictureLaneSendsBytesToTheDecoderNotTheUi() {
+        let items = [
+            Incoming(json: Data([1]), binary: nil),
+            Incoming(json: nil, binary: Data([2, 3])),
+        ]
+        let lanes = PictureLane.route(items)
+        XCTAssertEqual(lanes.json, [Data([1])])
+        XCTAssertEqual(lanes.pictures, [Data([2, 3])])
+    }
+
     func testMediaWatchPollsOnlyWhileTheRemotePageIsOpen() {
         XCTAssertFalse(MediaWatch.shouldPoll(false, true, false))
         XCTAssertFalse(MediaWatch.shouldPoll(true, false, false))
