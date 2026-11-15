@@ -230,7 +230,7 @@ public enum StageFive {
         }
         if name.isEmpty { return false }
         let want = wanted.trimmingCharacters(in: .whitespacesAndNewlines)
-        if want.isEmpty { return true }
+        if want.isEmpty { return false }
         return name.lowercased() == want.lowercased()
     }
 

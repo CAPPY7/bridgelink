@@ -658,7 +658,7 @@ public class ProtocolTest {
         assertTrue(StageFive.batteryLow(19, false));
         assertFalse(StageFive.batteryLow(19, true));
         assertFalse(StageFive.batteryLow(20, false));
-        assertTrue(StageFive.homeWifi("Home", ""));
+        assertFalse(StageFive.homeWifi("Home", ""));
         assertTrue(StageFive.homeWifi("Home", "home"));
         assertFalse(StageFive.homeWifi("<unknown ssid>", ""));
         assertEquals("Notes", StageFive.appName("Notes.app"));

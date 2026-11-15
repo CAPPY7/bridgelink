@@ -298,7 +298,7 @@ public final class StageFive {
         if (name.isEmpty() || "<unknown ssid>".equalsIgnoreCase(name) || "unknown".equalsIgnoreCase(name)) return false;
         if (name.startsWith("\"") && name.endsWith("\"") && name.length() >= 2) name = name.substring(1, name.length() - 1);
         if (name.isEmpty()) return false;
-        if (wanted == null || wanted.trim().isEmpty()) return true;
+        if (wanted == null || wanted.trim().isEmpty()) return false;
         return name.equalsIgnoreCase(wanted.trim());
     }
 

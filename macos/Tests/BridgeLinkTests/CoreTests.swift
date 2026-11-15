@@ -385,7 +385,7 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(StageFive.batteryLow(19, false))
         XCTAssertFalse(StageFive.batteryLow(19, true))
         XCTAssertFalse(StageFive.batteryLow(20, false))
-        XCTAssertTrue(StageFive.homeWifi("Home", ""))
+        XCTAssertFalse(StageFive.homeWifi("Home", ""))
         XCTAssertTrue(StageFive.homeWifi("Home", "home"))
         XCTAssertFalse(StageFive.homeWifi("<unknown ssid>", ""))
         XCTAssertEqual(StageFive.appName("Notes.app"), "Notes")

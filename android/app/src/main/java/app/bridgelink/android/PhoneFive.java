@@ -1,6 +1,11 @@
 package app.bridgelink.android;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -161,10 +166,10 @@ public final class PhoneFive {
         switch (item.thenAction) {
             case "start_sync" -> setPaused(false, false);
             case "pause_sync" -> setPaused(true, false);
-            case "copy_code" -> out.status(item.detail.isEmpty() ? "No code to copy" : "Copied a code");
-            case "alert", "note" -> out.status(item.extra.isEmpty() ? StageFive.actionLabel(item.thenAction) : item.extra);
+            case "copy_code" -> copyCode(item.detail.isEmpty() ? item.extra : item.detail);
+            case "alert", "note" -> showAuto(item.extra.isEmpty() ? item.detail : item.extra, item.thenAction);
             case "open_app" -> out.status("Open app runs on the Mac");
-            case "ring" -> out.status("Automation asked the Mac to ring this phone");
+            case "ring" -> ringMac();
             default -> {
             }
         }
@@ -421,6 +426,53 @@ public final class PhoneFive {
         Prefs.open(context).edit().putString("autoRules", StageFive.encodeRules(rules)).apply();
     }
 
+    private String homeName() {
+        for (StageFive.Rule rule : rules) {
+            if (rule.enabled && "home_wifi".equals(rule.when)) return rule.extra == null ? "" : rule.extra;
+        }
+        return "";
+    }
+
+    private void copyCode(String text) {
+        if (text == null || text.isEmpty()) {
+            out.status("No code to copy");
+            return;
+        }
+        ClipboardManager board = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (board != null) board.setPrimaryClip(ClipData.newPlainText("BridgeLink", text));
+        out.status("Copied a code");
+    }
+
+    private void showAuto(String text, String action) {
+        String line = text == null || text.isEmpty() ? StageFive.actionLabel(action) : text;
+        out.status(line);
+        try {
+            NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager == null) return;
+            if (Build.VERSION.SDK_INT >= 26) {
+                manager.createNotificationChannel(new NotificationChannel("bridgelink.auto", "Automations", NotificationManager.IMPORTANCE_DEFAULT));
+            }
+            Notification note = new Notification.Builder(context, "bridgelink.auto")
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentTitle("BridgeLink")
+                    .setContentText(line)
+                    .build();
+            manager.notify(70, note);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void ringMac() {
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("label", "automation");
+            out.frame("find_mac", payload);
+            out.status("Asked the Mac to ring");
+        } catch (Exception error) {
+            out.status("Could not ask the Mac to ring");
+        }
+    }
+
     private void pushWifi() {
         String ssid = ssid();
         if (ssid.equals(lastSsid) && !ssid.isEmpty()) return;
@@ -431,7 +483,7 @@ public final class PhoneFive {
             out.frame("wifi", payload);
         } catch (Exception ignored) {
         }
-        if (StageFive.homeWifi(ssid, "")) fire("home_wifi", ssid);
+        if (StageFive.homeWifi(ssid, homeName())) fire("home_wifi", ssid);
     }
 
     private String ssid() {
