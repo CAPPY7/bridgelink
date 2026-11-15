@@ -198,6 +198,14 @@ public enum StageSix {
         return String(Features.echoKey(secret + "\n" + who).prefix(32))
     }
 
+    public static func relayHello(_ secret: String, _ role: String, _ epoch: Int64) -> String {
+        if secret.count < 16 { return "" }
+        let key = Features.echoKey(secret + "\nrelay-ticket")
+        let who = role == "mac" ? "mac" : "phone"
+        let mac = String(Features.echoKey(key + "\n" + who + "\n" + String(epoch)).prefix(32))
+        return "\(who) \(epoch) \(mac) \(key)"
+    }
+
     public static func sealedLooksOpaque(plain: Data, sealed: Data) -> Bool {
         if plain.isEmpty || sealed.count < plain.count + 16 { return false }
         let a = [UInt8](plain)

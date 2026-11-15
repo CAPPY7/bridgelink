@@ -46,14 +46,16 @@ extension LinkModel {
     func acceptRelay(_ framed: Data) {
         var buffer = FrameBuffer()
         guard let items = try? buffer.pushAll(framed) else { return }
-        let connection = live ?? NWConnection(host: "127.0.0.1", port: 9, using: .tcp)
+        let sink = NWConnection(host: "127.0.0.1", port: 9, using: .tcp)
+        replyOnRelay = true
         for item in items {
             if let json = item.json {
-                handle(json, connection: connection, id: liveID, pending: false)
+                handle(json, connection: sink, id: liveID, pending: false)
             } else if let binary = item.binary {
                 takePicture(binary)
             }
         }
+        replyOnRelay = false
     }
 
     func takePicture(_ raw: Data) {
@@ -173,9 +175,13 @@ final class AwayLink {
     private let onDown: (String) -> Void
     private var task: URLSessionWebSocketTask?
     private var session: URLSession?
-    private var key = Data()
+    private var sendKey = Data()
+    private var recvKey = Data()
+    private var sessionId: Int64 = 1
     private var counter: Int64 = 0
     private var seen: Int64 = 0
+    private var replaySession: Int64 = 0
+    private var replayArmed = false
 
     init(onFrames: @escaping (Data) -> Void, onUp: @escaping () -> Void, onDown: @escaping (String) -> Void) {
         self.onFrames = onFrames
@@ -189,7 +195,12 @@ final class AwayLink {
             onDown("Pair on the same Wi-Fi once, and save a wss relay address.")
             return
         }
-        key = Features.deriveKey(secret)
+        sendKey = Features.directionKey(secret, "mac-to-phone")
+        recvKey = Features.directionKey(secret, "phone-to-mac")
+        sessionId = Int64.random(in: 1...Int64.max)
+        counter = 0
+        seen = 0
+        replayArmed = false
         var path = parts.path
         if path.hasSuffix("/") { path.removeLast() }
         guard let target = URL(string: "wss://\(parts.host):\(parts.port)\(path)/room/\(StageSix.room(secret))") else {
@@ -201,8 +212,8 @@ final class AwayLink {
         self.session = session
         self.task = task
         task.resume()
-        let ticket = StageSix.ticket(secret, "mac")
-        task.send(.string("mac \(ticket)")) { [weak self] error in
+        let ticket = StageSix.relayHello(secret, "mac", Int64(Date().timeIntervalSince1970))
+        task.send(.string(ticket)) { [weak self] error in
             guard let self else { return }
             if error != nil {
                 self.onDown("The away relay could not be reached.")
@@ -227,14 +238,19 @@ final class AwayLink {
     }
 
     private func sendFramed(_ framed: Data) {
-        guard isLive, key.count == 32 else { return }
+        guard isLive, sendKey.count == 32 else { return }
         var nonce = Data(count: 12)
         nonce.withUnsafeMutableBytes { raw in
             _ = SecRandomCopyBytes(kSecRandomDefault, 12, raw.baseAddress!)
         }
         counter += 1
-        guard let sealed = try? Features.seal(key: key, counter: counter, nonce: nonce, plaintext: framed) else { return }
-        task?.send(.data(sealed)) { _ in }
+        guard let sealed = try? Features.seal(key: sendKey, counter: counter, nonce: nonce, plaintext: framed) else { return }
+        var packet = Data()
+        var sid = sessionId.bigEndian
+        withUnsafeBytes(of: &sid) { packet.append(contentsOf: $0) }
+        packet.append(sealed)
+        if packet.count > 512 * 1024 { return }
+        task?.send(.data(packet)) { _ in }
     }
 
     private func listen() {
@@ -242,11 +258,20 @@ final class AwayLink {
             guard let self else { return }
             switch result {
             case .success(.data(let data)):
-                if let opened = try? Features.open(key: self.key, sealed: data) {
-                    let count = Features.counterOf(data)
-                    if count > self.seen {
-                        self.seen = count
-                        self.onFrames(opened)
+                if data.count >= 8 + 12 + 8 + 16 {
+                    let sid = data.prefix(8).reduce(Int64(0)) { ($0 << 8) | Int64($1) }
+                    let sealed = data.dropFirst(8)
+                    if let opened = try? Features.open(key: self.recvKey, sealed: Data(sealed)) {
+                        if !self.replayArmed || sid != self.replaySession {
+                            self.replayArmed = true
+                            self.replaySession = sid
+                            self.seen = 0
+                        }
+                        let count = Features.counterOf(Data(sealed))
+                        if count > self.seen {
+                            self.seen = count
+                            self.onFrames(opened)
+                        }
                     }
                 }
                 self.listen()

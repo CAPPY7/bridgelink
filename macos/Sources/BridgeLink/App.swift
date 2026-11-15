@@ -116,6 +116,8 @@ final class LinkModel: ObservableObject {
     var pending: NWConnection?
     var pendingID = UUID()
     var liveID = UUID()
+    var replyOnRelay = false
+    var relayTrusted = false
     let queue = DispatchQueue(label: "app.bridgelink.mac")
     var book = DeviceBook()
     @Published var phoneList: [PairedDevice] = []

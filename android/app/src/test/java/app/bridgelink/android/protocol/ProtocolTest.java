@@ -826,6 +826,45 @@ public class ProtocolTest {
         assertEquals("", MacTokens.tokenFor(MacTokens.remove(book, "aa11aa11aa11aa11"), "aa11aa11aa11aa11"));
     }
 
+    @Test
+    public void relayRestartsAndRejectsAReflectedFrame() throws Exception {
+        String secret = "pairing-secret-value";
+        long now = 1_700_000_000L;
+        String hello = RelayRules.hello(secret, "phone", now);
+        assertTrue(RelayRules.ticketOk(hello, now));
+        assertFalse(RelayRules.ticketOk(hello, now + 180));
+        RelayRules.Hub hub = new RelayRules.Hub();
+        assertTrue(hub.join("phone", hello, now, new byte[] {1}));
+        assertTrue(hub.join("mac", RelayRules.hello(secret, "mac", now), now, new byte[] {2}));
+        byte[] frame = new byte[] {9, 9, 9};
+        assertArrayEquals(frame, hub.forward("phone", frame));
+        assertNull(hub.forward("phone", new byte[RelayRules.MAX_MESSAGE + 1]));
+        String attacker = "phone " + now + " 00112233445566778899aabbccddeeff " + RelayRules.ticketKey("other-secret-value");
+        assertFalse(hub.join("phone", attacker, now, new byte[] {3}));
+
+        byte[] outKey = RelayRules.phoneToMac(secret);
+        byte[] backKey = RelayRules.macToPhone(secret);
+        assertFalse(java.util.Arrays.equals(outKey, backKey));
+        byte[] nonce = new byte[12];
+        byte[] sealed = Features.seal(outKey, 1, nonce, "hello".getBytes(StandardCharsets.UTF_8));
+        assertEquals("hello", new String(Features.open(outKey, sealed), StandardCharsets.UTF_8));
+        boolean reflected = false;
+        try {
+            Features.open(backKey, sealed);
+        } catch (Exception expected) {
+            reflected = true;
+        }
+        assertTrue(reflected);
+
+        RelayRules.Replay replay = new RelayRules.Replay();
+        assertTrue(replay.accept(11L, 1));
+        assertFalse(replay.accept(11L, 1));
+        assertTrue(replay.accept(22L, 1));
+        assertTrue(RelayRules.knownPhone("tokentokentoken1", new String[] {"tokentokentoken1"}, new String[0]));
+        assertFalse(RelayRules.knownPhone("tokentokentoken1", new String[] {"tokentokentoken1"}, new String[] {"tokentokentoken1"}));
+        assertFalse(RelayRules.knownPhone("tokentokentoken1", new String[] {"someoneelse123456"}, new String[0]));
+    }
+
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */
     public static final class ForegroundServiceStartNotAllowedException extends IllegalStateException {
         public ForegroundServiceStartNotAllowedException() {

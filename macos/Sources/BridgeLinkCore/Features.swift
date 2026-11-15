@@ -223,6 +223,10 @@ public enum Features {
         hkdf(ikm: Data(pairingSecret.utf8), salt: Data("bridgelink-e2e-v1".utf8), info: Data("key".utf8), length: 32)
     }
 
+    public static func directionKey(_ secret: String, _ info: String) -> Data {
+        hkdf(ikm: Data(secret.utf8), salt: Data("bridgelink-e2e-v1".utf8), info: Data(info.utf8), length: 32)
+    }
+
     public static func seal(key: Data, counter: Int64, nonce: Data, plaintext: Data) throws -> Data {
         if key.count != 32 || nonce.count != 12 || counter < 0 { throw CodecError.badJson }
         let box = try AES.GCM.seal(plaintext, using: SymmetricKey(data: key), nonce: AES.GCM.Nonce(data: nonce), authenticating: counterData(counter))

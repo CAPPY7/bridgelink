@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Fix-all pass, Step 1. C1, C2, and C3 are done. Next is C4: make Away from home work on the free Cloudflare plan, and make it safe.
+Fix-all pass, Step 1. C1, C2, and C3 are done. C4 is partly done. Next is the rest of C4 (one relay secret per phone, in the Mac keychain), then C5.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -34,6 +34,7 @@ Fix-all pass, Step 1. C1, C2, and C3 are done. Next is C4: make Away from home w
 - C1. Phone reconnects by itself after a clean disconnect. A bad key or a bad code does not.
 - C2. A pairing link asks before it connects, and a different Mac does not receive the old token.
 - C3. Received files are not opened by themselves. The share sheet asks before it sends.
+- C4 partly. Away from home can deploy on the free plan, checks a timed ticket, and refuses a forgotten phone. One secret per phone in the Mac keychain is still open.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

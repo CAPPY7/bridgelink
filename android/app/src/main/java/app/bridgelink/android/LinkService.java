@@ -134,6 +134,10 @@ public class LinkService extends Service {
         public void run() {
             if (!paired) return;
             if (lastRx > 0 && System.currentTimeMillis() - lastRx > 45_000) {
+                if (six != null && six.relayLive()) {
+                    main.postDelayed(this, 20_000);
+                    return;
+                }
                 closeSocket();
                 return;
             }
@@ -190,7 +194,16 @@ public class LinkService extends Service {
             @Override
             public void relayUp() {
                 paired = true;
-                publish("Connected through the away relay. The relay cannot read the link.", null);
+                publish("Away (relay). The relay cannot read the link.", null);
+                main.removeCallbacks(heartbeat);
+                main.postDelayed(heartbeat, 1_000);
+                try {
+                    JsonObject auth = new JsonObject();
+                    String token = Prefs.open(LinkService.this).getString("token", "");
+                    auth.addProperty("token", token == null ? "" : token);
+                    writeEnvelope(Envelope.make("relay_auth", "android", auth));
+                } catch (Exception ignored) {
+                }
             }
 
             @Override
@@ -485,7 +498,12 @@ public class LinkService extends Service {
                     main.post(() -> openAttempt(next, port, code));
                 } else if (linkState.afterClose(userStopped, tokenSaved) && !address.isEmpty()) {
                     long delay = linkState.delayMs();
-                    publish("Reconnecting…", null);
+                    if (linkState.attempt >= 2 && six != null) {
+                        six.tryRelay();
+                        publish("Wi-Fi missed the Mac. Trying away from home, and still retrying Wi-Fi.", null);
+                    } else {
+                        publish("Reconnecting…", null);
+                    }
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (!userStopped && linkState.phase != LinkState.Phase.FATAL) {
                     if (six != null && six.tryRelay()) {
@@ -520,6 +538,7 @@ public class LinkService extends Service {
                 case "paired" -> {
                     paired = true;
                     linkState.paired();
+                    if (six != null) six.stopRelay();
                     String issued = message.text("token");
                     if (issued.length() >= 16) {
                         SharedPreferences prefs = Prefs.open(this);

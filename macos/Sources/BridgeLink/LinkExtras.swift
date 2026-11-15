@@ -14,6 +14,10 @@ import UserNotifications
 extension LinkModel {
     func send(type: String, payload: [String: String], on connection: NWConnection?) {
         let json = EnvelopeCodec.json(type: type, from: "mac", payload: payload)
+        if replyOnRelay, let away, away.isLive {
+            away.sendJson(json)
+            return
+        }
         if connection != nil {
             connection?.send(content: encodeFrame(json: json), completion: .contentProcessed { _ in })
             return

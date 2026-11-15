@@ -16,6 +16,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.Frame;
+import app.bridgelink.android.protocol.RelayRules;
 import app.bridgelink.android.protocol.StageSix;
 
 /** WebSocket to the free relay. Only locked frames leave this phone. */
@@ -33,8 +34,10 @@ public final class RelayDoor {
     private final SecureRandom random = new SecureRandom();
     private volatile SSLSocket socket;
     private volatile OutputStream out;
-    private byte[] key = new byte[0];
-    private long seen;
+    private byte[] sendKey = new byte[0];
+    private byte[] recvKey = new byte[0];
+    private long sessionId;
+    private final RelayRules.Replay replay = new RelayRules.Replay();
 
     public boolean up() {
         return live.get();
@@ -44,12 +47,17 @@ public final class RelayDoor {
         stop();
         String[] parts = StageSix.relayParts(url);
         String room = StageSix.room(secret);
-        String ticket = StageSix.ticket(secret, "phone");
+        String ticket = RelayRules.hello(secret, "phone", System.currentTimeMillis() / 1000);
         if (parts == null || room.isEmpty() || ticket.isEmpty()) {
             sink.down("Pair on the same Wi-Fi once, and save a wss relay address.");
             return;
         }
-        key = Features.deriveKey(secret);
+        sendKey = RelayRules.phoneToMac(secret);
+        recvKey = RelayRules.macToPhone(secret);
+        sessionId = random.nextLong();
+        if (sessionId == 0) sessionId = 1;
+        replay.armed = false;
+        replay.seen = 0;
         Thread thread = new Thread(() -> run(parts, room, ticket, sink), "bridgelink-relay");
         thread.start();
     }
@@ -72,10 +80,14 @@ public final class RelayDoor {
             byte[] nonce = new byte[12];
             random.nextBytes(nonce);
             long count = counter.incrementAndGet();
-            byte[] sealed = Features.seal(key, count, nonce, framed);
+            byte[] sealed = Features.seal(sendKey, count, nonce, framed);
+            byte[] packet = new byte[8 + sealed.length];
+            java.nio.ByteBuffer.wrap(packet).putLong(sessionId);
+            System.arraycopy(sealed, 0, packet, 8, sealed.length);
+            if (!RelayRules.fits(packet.length)) return false;
             byte[] mask = new byte[4];
             random.nextBytes(mask);
-            byte[] frame = StageSix.wsFrame(2, sealed, mask);
+            byte[] frame = StageSix.wsFrame(2, packet, mask);
             OutputStream stream = out;
             if (stream == null) return false;
             stream.write(frame);
@@ -116,7 +128,7 @@ public final class RelayDoor {
             }
             byte[] mask = new byte[4];
             random.nextBytes(mask);
-            byte[] greet = StageSix.wsFrame(1, ("phone " + ticket).getBytes(StandardCharsets.US_ASCII), mask);
+            byte[] greet = StageSix.wsFrame(1, ticket.getBytes(StandardCharsets.US_ASCII), mask);
             stream.write(greet);
             stream.flush();
             live.set(true);
@@ -146,10 +158,17 @@ public final class RelayDoor {
                 byte[] payload = StageSix.wsPayload(frame);
                 if (payload == null) return;
                 if ((frame[0] & 0x0f) != 2) continue;
-                byte[] opened = Features.open(key, payload);
-                long count = Features.counterOf(payload);
-                if (count <= seen) continue;
-                seen = count;
+                if (payload.length < 8 + 12 + 8 + 16) continue;
+                long session = java.nio.ByteBuffer.wrap(payload, 0, 8).getLong();
+                byte[] sealed = Arrays.copyOfRange(payload, 8, payload.length);
+                byte[] opened;
+                try {
+                    opened = Features.open(recvKey, sealed);
+                } catch (Exception rejected) {
+                    continue;
+                }
+                long count = Features.counterOf(sealed);
+                if (!replay.accept(session, count)) continue;
                 List<Frame> frames = parser.push(opened);
                 if (!frames.isEmpty()) sink.frames(frames);
             }

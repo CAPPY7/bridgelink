@@ -15,6 +15,21 @@ extension LinkModel {
     func handle(_ data: Data, connection: NWConnection, id: UUID, pending: Bool) {
         guard let envelope = try? EnvelopeCodec.parse(data) else { return }
         lastRx = Date()
+        if replyOnRelay && envelope.type == "relay_auth" {
+            let token = envelope.text("token")
+            if book.match(token: token) != nil {
+                relayTrusted = true
+                send(type: "relay_ok", payload: [:], on: nil)
+            } else {
+                relayTrusted = false
+                send(type: "error", payload: ["code": "forgotten", "body": "This phone is not paired"], on: nil)
+                away?.stop()
+            }
+            return
+        }
+        if replyOnRelay && !relayTrusted {
+            return
+        }
         if envelope.type == "hello" {
             let now = Int64(Date().timeIntervalSince1970 * 1000)
             let token = envelope.text("token")
@@ -252,6 +267,7 @@ extension LinkModel {
             live?.cancel()
             live = nil
             liveDeviceId = ""
+            relayTrusted = false
             phase = .listening
             note("The phone forgot this Mac")
         default:
@@ -271,6 +287,8 @@ extension LinkModel {
         liveDeviceId = deviceId
         pending = nil
         pendingCount = max(0, pendingCount - 1)
+        away?.stop()
+        replyOnRelay = false
         phase = .paired(name)
         send(type: "paired", payload: ["token": token, "deviceId": deviceId], on: connection)
         lastRx = Date()
