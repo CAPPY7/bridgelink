@@ -1,12 +1,5 @@
 package app.bridgelink.android;
 
-import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.action.ViewActions.click;
-import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
-import static androidx.test.espresso.action.ViewActions.replaceText;
-import static androidx.test.espresso.action.ViewActions.scrollTo;
-import static androidx.test.espresso.matcher.ViewMatchers.withId;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -121,12 +114,11 @@ public class PairingEmulatorTest {
         Assert.assertTrue("QR pair did not save a token. " + dump(), firstToken != null && firstToken.length() >= 16);
         Assert.assertEquals("Phone saved a different token than the Mac issued. " + dump(), mac.lastToken, firstToken);
 
-        onView(withId(R.id.message)).perform(scrollTo(), replaceText(NOTE), closeSoftKeyboard());
-        onView(withId(R.id.send)).perform(scrollTo(), click());
+        scenario.onActivity(activity -> activity.uiSendNote(NOTE));
         waitUntil(() -> NOTE.equals(mac.lastText), 20_000, "Mac never got the note");
 
         int sessions = mac.finishedSessions;
-        onView(withId(R.id.forget)).perform(scrollTo(), click());
+        scenario.onActivity(activity -> activity.uiForget());
         waitFor("Forgot this Mac", 20_000);
         waitUntil(() -> mac.finishedSessions > sessions, 20_000, "Fake Mac did not see the socket close");
         String forgotten = Prefs.open(target).getString("token", "");
@@ -134,11 +126,10 @@ public class PairingEmulatorTest {
         String fp = Prefs.open(target).getString("fp", "");
         Assert.assertTrue("Forget left the certificate pin in place. " + dump(), fp == null || fp.isEmpty());
 
-        onView(withId(R.id.pin)).perform(scrollTo(), replaceText(""), closeSoftKeyboard());
         int pairedBefore = countOf("Paired with the Mac");
-        onView(withId(R.id.connect)).perform(scrollTo(), click());
+        scenario.onActivity(activity -> activity.uiConnectWithPin(""));
         waitFor("Match code ", 40_000);
-        onView(withId(R.id.confirm)).perform(scrollTo(), click());
+        scenario.onActivity(activity -> activity.uiConfirm());
         waitUntil(() -> countOf("Paired with the Mac") > pairedBefore, 40_000, "match-code pair did not finish");
 
         String secondToken = Prefs.open(target).getString("token", "");

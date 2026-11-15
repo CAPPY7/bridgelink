@@ -37,6 +37,8 @@ final class LinkModel: ObservableObject {
     @Published var pendingLink = ""
     @Published var linkDraft = ""
     @Published var phoneBattery = ""
+    @Published var macBattery = "—"
+    var openWindow: (() -> Void)?
     var macLevel = -1
     var macCharging = false
     var sawMacBattery = false
@@ -85,6 +87,8 @@ final class LinkModel: ObservableObject {
         let saved = HistoryFile.load(from: historyURL())
         if !saved.isEmpty { lines = saved }
         refreshAddresses()
+        refreshMacBatteryLabel()
+        if ProcessInfo.processInfo.environment["BRIDGELINK_SHOTS"] != nil { return }
         start()
         watchNetwork()
         armPinClock()
@@ -141,6 +145,28 @@ final class LinkModel: ObservableObject {
 
     func quit() {
         NSApp.terminate(nil)
+    }
+
+    func refreshMacBatteryLabel() {
+        if let sample = MacPower.sample() {
+            macBattery = sample.charging ? "\(sample.level)% charging" : "\(sample.level)%"
+        } else {
+            macBattery = "No battery"
+        }
+    }
+
+    func showDesk() {
+        openWindow?()
+    }
+
+    func mirrorLater() {
+        note("Screen mirror arrives in a later update.")
+    }
+
+    func sendDropped(_ urls: [URL]) {
+        for url in urls {
+            sendFile(url)
+        }
     }
 
     func setMirror(_ on: Bool) {

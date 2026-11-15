@@ -36,4 +36,20 @@ fi
 bash sign.sh BridgeLink.app
 ditto -c -k --keepParent BridgeLink.app BridgeLink-mac.zip
 bash make-dmg.sh
+SHOTS="$(cd .. && pwd)/docs/screenshots"
+mkdir -p "$SHOTS"
+export SHOTS
+python3 - << 'PY'
+import os, subprocess, sys
+env = os.environ.copy()
+env["BRIDGELINK_SHOTS"] = env["SHOTS"]
+try:
+    result = subprocess.run(["./BridgeLink.app/Contents/MacOS/BridgeLink"], env=env, timeout=45)
+except subprocess.TimeoutExpired:
+    print("screenshot app hung")
+    sys.exit(1)
+if result.returncode != 0:
+    sys.exit(result.returncode)
+print("screenshots ok")
+PY
 echo "Built universal BridgeLink-mac.zip and BridgeLink.dmg"

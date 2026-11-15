@@ -34,12 +34,22 @@ run_tests() {
   ./gradlew connectedDebugAndroidTest --no-daemon
 }
 
+pull_shots() {
+  mkdir -p ../docs/screenshots
+  rm -rf /tmp/bl-shots
+  mkdir -p /tmp/bl-shots
+  adb pull /sdcard/Android/data/app.bridgelink.android/files/shots /tmp/bl-shots || true
+  find /tmp/bl-shots -name 'android-*.png' -exec cp {} ../docs/screenshots/ \;
+}
+
 if ! run_tests; then
   echo "::warning::Emulator pairing test failed once. Retrying."
   adb logcat -d -t 250 || true
   if ! run_tests; then
     echo "::error::Emulator pairing test failed twice."
     adb logcat -d -t 400 || true
+    pull_shots
     exit 1
   fi
 fi
+pull_shots

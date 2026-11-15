@@ -20,7 +20,7 @@ Clipboard history, leave-lock, rate limit, and replay classes were deleted becau
 
 The first hello sends `proof` only when the QR link already contained the certificate fingerprint and the live certificate matches it. A typed address does not send a PIN proof. Both screens show a 6-digit match code from the certificate the phone saw. The user confirms on both. A relay sees a different code and is not given a token. This replaced the v0.3.0 hello, so 0.3.0 and 0.4.0 cannot pair. The Mac stores SHA-256 hashes of device tokens. The PIN on the Mac refreshes itself after 120 seconds.
 
-Android reconnect is a small state machine: fatal errors do not retry. Forget on the phone sends a `forget` message, then drops the token. The UI is still the existing Java form. Kotlin and Compose wait until the shell is replaced, because rewriting it in the same release as the pairing change would hide the security fix.
+Android reconnect is a small state machine: fatal errors do not retry. Forget on the phone sends a `forget` message, then drops the token. The screen is Kotlin and Jetpack Compose. LinkService and the protocol stay Java.
 
 The phone seals the pairing token with AES-256-GCM. The key is created in the Android Keystore and is not exported. The cipher generates the IV. A caller-supplied IV is rejected by the keystore, and that failure used to drop the token while the screen still said paired. If the keystore cannot be opened, or the seal does not read back, the token is not written to a file and the screen says so. `androidx.security:security-crypto` is no longer a dependency. Host, port, and certificate fingerprint are not the token; they stay in a private preferences file so the phone can still show the saved Mac.
 
@@ -42,9 +42,9 @@ The share sheet copies a shared file into the app cache first, because the tempo
 
 The product is the Android app and the Mac menu-bar app. The page under `src/` is a labeled simulation for the browser preview. Its feature table is not the status of the installable apps. The README table is.
 
-## Java on Android, for now
+## Phone screen is Compose. The link stays Java.
 
-The phone app stays Java. A Kotlin and Jetpack Compose rewrite would throw away a working service, and this pass had to keep the GitHub build green. Compose is still the intended UI once the link itself is solid. Recorded here so it is a choice, not an accident.
+The phone screen is Kotlin and Jetpack Compose with Material 3. On Android 12 and newer it uses the system colors. LinkService, pairing, and the protocol stay Java so the socket code is not rewritten in the same pass as the screen. The Mac app is a menu-bar panel plus a sidebar window.
 
 ## TLS is server authentication plus a pin, not mutual TLS
 

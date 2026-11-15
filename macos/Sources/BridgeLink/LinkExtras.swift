@@ -28,6 +28,7 @@ extension LinkModel {
     }
 
     func sendMacBattery() {
+        refreshMacBatteryLabel()
         guard case .paired = phase, let sample = MacPower.sample() else { return }
         if !Features.batteryChanged(
             previousLevel: macLevel,

@@ -44,6 +44,13 @@ jobs:
           MAC_SIGN_P12_BASE64: ${{ secrets.MAC_SIGN_P12_BASE64 }}
           MAC_SIGN_P12_PASSWORD: ${{ secrets.MAC_SIGN_P12_PASSWORD }}
         run: bash macos/build.sh
+      - name: Upload Mac screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-screenshots
+          path: docs/screenshots/mac-*.png
+          if-no-files-found: ignore
 
   web:
     runs-on: ubuntu-latest
@@ -88,3 +95,10 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           script: bash android/emulator-ci.sh
+      - name: Upload Android screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-screenshots
+          path: docs/screenshots/android-*.png
+          if-no-files-found: ignore

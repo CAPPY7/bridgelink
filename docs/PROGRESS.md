@@ -5,14 +5,16 @@ v0.8.0 is tagged on 1151c98. CI was green: https://github.com/CAPPY7/bridgelink/
 Release: https://github.com/CAPPY7/bridgelink/releases/tag/v0.8.0
 
 ## Done in code
-- Stage 1 bug fixes: macOS 15 open steps, disk image, icon, history on disk, battery both ways, every Mac address in the QR, scan button first, diagnostics, plain errors, firewall text, release fails without the Android key.
-- The Mac app is still ad-hoc signed. GitHub returned 403 when storing MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD.
+- Stage 1 bug fixes are in v0.8.0.
+- Stage 2 screen work is in progress on top of that. The phone screen is Compose. The Mac app has a menu panel and a sidebar window. The link code is unchanged.
+- Screenshots are drawn by the Mac build and by the emulator test, then copied into docs/screenshots.
 
 ## Next exact step
-Stage 2. New design. Android UI in Kotlin and Jetpack Compose. Mac menu popover plus a sidebar window. Light and dark. Do not mark features Final.
+Finish Stage 2. Keep CI green, put the screenshots in the repo, tag v0.9.0.
 
 ## Open problems
 - LinkService.java is still longer than 400 lines.
-- Mac permissions can still reset after an update until those two secrets exist.
+- Mac permissions can still reset after an update until MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD exist.
 - Sparkle, the first-run wizard, and the in-app updater are not built yet.
+- Messages, remote, screen mirror, shared folder, webcam, and automations are empty screens on purpose. Those features are later stages.
 - Do not create a new Android signing key. Do not print secrets.
