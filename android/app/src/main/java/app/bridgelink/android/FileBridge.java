@@ -314,7 +314,7 @@ public final class FileBridge {
     }
 
     private String finalizeDest(Slot slot) throws Exception {
-        if (slot.uri != null) {
+        if (Build.VERSION.SDK_INT >= 29 && slot.uri != null) {
             ContentValues values = new ContentValues();
             values.put(MediaStore.Downloads.IS_PENDING, 0);
             int updated = context.getContentResolver().update(slot.uri, values, null, null);
@@ -337,6 +337,7 @@ public final class FileBridge {
         if (slot.file != null) slot.file.delete();
     }
 
+    @androidx.annotation.RequiresApi(29)
     private Uri insertPending(String name) {
         ContentValues values = new ContentValues();
         values.put(MediaStore.Downloads.DISPLAY_NAME, name);
@@ -345,6 +346,7 @@ public final class FileBridge {
         return context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
     }
 
+    @androidx.annotation.RequiresApi(29)
     private Uri reopenDownload(String id) {
         String saved = incomingBook().getString(id, "");
         if (saved == null || !saved.startsWith("content:")) return null;
