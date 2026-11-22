@@ -84,6 +84,8 @@ final class LinkModel: ObservableObject {
     @Published var rules: [StageFive.Rule] = []
     let six = SixHold()
     var away: AwayLink?
+    var relayAttempt = 0
+    var relayJoin: DispatchWorkItem?
     @Published var ruleWhen = "connect"
     @Published var ruleThen = "alert"
     @Published var ruleExtra = ""

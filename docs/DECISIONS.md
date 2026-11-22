@@ -16,6 +16,8 @@ The pair question stays on the phone screen. The emulator test reads that screen
 
 A sleeping relay keeps the role on the socket and the room key in storage. Nothing important is only in memory. The free Cloudflare plan already supports that.
 
+A quiet away relay closes after 10 minutes without a frame, not because the connection is old. A drop shows "Away link down" and rejoins with the same wait used for Wi-Fi. A relay that never came up does not loop by itself.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".

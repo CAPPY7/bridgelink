@@ -35,6 +35,8 @@ extension LinkModel {
                 onUp: { [weak self] in
                     Task { @MainActor in
                         guard let self else { return }
+                        self.relayAttempt = 0
+                        self.relayJoin?.cancel()
                         if case .paired = self.phase {} else {
                             let name = self.pairedSummary.isEmpty ? "Phone" : self.pairedSummary
                             self.phase = .paired(name)
@@ -43,11 +45,39 @@ extension LinkModel {
                     }
                 },
                 onDown: { [weak self] reason in
-                    Task { @MainActor in self?.note(reason) }
+                    Task { @MainActor in
+                        guard let self else { return }
+                        if reason == "Away link down" {
+                            if self.live == nil {
+                                if case .paired = self.phase { self.phase = .listening }
+                            }
+                            self.note("Away link down")
+                            self.rejoinRelay()
+                            return
+                        }
+                        self.note(reason)
+                    }
                 }
             )
         }
         away?.connect(url: url, secret: secret)
+    }
+
+    func rejoinRelay() {
+        guard live == nil, away != nil else { return }
+        relayJoin?.cancel()
+        let delay = Double(nextBackoffMs(relayAttempt)) / 1000
+        relayAttempt += 1
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.live == nil else { return }
+            let id = self.awayDeviceId.isEmpty ? self.liveDeviceId : self.awayDeviceId
+            let url = UserDefaults.standard.string(forKey: "relayUrl") ?? self.six.relayUrl
+            let secret = RelayVault.load(id) ?? ""
+            guard secret.count >= 16 else { return }
+            self.away?.connect(url: url, secret: secret)
+        }
+        relayJoin = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     func acceptRelay(_ framed: Data) {
@@ -174,6 +204,8 @@ final class AwayLink {
     private var seen: Int64 = 0
     private var replaySession: Int64 = 0
     private var replayArmed = false
+    private var opened = false
+    private var generation = 0
 
     init(onFrames: @escaping (Data) -> Void, onUp: @escaping () -> Void, onDown: @escaping (String) -> Void) {
         self.onFrames = onFrames
@@ -183,6 +215,7 @@ final class AwayLink {
 
     func connect(url: String, secret: String) {
         stop()
+        let mine = generation
         guard StageSix.relayUrl(url), secret.count >= 16, let parts = StageSix.relayParts(url) else {
             onDown("Pair on the same Wi-Fi once, and save a wss relay address.")
             return
@@ -206,14 +239,15 @@ final class AwayLink {
         task.resume()
         let ticket = StageSix.relayHello(secret, "mac", Int64(Date().timeIntervalSince1970))
         task.send(.string(ticket)) { [weak self] error in
-            guard let self else { return }
+            guard let self, self.generation == mine else { return }
             if error != nil {
                 self.onDown("The away relay could not be reached.")
                 return
             }
+            self.opened = true
             self.isLive = true
             self.onUp()
-            self.listen()
+            self.listen(mine)
         }
     }
 
@@ -222,6 +256,8 @@ final class AwayLink {
     }
 
     func stop() {
+        generation += 1
+        opened = false
         isLive = false
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
@@ -258,9 +294,9 @@ final class AwayLink {
         task.send(.data(packet)) { _ in done?() }
     }
 
-    private func listen() {
+    private func listen(_ mine: Int) {
         task?.receive { [weak self] result in
-            guard let self else { return }
+            guard let self, self.generation == mine else { return }
             switch result {
             case .success(.data(let data)):
                 if data.count >= 8 + 12 + 8 + 16 {
@@ -279,15 +315,20 @@ final class AwayLink {
                         }
                     }
                 }
-                self.listen()
+                self.listen(mine)
             case .success(.string):
-                self.stop()
+                self.generation += 1
+                self.isLive = false
+                self.opened = false
                 self.onDown("The relay sent plain text. The link was closed.")
             case .failure:
+                let dropped = self.opened || self.isLive
                 self.isLive = false
-                self.onDown("The away relay dropped.")
+                self.opened = false
+                self.generation += 1
+                self.onDown(dropped ? "Away link down" : "The away relay dropped.")
             @unknown default:
-                self.listen()
+                self.listen(mine)
             }
         }
     }

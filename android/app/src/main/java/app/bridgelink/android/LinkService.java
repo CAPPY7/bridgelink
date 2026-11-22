@@ -116,6 +116,14 @@ public class LinkService extends Service {
     private volatile Attempt attempt;
     private MediaPlayer player;
     private volatile boolean paired;
+    private int relayAttempt;
+
+    private void rejoinRelay() {
+        if (six == null) return;
+        if (six.relayLive()) return;
+        if (paired && !onRelay) return;
+        six.tryRelay();
+    }
     private volatile String lastHost = "";
     private volatile int lastPort = 8787;
     private int savedAlarmVolume = -1;
@@ -205,6 +213,8 @@ public class LinkService extends Service {
 
             @Override
             public void relayUp() {
+                relayAttempt = 0;
+                main.removeCallbacks(LinkService.this::rejoinRelay);
                 paired = true;
                 onRelay = true;
                 publish("Away (relay). The relay cannot read the link.", null);
@@ -217,6 +227,25 @@ public class LinkService extends Service {
                     writeEnvelope(Envelope.make("relay_auth", "android", auth));
                 } catch (Exception ignored) {
                 }
+            }
+
+            @Override
+            public void relayDown(String reason) {
+                boolean wasRelay = onRelay;
+                if (app.bridgelink.android.protocol.RelayRetry.rejoin(reason)) {
+                    if (wasRelay) {
+                        paired = false;
+                        onRelay = false;
+                    }
+                    publish(app.bridgelink.android.protocol.RelayRetry.DOWN, null);
+                    if (wasRelay) {
+                        long delay = app.bridgelink.android.protocol.RelayRetry.delayMs(relayAttempt++);
+                        main.removeCallbacks(LinkService.this::rejoinRelay);
+                        main.postDelayed(LinkService.this::rejoinRelay, delay);
+                    }
+                    return;
+                }
+                publish(reason, null);
             }
 
             @Override
@@ -580,6 +609,8 @@ public class LinkService extends Service {
                 case "paired" -> {
                     paired = true;
                     onRelay = false;
+                    relayAttempt = 0;
+                    main.removeCallbacks(LinkService.this::rejoinRelay);
                     if (six != null) six.stopRelay();
                     linkState.paired();
                     String issued = message.text("token");

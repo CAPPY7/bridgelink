@@ -30,6 +30,7 @@ public final class RelayDoor {
     }
 
     private final AtomicBoolean live = new AtomicBoolean();
+    private final java.util.concurrent.atomic.AtomicInteger generation = new java.util.concurrent.atomic.AtomicInteger();
     private final AtomicLong counter = new AtomicLong();
     private final SecureRandom random = new SecureRandom();
     private volatile SSLSocket socket;
@@ -44,7 +45,8 @@ public final class RelayDoor {
     }
 
     public void start(String url, String secret, Sink sink) {
-        stop();
+        int mine = generation.incrementAndGet();
+        closeSocket();
         String[] parts = StageSix.relayParts(url);
         String room = StageSix.room(secret);
         String ticket = RelayRules.hello(secret, "phone", System.currentTimeMillis() / 1000);
@@ -58,14 +60,20 @@ public final class RelayDoor {
         if (sessionId == 0) sessionId = 1;
         replay.armed = false;
         replay.seen = 0;
-        Thread thread = new Thread(() -> run(parts, room, ticket, sink), "bridgelink-relay");
+        Thread thread = new Thread(() -> run(parts, room, ticket, sink, mine), "bridgelink-relay");
         thread.start();
     }
 
     public void stop() {
+        generation.incrementAndGet();
         live.set(false);
+        closeSocket();
+    }
+
+    private void closeSocket() {
         SSLSocket current = socket;
         socket = null;
+        out = null;
         if (current != null) {
             try {
                 current.close();
@@ -98,11 +106,16 @@ public final class RelayDoor {
         }
     }
 
-    private void run(String[] parts, String room, String ticket, Sink sink) {
+    private void run(String[] parts, String room, String ticket, Sink sink, int mine) {
+        boolean opened = false;
         try {
             SSLSocket next = (SSLSocket) SSLSocketFactory.getDefault().createSocket();
             next.connect(new InetSocketAddress(parts[0], Integer.parseInt(parts[1])), 8000);
             next.startHandshake();
+            if (mine != generation.get()) {
+                next.close();
+                return;
+            }
             socket = next;
             OutputStream stream = next.getOutputStream();
             out = stream;
@@ -121,23 +134,24 @@ public final class RelayDoor {
             stream.write(hello.getBytes(StandardCharsets.US_ASCII));
             stream.flush();
             InputStream input = next.getInputStream();
-            if (!accepted(input)) {
-                sink.down("The relay refused the connection.");
-                stop();
-                return;
-            }
+            if (!accepted(input)) return;
+            if (mine != generation.get()) return;
             byte[] mask = new byte[4];
             random.nextBytes(mask);
             byte[] greet = StageSix.wsFrame(1, ticket.getBytes(StandardCharsets.US_ASCII), mask);
             stream.write(greet);
             stream.flush();
+            opened = true;
             live.set(true);
             sink.up();
             readLoop(input, sink);
-        } catch (Exception error) {
-            sink.down("The away relay could not be reached.");
+        } catch (Exception ignored) {
         } finally {
-            live.set(false);
+            if (mine == generation.get()) {
+                live.set(false);
+                generation.incrementAndGet();
+                sink.down(opened ? app.bridgelink.android.protocol.RelayRetry.DOWN : "The away relay could not be reached.");
+            }
         }
     }
 

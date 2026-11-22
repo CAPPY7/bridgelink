@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Room, keptRole, readMeta, sha256hex } from "./worker.js";
+import { Room, keptRole, readMeta, sha256hex, writeMeta } from "./worker.js";
 
 function memoryState(sockets) {
   const saved = new Map();
@@ -48,4 +48,29 @@ test("a wake-up still knows the role and the room key", async () => {
   const again = woken.state.getWebSockets()[0];
   assert.equal(keptRole(readMeta(again)), "phone");
   assert.equal(await woken.state.storage.get("roomKey"), key);
+});
+
+test("silence closes the room, a recent frame does not, and a new join works", async () => {
+  const stamp = Math.floor(Date.now() / 1000);
+  const key = "cd".repeat(32);
+  const phone = socket();
+  const state = memoryState([phone]);
+  const room = new Room(state);
+  await room.webSocketMessage(phone, await hello("phone", stamp, key));
+  const fresh = readMeta(phone);
+  writeMeta(phone, { ...fresh, acceptedAt: Date.now() - 11 * 60 * 1000, lastFrame: Date.now() });
+  await room.sweep(Date.now());
+  assert.equal(phone.closed, false);
+
+  writeMeta(phone, { ...readMeta(phone), lastFrame: Date.now() - 11 * 60 * 1000 });
+  await room.sweep(Date.now());
+  assert.equal(phone.closed, true);
+  assert.equal(await state.storage.get("roomKey"), "");
+
+  const again = socket();
+  const next = new Room(memoryState([again]));
+  next.state.storage = state.storage;
+  await next.webSocketMessage(again, await hello("phone", stamp, key));
+  assert.equal(keptRole(readMeta(again)), "phone");
+  assert.equal(await next.state.storage.get("roomKey"), key);
 });

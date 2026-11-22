@@ -270,6 +270,8 @@ extension LinkModel {
             awayDeviceId = ""
             relayTrusted = false
             away?.stop()
+            relayJoin?.cancel()
+            relayAttempt = 0
             phase = .listening
             note("The phone forgot this Mac")
         default:
@@ -298,6 +300,8 @@ extension LinkModel {
         pending = nil
         pendingCount = max(0, pendingCount - 1)
         away?.stop()
+        relayJoin?.cancel()
+        relayAttempt = 0
         replyOnRelay = false
         phase = .paired(name)
         clearLeaveLock()

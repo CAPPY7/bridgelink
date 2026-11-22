@@ -24,6 +24,8 @@ public final class PhoneSix {
 
         void relayUp();
 
+        void relayDown(String reason);
+
         void relayFrames(java.util.List<app.bridgelink.android.protocol.Frame> frames);
     }
 
@@ -181,7 +183,7 @@ public final class PhoneSix {
 
             @Override
             public void down(String reason) {
-                out.status(reason);
+                out.relayDown(reason);
             }
         });
         return true;

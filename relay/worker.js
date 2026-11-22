@@ -130,14 +130,15 @@ export class Room {
     await this.sweep();
   }
 
-  async sweep() {
+  async sweep(now = Date.now()) {
     const sockets = this.state.getWebSockets();
-    const now = Date.now();
     for (const peer of sockets) {
       const meta = readMeta(peer);
-      if (meta.acceptedAt && now - meta.acceptedAt > IDLE_MS) peer.close(1000, "idle");
+      if (!meta.ready || !meta.lastFrame) continue;
+      if (now - meta.lastFrame > IDLE_MS) peer.close(1000, "idle");
     }
-    if (sockets.length === 0) await this.state.storage.delete("roomKey");
+    const alive = this.state.getWebSockets().filter((peer) => !peer.closed);
+    if (alive.length === 0) await this.state.storage.delete("roomKey");
   }
 }
 
