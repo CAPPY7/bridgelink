@@ -104,6 +104,7 @@ M14. A shared path could name a hidden file such as .seen. Fixed: any path part 
 M9. The phone could send the clipboard only while the app was on screen. Fixed: a Quick Settings tile and a notification button open a short screen, read the clipboard there, and send it. The Send page says so. NOT TESTED on a device.
 M19. A drag clicked down and up on every move. Fixed: the button stays down until the drag ends. NOT TESTED on a device.
 M26. The disk image was hidden while it was built, so the icon layout could not be applied. Fixed: it is mounted where that layout step can see it. NOT TESTED on a device.
+N14. Switching to a saved Mac replaced the address list with one address. Fixed: the saved address is added to the list. NOT TESTED on a device.
 
 
 

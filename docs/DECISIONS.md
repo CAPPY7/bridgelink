@@ -68,6 +68,8 @@ A drag holds the mouse button down until a move that is not a drag. It does not 
 
 The disk image is mounted in view while it is built, so the icon layout can be applied. It is still a free sideload.
 
+Switching to a saved Mac adds that Mac's address to the list. The other addresses stay.
+
 
 
 

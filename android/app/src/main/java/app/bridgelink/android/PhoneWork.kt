@@ -289,7 +289,7 @@ class PhoneWork(private val activity: MainActivity) {
         }
         prefs.edit()
             .putString("host", saved.host)
-            .putString("hosts", saved.host)
+            .putString("hosts", HostMerge.merge(prefs.getString("hosts", "") ?: "", saved.host))
             .putString("port", saved.port.toString())
             .putString("fp", saved.fp)
             .putString("token", token)
