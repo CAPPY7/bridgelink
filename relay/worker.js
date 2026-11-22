@@ -2,6 +2,14 @@ const MAX_MESSAGE = 512 * 1024;
 const WINDOW_SEC = 120;
 const MAX_PER_SECOND = 200;
 const IDLE_MS = 10 * 60 * 1000;
+const IDLE_STAMP_MS = 30 * 1000;
+
+/** Write the idle clock at most once every 30 seconds. */
+export function nextIdleStamp(lastFrame, now, gap = IDLE_STAMP_MS) {
+  const last = Number(lastFrame) || 0;
+  if (last > 0 && now - last < gap) return last;
+  return now;
+}
 
 export async function sha256hex(text) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -29,7 +37,6 @@ export function writeMeta(ws, meta) {
   ws.serializeAttachment(meta);
 }
 
-/** A wake-up must still know the role. The room key lives in storage, not memory. */
 /** A wake-up must still know the role. The room key lives in storage, not memory. */
 export function keptRole(meta) {
   return meta && meta.role ? meta.role : "";
@@ -120,7 +127,8 @@ export class Room {
       ws.close(1008, "rate");
       return;
     }
-    writeMeta(ws, { ...meta, lastFrame: Date.now() });
+    const stamp = nextIdleStamp(meta.lastFrame, Date.now());
+    if (stamp !== meta.lastFrame) writeMeta(ws, { ...meta, lastFrame: stamp });
     const otherRole = role === "phone" ? "mac" : "phone";
     const other = this.state.getWebSockets().find((peer) => {
       if (peer === ws) return false;
