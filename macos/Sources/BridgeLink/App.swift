@@ -78,8 +78,13 @@ final class LinkModel: ObservableObject {
     @Published var smsBody = ""
     @Published var smsSim = 0
     @Published var simCount = 1
-    @Published var folderOn = false
-    @Published var folderPaused = false
+    @Published var folderOn = false {
+        didSet { folderFlags.update(on: folderOn, paused: folderPaused) }
+    }
+    @Published var folderPaused = false {
+        didSet { folderFlags.update(on: folderOn, paused: folderPaused) }
+    }
+    let folderFlags = FolderFlags()
     @Published var folderPath = ""
     @Published var rules: [StageFive.Rule] = []
     let six = SixHold()

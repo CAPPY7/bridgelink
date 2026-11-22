@@ -368,6 +368,26 @@ final class SharedBox {
 
 private let folderPartQueue = DispatchQueue(label: "app.bridgelink.mac.folder-part", qos: .utility)
 
+/// A copy of the folder switches that the folder queue can read without touching the window.
+final class FolderFlags: @unchecked Sendable {
+    private let lock = NSLock()
+    private var on = false
+    private var paused = false
+
+    func update(on: Bool, paused: Bool) {
+        lock.lock()
+        self.on = on
+        self.paused = paused
+        lock.unlock()
+    }
+
+    func allows() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return on && !paused
+    }
+}
+
 extension LinkModel {
     func loadFive() {
         let raw = UserDefaults.standard.string(forKey: "autoRules") ?? ""
@@ -459,6 +479,7 @@ extension LinkModel {
         guard case .paired = phase else { return }
         folderPartQueue.async { [weak self] in
             guard let self else { return }
+            guard self.folderFlags.allows() else { return }
             let now = self.sharedBox.scan()
             let seenURL = self.sharedBox.root().appendingPathComponent(".seen")
             let seen = (try? String(contentsOf: seenURL, encoding: .utf8)) ?? ""
@@ -578,7 +599,7 @@ extension LinkModel {
             let indexBody = envelope.text("body")
             folderPartQueue.async { [weak self] in
                 guard let self else { return }
-                guard self.folderOn, !self.folderPaused else { return }
+                guard self.folderFlags.allows() else { return }
                 let local = self.sharedBox.scan()
                 var wants: [String] = []
                 var removed = false
@@ -616,7 +637,7 @@ extension LinkModel {
             let wantPath = envelope.text("path")
             folderPartQueue.async { [weak self] in
                 guard let self else { return }
-                guard self.folderOn, !self.folderPaused else { return }
+                guard self.folderFlags.allows() else { return }
                 let problem = self.sharedBox.send(path: wantPath) { offset, size, mtime, sha, data in
                     let payload = [
                         "path": wantPath,
@@ -645,7 +666,7 @@ extension LinkModel {
             let data = envelope.text("data")
             folderPartQueue.async { [weak self] in
                 guard let self else { return }
-                guard self.folderOn, !self.folderPaused else { return }
+                guard self.folderFlags.allows() else { return }
                 let problem = self.sharedBox.part(
                     path: path,
                     offset: offset,
@@ -669,7 +690,7 @@ extension LinkModel {
             let deleteSha = envelope.text("sha")
             folderPartQueue.async { [weak self] in
                 guard let self else { return }
-                guard self.folderOn, !self.folderPaused else { return }
+                guard self.folderFlags.allows() else { return }
                 let removed = self.sharedBox.remove(path: deletePath, sha: deleteSha)
                 if removed {
                     DispatchQueue.main.async {

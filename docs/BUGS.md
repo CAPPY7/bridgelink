@@ -136,3 +136,4 @@ M27. Every Mac update can ask for the keychain again while the app is ad-hoc sig
 X4. History could wipe itself on an upgrade. Fixed: that wipe is gone, the schema is saved, and a test checks that a saved line stays. NOT TESTED on a device.
 V3. The emulator test pressed Pair by calling a hidden method. Fixed: it taps the real Pair button. The hidden method is gone. NOT TESTED on a device.
 M12. The shared folder scanned every file again for each name, and the Mac read each whole file to hash it. Fixed: each side scans once, and a file is hashed again only when its size or time changed. NOT TESTED on a device.
+Q5. The shared-folder queue read the window's folder switches from a background queue. Fixed: the queue reads a locked copy, and the window updates that copy whenever the switches change. NOT TESTED on a device.

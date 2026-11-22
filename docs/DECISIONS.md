@@ -200,6 +200,8 @@ Shared-folder scan, send, write, and delete on the Mac all use one queue. A paus
 
 The phone does not read or send the Wi-Fi name. Home Wi-Fi automations cannot see that name on current Android. The Mac still accepts an old wifi message and does nothing, so an old phone does not break.
 
+The Mac folder queue does not read the window's folder switches. It reads a locked copy that the window updates when those switches change.
+
 The Mac shared-folder check hashes files on the folder queue, not the main thread. The window is updated only after that work finishes.
 
 Mac signing sets the cleanup before it creates the temporary keychain. A failed import still deletes the certificate file and that keychain. The old keychain list is put back only after it was saved. The password is never printed.
