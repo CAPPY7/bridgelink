@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. L11 is done. Next is N15: the release builds appcast.xml with the real disk image size and date.
+Last fix pass. N15 is done. Next is X14: pin the Gradle download to the official checksum.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -98,6 +98,7 @@ Last fix pass. L11 is done. Next is N15: the release builds appcast.xml with the
 - X12. Every GitHub Action in the checks and the release is pinned to a full commit, with the tag beside it.
 - X13. Only the publish job can write to the repository.
 - L11. A paid Apple account staples the disk image, not the app. No paid account still skips that step.
+- N15. The release writes appcast.xml with the real disk-image size and the date. There is still no Sparkle signature.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

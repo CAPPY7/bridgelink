@@ -149,6 +149,7 @@ jobs:
             *) echo "Tag must start with v"; exit 1 ;;
           esac
           SHA=$(git rev-parse HEAD)
+          python3 scripts/make-appcast.py mac-app/BridgeLink.dmg appcast.xml "$TAG"
           gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
             && gh release edit "$TAG" --repo "${GITHUB_REPOSITORY}" --target "$SHA" \
             || gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --target "$SHA" --title "$TAG" --generate-notes
