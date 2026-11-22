@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import BridgeLinkCore
 import CoreImage
 import CoreMedia
 import CoreVideo

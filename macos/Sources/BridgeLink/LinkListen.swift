@@ -10,6 +10,11 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UserNotifications
 
+/// Holds the read buffer so the network callback does not capture a non-sendable value.
+private final class FrameHold: @unchecked Sendable {
+    var buffer: FrameBuffer
+    init(_ buffer: FrameBuffer) { self.buffer = buffer }
+}
 
 extension LinkModel {
     func start() {
@@ -193,14 +198,14 @@ extension LinkModel {
 
     func receive(_ connection: NWConnection, id: UUID, buffer: FrameBuffer) {
         let pump = six.pump
-        var buffer = buffer
+        let hold = FrameHold(buffer)
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, isComplete, error in
             guard let self else { return }
             var failed = false
             var items: [Incoming] = []
             if let data {
                 do {
-                    items = try buffer.pushAll(data)
+                    items = try hold.buffer.pushAll(data)
                 } catch {
                     failed = true
                 }
@@ -208,8 +213,8 @@ extension LinkModel {
             let lanes = PictureLane.route(items)
             pump.submit(lanes.pictures)
             let jsons = lanes.json
+            let next = hold.buffer
             Task { @MainActor in
-                guard let self else { return }
                 if self.liveID != id && !self.pendingSet.contains(id.uuidString) { return }
                 let stillPending = self.liveID != id
                 if failed {
@@ -231,7 +236,7 @@ extension LinkModel {
                     }
                     return
                 }
-                self.receive(connection, id: id, buffer: buffer)
+                self.receive(connection, id: id, buffer: next)
             }
         }
     }

@@ -47,3 +47,4 @@ M1. The phone kept dialing an old Mac address. Fixed: after two misses it looks 
 M2. Tapping Connect replaced the list of Mac addresses with one address. Fixed: the typed address is added, and the other saved addresses stay.
 M3. A second phone that was still pairing silently dropped the first waiting connection. Fixed: each waiting connection stays until it pairs or times out.
 M4. The phone could not stop the Mac ringing, and the Mac only beeped. Fixed: Stop Mac ringing sends find-stop. The Mac plays a loud system sound for 30 seconds.
+N1. The Mac app did not compile. Fixed: the picture decoder can see the shared protocol, the listener no longer unwraps itself twice, and the read buffer is not captured as a non-sendable value. The test can build an incoming frame. NOT TESTED on a device. Swift was not run here.

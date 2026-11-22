@@ -60,12 +60,17 @@ public enum EnvelopeCodec {
     }
 }
 
-public struct Incoming {
+public struct Incoming: Sendable {
     public let json: Data?
     public let binary: Data?
+
+    public init(json: Data?, binary: Data?) {
+        self.json = json
+        self.binary = binary
+    }
 }
 
-public struct FrameBuffer {
+public struct FrameBuffer: Sendable {
     public static let maxBytes = 1024 * 1024
     private var pending = Data()
 
