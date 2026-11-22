@@ -108,7 +108,11 @@ public class PairingEmulatorTest {
                 + "&fp=" + mac.fingerprint + "&pin=" + PIN;
         Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(link), target, MainActivity.class);
         scenario = ActivityScenario.launch(open);
-        waitFor("Pair with ", 20_000);
+        waitUntil(() -> {
+            final boolean[] ready = {false};
+            scenario.onActivity(activity -> ready[0] = activity.getModel().getAskPair());
+            return ready[0];
+        }, 20_000, "the pair question never showed");
         scenario.onActivity(activity -> activity.uiAcceptPair());
 
         waitFor("Paired with the Mac", 40_000);

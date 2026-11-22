@@ -59,7 +59,7 @@ Full fix pass. N2 is done. Next is N3: the away relay must keep its room across 
 - M3. A second waiting connection does not drop the first one.
 - M4. Stop Mac ringing tells the Mac. The Mac plays a loud sound for 30 seconds.
 - N1. The Mac app compiles again. Picture code sees the protocol. The listener does not unwrap itself twice. The send-window check does not trap the tests.
-- N2. The emulator pair test taps Pair before it looks for a paired Mac.
+- N2. The emulator pair test waits for the pair screen, then taps Pair.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
