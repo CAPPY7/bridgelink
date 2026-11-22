@@ -252,7 +252,7 @@ A shared file over 32 MB uses the normal file messages and is saved in the share
 
 Check for update downloads the Mac disk image and the checksum file into Downloads, off the main thread. It opens the disk image only when the hash matches. There is no Sparkle signature and no paid update service. The checksum compares the file name, so a sums line may include a folder. The download is named BridgeLink-version.dmg. BridgeLink does not delete a file it did not write.
 
-The newest Compose BOM in November 2026 is 2026.11.01. It needs Kotlin 2.2, compileSdk 37.1, and Android Gradle Plugin 9. This project stays on plugin 8.7.3 and compileSdk 35, so the BOM used here is 2026.06.01, activity-compose is 1.10.1, core and core-ktx are 1.16.0, and Room is 2.8.5. Room 3 is a different library and is not used.
+The newest Compose BOM in November 2026 is 2026.11.01. It needs Kotlin 2.2, compileSdk 37.1, and Android Gradle Plugin 9. BOM 2026.06.01 was tried and lint crashed on this Kotlin 2.0.21 toolchain, so Compose stays on 2024.12.01 and activity-compose stays on 1.9.3. Room is 2.8.5. core and core-ktx are 1.16.0. Room 3 is a different library and is not used.
 
 The demo page does not read the database, multiplayer, or app-data connectors. The app shell still mounts the auth provider, and the preview bridge still names an app-data type, so those files stay. The web test script lists only test files that exist.
 

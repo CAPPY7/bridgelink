@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. S0-1 through S0-5, S0-7 through S0-12 are committed. S0-6 waits until the away relay is removed. Step 0 self-audit pass 1 found nothing new. Next is a green CI run, then Part B.
+Final fix pass. A first CI run failed: the sample-message test used a method the Android test tools do not have, and Compose BOM 2026.06.01 crashed lint. Those are fixed and pushed again. S0-6 still waits until the away relay is removed. Next is a green CI run, then Part B.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

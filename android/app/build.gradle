@@ -82,10 +82,10 @@ dependencies {
     implementation "androidx.room:room-runtime:2.8.5"
     annotationProcessor "androidx.room:room-compiler:2.8.5"
 
-    implementation platform("androidx.compose:compose-bom:2026.06.01")
+    implementation platform("androidx.compose:compose-bom:2024.12.01")
     implementation "androidx.compose.material3:material3"
     implementation "androidx.compose.material:material-icons-extended"
-    implementation "androidx.activity:activity-compose:1.10.1"
+    implementation "androidx.activity:activity-compose:1.9.3"
     debugImplementation "androidx.compose.ui:ui-test-manifest"
 
     testImplementation "junit:junit:4.13.2"
@@ -95,6 +95,6 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
     androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0"
     androidTestImplementation "androidx.room:room-testing:2.8.5"
-    androidTestImplementation platform("androidx.compose:compose-bom:2026.06.01")
+    androidTestImplementation platform("androidx.compose:compose-bom:2024.12.01")
     androidTestImplementation "androidx.compose.ui:ui-test-junit4"
 }

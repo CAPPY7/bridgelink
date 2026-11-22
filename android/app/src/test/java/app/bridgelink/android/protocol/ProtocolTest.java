@@ -896,7 +896,7 @@ public class ProtocolTest {
             java.util.List<Path> files = stream.filter(path -> path.getFileName().toString().endsWith(".json")).toList();
             assertEquals(FeatureMessages.TYPES.length, files.size());
             for (Path file : files) {
-                Envelope env = Envelope.parse(java.nio.file.Files.readString(file));
+                Envelope env = Envelope.parse(new String(java.nio.file.Files.readAllBytes(file), java.nio.charset.StandardCharsets.UTF_8));
                 String stem = file.getFileName().toString().replace(".json", "");
                 assertEquals(stem, env.type);
                 assertFalse(env.text("body").isEmpty());
