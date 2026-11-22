@@ -51,6 +51,7 @@ extension LinkModel {
         book = DeviceBook()
         saveBook()
         phase = .listening
+        RelayVault.deleteAll()
         let keys = [
             "clipboardMode", "flags", "showNotificationText", "linksAlways", "dndSync",
             "lockOn", "atDesk", "lockFar", "lockDelay", "notifyOff", "autoRules",
@@ -126,7 +127,7 @@ struct FirstRunView: View {
     private var stepBody: String {
         switch step {
         case 0:
-            return "BridgeLink links this Mac to your Android phone. Four short steps, then a QR code."
+            return "BridgeLink links this Mac to your Android phone. Four short steps, then a QR code. The first open can ask for the keychain. That is normal for a free sideload. If it keeps asking after every update, run scripts/make-mac-cert.sh once and keep that certificate."
         case 1:
             return "Allow notifications so a note, a text, or a low battery from the phone can appear."
         case 2:

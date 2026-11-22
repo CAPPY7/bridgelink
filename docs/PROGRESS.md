@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. C7g and R3 are done. Next is N13: Reset must ask first.
+Last fix pass. N13, L14, and M27 are done. Next is X4: history must not wipe itself on an upgrade.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -81,6 +81,9 @@ Last fix pass. C7g and R3 are done. Next is N13: Reset must ask first.
 - H14. Open an app asks the Mac to open a named app in Applications.
 - C7g. The full-screen screen-share or camera question is used only when Android allows it.
 - R3. The unused phone stop flag is gone.
+- N13. Reset asks "Are you sure?" and deletes the away secrets.
+- L14. A desktop Mac does not show a "No battery" line.
+- M27. The first-run window explains the keychain prompt and the free certificate script.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

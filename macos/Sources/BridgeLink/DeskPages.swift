@@ -52,7 +52,9 @@ struct DeskDetail: View {
             }
             HStack(spacing: 12) {
                 battery("Phone", model.phoneBattery.isEmpty ? "—" : model.phoneBattery)
-                battery("Mac", model.macBattery)
+                if !model.macBattery.isEmpty {
+                    battery("Mac", model.macBattery)
+                }
             }
             CardBox {
                 Text("Quick actions").font(.headline)
@@ -187,7 +189,7 @@ struct DeskDetail: View {
             Button("Send diagnostics") { model.saveDiagnostics() }
             Button("Check for update") { model.checkForUpdate() }
             Button("Show setup again") { model.replaySetup() }
-            Button("Reset BridgeLink") { model.resetBridgeLink() }
+            ResetBridgeButton(model: model)
             LockPane()
             Text("Phone trackpad").font(.headline)
             Text(StageFive.pointerSteps).font(.callout).foregroundStyle(.secondary)
@@ -233,5 +235,20 @@ struct DeskDetail: View {
                 }
             }
         }
+    }
+}
+
+private struct ResetBridgeButton: View {
+    @ObservedObject var model: LinkModel
+    @State private var confirm = false
+
+    var body: some View {
+        Button("Reset BridgeLink") { confirm = true }
+            .confirmationDialog("Are you sure?", isPresented: $confirm, titleVisibility: .visible) {
+                Button("Reset BridgeLink", role: .destructive) { model.resetBridgeLink() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes the saved phone, the settings, and the away secrets.")
+            }
     }
 }

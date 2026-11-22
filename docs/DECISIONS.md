@@ -221,3 +221,5 @@ The Mac lock command runs on a background task. The window updates after it fini
 Open an app sends the name to the Mac. The Mac opens it only from the Applications folder, and only if the name has no slash or dots that climb out. An old Mac that does not know this message shows it as unsupported.
 
 The screen-share and camera question can cover the screen only when Android says full-screen alerts are allowed. Otherwise it stays a normal notification you can tap. The unused stop flag was removed because nothing read it.
+
+Reset asks "Are you sure?" before it clears the Mac. It also deletes every away secret for this app. A desktop Mac hides the battery line instead of saying "No battery". The first-run window says the keychain prompt is normal for a free sideload and points at scripts/make-mac-cert.sh. That script is not run from here.

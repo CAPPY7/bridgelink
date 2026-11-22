@@ -130,3 +130,6 @@ N16. Locking the Mac could freeze the window for a few seconds. Fixed: the lock 
 H14. Open an app only showed a status line on the phone. Fixed: the phone asks the Mac, and the Mac opens that app from the Applications folder. NOT TESTED on a device.
 C7g. The screen and camera question used a full-screen alert without the permission, and without checking Android 14. Fixed: the permission is declared, and the full-screen alert is used only when Android allows it. The normal notification stays. NOT TESTED on a device.
 R3. A stop flag on the phone was written and never read. Fixed: it is gone. Stopping the mirror or camera is unchanged. NOT TESTED on a device.
+N13. Reset BridgeLink did not ask, and it left away secrets in the keychain. Fixed: it asks "Are you sure?" and then deletes those secrets. NOT TESTED on a device.
+L14. A desktop Mac showed "Mac: No battery". Fixed: that line is hidden when the Mac has no battery. NOT TESTED on a device.
+M27. Every Mac update can ask for the keychain again while the app is ad-hoc signed. Fixed: the first-run window says that, and it points at the free certificate script. The prompt itself still comes from macOS. NOT TESTED on a device.

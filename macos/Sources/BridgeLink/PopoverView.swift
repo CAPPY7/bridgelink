@@ -17,7 +17,9 @@ struct PopoverView: View {
             HStack {
                 Label(model.phoneBattery.isEmpty ? "Phone —" : model.phoneBattery, systemImage: "iphone")
                 Spacer()
-                Label("Mac \(model.macBattery)", systemImage: "laptopcomputer")
+                if !model.macBattery.isEmpty {
+                    Label("Mac \(model.macBattery)", systemImage: "laptopcomputer")
+                }
             }
             .font(.callout)
             Text(model.nowPlaying).font(.callout).lineLimit(2)

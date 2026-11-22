@@ -219,7 +219,7 @@ final class LinkModel: ObservableObject {
         if let sample = MacPower.sample() {
             macBattery = sample.charging ? "\(sample.level)% charging" : "\(sample.level)%"
         } else {
-            macBattery = "No battery"
+            macBattery = ""
         }
     }
 
