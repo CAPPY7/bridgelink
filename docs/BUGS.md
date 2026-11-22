@@ -108,6 +108,7 @@ M26. The disk image was hidden while it was built, so the icon layout could not 
 N14. Switching to a saved Mac replaced the address list with one address. Fixed: the saved address is added to the list. NOT TESTED on a device.
 L5. Raising the ring volume sat outside the safety net, so a refusal could stop the ring. Fixed: that change is caught, and the ring still starts. NOT TESTED on a device.
 M20. The phone send page said a folder could be sent. The phone still sends files only. The Mac does send a folder as a zip, and its window says so again. NOT TESTED on a device.
+NB3. The code check and the away sign-in flags were used from more than one thread. Fixed: the code check takes a lock, and the away flags use that same lock. NOT TESTED on a device.
 L4. A code could be sent twice, once from the text and once from the notification. Fixed: the same code is sent once per minute. NOT TESTED on a device.
 M17. Mirror taps used the wrong screen size, so they landed in the wrong place. Fixed: the tap uses the real screen, including the system bars. NOT TESTED on a device.
 

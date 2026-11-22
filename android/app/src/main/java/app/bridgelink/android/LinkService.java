@@ -1051,7 +1051,7 @@ public class LinkService extends Service {
     private long lastOtpAt;
     private long lastProgressAt;
 
-    private boolean otpFresh(String code) {
+    private synchronized boolean otpFresh(String code) {
         long now = System.currentTimeMillis();
         if (!app.bridgelink.android.protocol.OtpGate.fresh(lastOtp, lastOtpAt, code, now)) return false;
         lastOtp = code;

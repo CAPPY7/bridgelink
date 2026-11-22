@@ -15,8 +15,8 @@ public final class AwayAuth {
 
     private final Sink sink;
     private final Runnable tick;
-    private boolean accepted;
-    private boolean forgotten;
+    private volatile boolean accepted;
+    private volatile boolean forgotten;
 
     public AwayAuth(Sink sink) {
         this.sink = sink;
@@ -24,48 +24,48 @@ public final class AwayAuth {
     }
 
     /** Phone joined the away relay first. */
-    public void start() {
+    public synchronized void start() {
         accepted = false;
         forgotten = false;
         kick();
     }
 
     /** Mac joined later. Sign in again unless this phone was forgotten. */
-    public void macJoined() {
+    public synchronized void macJoined() {
         if (forgotten) return;
         accepted = false;
         kick();
     }
 
-    public void ok() {
+    public synchronized void ok() {
         accepted = true;
         sink.remove(tick);
     }
 
-    public void forgot() {
+    public synchronized void forgot() {
         forgotten = true;
         accepted = false;
         sink.remove(tick);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         sink.remove(tick);
     }
 
-    public boolean accepted() {
+    public synchronized boolean accepted() {
         return accepted;
     }
 
-    public boolean forgotten() {
+    public synchronized boolean forgotten() {
         return forgotten;
     }
 
-    private void kick() {
+    private synchronized void kick() {
         sink.remove(tick);
         tick.run();
     }
 
-    private void tick() {
+    private synchronized void tick() {
         if (!RelayAuth.keepSending(accepted, forgotten ? "forgotten" : "")) {
             sink.remove(tick);
             return;

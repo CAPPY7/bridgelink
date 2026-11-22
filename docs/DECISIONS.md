@@ -86,6 +86,9 @@ A hand-started release uses the commit of the typed tag. It waits up to 60 minut
 
 The Mac sends a folder as a zip. Its window says so. The phone does not send a folder, and its page does not claim that it does.
 
+The one-minute code check and the away sign-in flags take one lock, so two threads cannot send the same code or restart a stopped sign-in.
+
+
 
 
 
