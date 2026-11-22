@@ -213,3 +213,7 @@ An old pairing token is sealed with the Android keystore key before it is remove
 Incoming files are written straight into Downloads/BridgeLink. Android 10 and newer use a pending Downloads item. Android 8 and 9 write into the app downloads folder and add " (1)" when the name is taken. A failed save deletes that pending item.
 
 Screen mirror keeps the phone's shape. A tall phone is not forced into 1280 by 720. The long side still stays inside the chosen quality. On Android 10 and newer each key frame starts with the decoder header. The shape is measured when sharing starts.
+
+The phone camera is turned using the sensor direction. A front camera is also mirrored, so it looks like a normal selfie.
+
+The Mac lock command runs on a background task. The window updates after it finishes. The media buttons were already off the main thread.

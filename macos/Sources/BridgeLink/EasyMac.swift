@@ -86,7 +86,10 @@ extension LinkModel {
             return
         }
         clearLeaveLock()
-        note(MacLock.lock())
+        Task.detached { [weak self] in
+            let line = MacLock.lock()
+            await MainActor.run { self?.note(line) }
+        }
     }
 
     func clearLeaveLock() {
@@ -207,8 +210,13 @@ extension LinkModel {
             return true
         case "lock":
             if StageFour.lockRequest(envelope.text("reason")) {
-                note(MacLock.lock())
-                fireAuto("leave", "")
+                Task.detached { [weak self] in
+                    let line = MacLock.lock()
+                    await MainActor.run {
+                        self?.note(line)
+                        self?.fireAuto("leave", "")
+                    }
+                }
             } else {
                 note("Ignored a request to unlock. BridgeLink never unlocks the Mac.")
             }
