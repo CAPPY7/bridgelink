@@ -1,5 +1,6 @@
 #!/bin/bash
 # API 34 emulator: release APK installs, then the pairing instrumentation test runs.
+# A pairing link only asks. The test taps Pair (uiAcceptPair) before it can connect.
 set -euo pipefail
 cd "$(dirname "$0")"
 chmod +x gradlew
@@ -37,6 +38,7 @@ prepare_log() {
 
 run_tests() {
   prepare_log
+  echo "The pairing test taps Pair. A link does not connect by itself."
   ./gradlew connectedDebugAndroidTest --no-daemon
 }
 

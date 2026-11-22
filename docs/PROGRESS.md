@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Full fix pass. N1 is done. Next is N2: the emulator pair test must tap Pair.
+Full fix pass. N2 is done. Next is N3: the away relay must keep its room across a sleep.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -59,6 +59,7 @@ Full fix pass. N1 is done. Next is N2: the emulator pair test must tap Pair.
 - M3. A second waiting connection does not drop the first one.
 - M4. Stop Mac ringing tells the Mac. The Mac plays a loud sound for 30 seconds.
 - N1. The Mac app compiles again. Picture code sees the protocol. The listener does not unwrap itself twice.
+- N2. The emulator pair test taps Pair before it looks for a paired Mac.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
