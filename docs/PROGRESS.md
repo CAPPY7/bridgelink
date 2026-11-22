@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. H15 is done. Next is X10: a release publishes only after the checks for that same commit are green.
+Last fix pass. X10 is done. Next is X11: a hand-started release must use the typed tag, and the release must point at that commit.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -93,6 +93,7 @@ Last fix pass. H15 is done. Next is X10: a release publishes only after the chec
 - L7. The accessibility service no longer asks for click and focus events. It keeps gestures and window content for mirror taps.
 - L8. The Mac Bluetooth beacon starts only when leave-lock is on.
 - H15. A release stops if the Android app signer does not match the saved public fingerprint.
+- X10. A release waits until the checks for that same commit are green.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

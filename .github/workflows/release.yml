@@ -13,9 +13,20 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
+  ci-green:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait until the checks for this commit are green
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/wait-for-ci.sh
+
   android:
+    needs: [ci-green]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +83,7 @@ jobs:
           if-no-files-found: error
 
   mac:
+    needs: [ci-green]
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
