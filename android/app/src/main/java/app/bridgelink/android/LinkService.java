@@ -627,6 +627,11 @@ public class LinkService extends Service {
             public void onStatus(String status) {
                 if (status != null) publish(status, null);
             }
+
+            @Override
+            public void onStopped() {
+                browser = null;
+            }
         }, pinned);
         browser.start();
     }

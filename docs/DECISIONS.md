@@ -44,6 +44,8 @@ Switching to a saved Mac uses that Mac's own token. The handshake does not chang
 
 The screen, the camera, and the mic each keep at most 3 whole frames. A full lane drops the next whole frame, not one 24 KB piece of it. Only the screen asks for a new key frame.
 
+Looking for the Mac on Wi-Fi releases the multicast lock when the search stops or fails. The next search can start. The saved Mac is not forgotten.
+
 
 
 

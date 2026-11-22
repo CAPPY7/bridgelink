@@ -14,6 +14,7 @@ public final class MacBrowser {
     public interface Callback {
         void onHost(String host);
         void onStatus(String status);
+        default void onStopped() {}
     }
 
     private final NsdManager nsd;
@@ -21,6 +22,7 @@ public final class MacBrowser {
     private final Callback callback;
     private NsdManager.DiscoveryListener listener;
     private boolean running;
+    private boolean toldStop;
 
     private final String expectedFp;
 
@@ -40,6 +42,7 @@ public final class MacBrowser {
     public void start() {
         if (nsd == null || running) return;
         running = true;
+        toldStop = false;
         if (lock != null) lock.acquire();
         listener = new NsdManager.DiscoveryListener() {
             @Override
@@ -50,7 +53,7 @@ public final class MacBrowser {
 
             @Override
             public void onStopDiscoveryFailed(String type, int error) {
-                running = false;
+                finish();
             }
 
             @Override
@@ -60,7 +63,7 @@ public final class MacBrowser {
 
             @Override
             public void onDiscoveryStopped(String type) {
-                running = false;
+                finish();
             }
 
             @Override
@@ -72,11 +75,16 @@ public final class MacBrowser {
             public void onServiceLost(NsdServiceInfo service) {
             }
         };
-        nsd.discoverServices("_bridgelink._tcp.", NsdManager.PROTOCOL_DNS_SD, listener);
+        try {
+            nsd.discoverServices("_bridgelink._tcp.", NsdManager.PROTOCOL_DNS_SD, listener);
+        } catch (RuntimeException error) {
+            callback.onStatus("Could not look for the Mac");
+            stop();
+        }
     }
 
     public void stop() {
-        if (lock != null && lock.isHeld()) lock.release();
+        releaseLock();
         if (nsd != null && listener != null) {
             try {
                 nsd.stopServiceDiscovery(listener);
@@ -84,7 +92,23 @@ public final class MacBrowser {
             }
         }
         listener = null;
+        finish();
+    }
+
+    private void finish() {
         running = false;
+        releaseLock();
+        if (toldStop) return;
+        toldStop = true;
+        if (callback != null) callback.onStopped();
+    }
+
+    private void releaseLock() {
+        if (lock == null) return;
+        try {
+            if (lock.isHeld()) lock.release();
+        } catch (RuntimeException ignored) {
+        }
     }
 
     @SuppressWarnings("deprecation")
