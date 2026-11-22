@@ -208,6 +208,11 @@ public final class StageSix {
         return relayParts(url) != null;
     }
 
+    /** A late reply still uses the away relay when Wi-Fi is down. */
+    public static boolean useRelay(boolean reply, boolean wifiUp, boolean relayUp) {
+        return relayUp && (reply || !wifiUp);
+    }
+
     /** Host, port, and path. Null if the address is not a wss relay. */
     public static String[] relayParts(String url) {
         if (url == null) return null;

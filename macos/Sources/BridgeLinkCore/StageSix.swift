@@ -198,6 +198,11 @@ public enum StageSix {
         return String(Features.echoKey(secret + "\n" + who).prefix(32))
     }
 
+    /// A late reply still uses the away relay when Wi-Fi is down.
+    public static func useRelay(reply: Bool, wifiUp: Bool, relayUp: Bool) -> Bool {
+        return relayUp && (reply || !wifiUp)
+    }
+
     public static func relayHello(_ secret: String, _ role: String, _ epoch: Int64) -> String {
         if secret.count < 16 { return "" }
         let key = Features.echoKey(secret + "\nrelay-ticket")

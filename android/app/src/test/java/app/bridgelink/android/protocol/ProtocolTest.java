@@ -743,6 +743,10 @@ public class ProtocolTest {
         assertFalse(StageSix.relayUrl("wss://127.0.0.1/room"));
         assertTrue(StageSix.relayUrl("wss://relay.example.com"));
         assertTrue(StageSix.relayUrl("wss://relay.example.com:8443/bridge"));
+        assertTrue(StageSix.useRelay(false, false, true));
+        assertTrue(StageSix.useRelay(true, true, true));
+        assertFalse(StageSix.useRelay(false, true, true));
+        assertFalse(StageSix.useRelay(true, false, false));
         String[] where = StageSix.relayParts("wss://relay.example.com:8443/bridge");
         assertEquals("relay.example.com", where[0]);
         assertEquals("8443", where[1]);

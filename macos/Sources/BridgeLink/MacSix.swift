@@ -52,6 +52,7 @@ extension LinkModel {
                     Task { @MainActor in
                         guard let self else { return }
                         if reason == "Away link down" {
+                            self.replyOnRelay = false
                             if self.live == nil {
                                 if case .paired = self.phase { self.phase = .listening }
                             }
@@ -100,7 +101,6 @@ extension LinkModel {
                 for json in jsons {
                     self.handle(json, connection: sink, id: self.liveID, pending: false)
                 }
-                self.replyOnRelay = false
             }
         }
     }
