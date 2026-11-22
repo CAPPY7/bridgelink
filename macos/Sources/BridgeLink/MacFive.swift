@@ -28,12 +28,18 @@ enum MacInput {
         case "move":
             return move(point.x, point.y, drag: false)
         case "drag":
+            noteDrag()
             return move(point.x, point.y, drag: true)
+        case "drag_end":
+            releaseHeld()
+            return "Drag ended"
         case "tap":
+            releaseHeld()
             guard let spot = cursor() else { return "Could not read the pointer" }
             click(spot, right: false)
             return "Clicked"
         case "right":
+            releaseHeld()
             guard let spot = cursor() else { return "Could not read the pointer" }
             click(spot, right: true)
             return "Right-clicked"
@@ -58,6 +64,25 @@ enum MacInput {
     }
 
     private static var dragging = false
+    private static var dragWatch: DispatchWorkItem?
+
+    static func releaseHeld() {
+        dragWatch?.cancel()
+        dragWatch = nil
+        guard dragging, let spot = cursor() else {
+            dragging = false
+            return
+        }
+        post(.leftMouseUp, spot, .left)
+        dragging = false
+    }
+
+    private static func noteDrag() {
+        dragWatch?.cancel()
+        let work = DispatchWorkItem { releaseHeld() }
+        dragWatch = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+    }
 
     private static func move(_ dx: Int, _ dy: Int, drag: Bool) -> String {
         guard let current = cursor() else { return "Could not read the pointer" }

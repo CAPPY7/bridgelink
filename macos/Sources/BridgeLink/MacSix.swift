@@ -50,7 +50,10 @@ extension LinkModel {
                         if reason == "Away link down" {
                             self.replyOnRelay = false
                             if self.live == nil {
-                                if case .paired = self.phase { self.phase = .listening }
+                                if case .paired = self.phase {
+                                    MacInput.releaseHeld()
+                                    self.phase = .listening
+                                }
                             }
                             self.note("Away link down")
                             self.rejoinRelay()

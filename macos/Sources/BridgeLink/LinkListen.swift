@@ -130,6 +130,7 @@ extension LinkModel {
                     self.live?.cancel()
                     self.live = nil
                     self.liveDeviceId = ""
+                    MacInput.releaseHeld()
                     self.phase = .listening
                     self.note("The phone went quiet. Still listening.")
                 } else {
@@ -229,6 +230,7 @@ extension LinkModel {
                     if self.pendingSet.contains(id.uuidString) && self.liveID != id { self.finishPending(id) }
                     if self.liveID == id {
                         self.live = nil
+                        MacInput.releaseHeld()
                         self.phase = .listening
                         self.note("Phone disconnected")
                         self.armLeaveLock()

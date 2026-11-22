@@ -404,7 +404,7 @@ public final class StageFive {
 
     public static boolean knownPointer(String kind) {
         return "move".equals(kind) || "tap".equals(kind) || "right".equals(kind)
-                || "scroll".equals(kind) || "drag".equals(kind) || "key".equals(kind)
+                || "scroll".equals(kind) || "drag".equals(kind) || "drag_end".equals(kind) || "key".equals(kind)
                 || "slide".equals(kind) || "laser".equals(kind);
     }
 

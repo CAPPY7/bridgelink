@@ -180,7 +180,13 @@ fun RemotePage(model: PhoneModel, actions: PhoneActions) {
                             }
                             pressed.forEach { it.consume() }
                         }
-                        if (!scrolling && !moved) actions.pointer("tap", 0, 0, "")
+                        if (scrolling) {
+                            // A two-finger scroll is not a click.
+                        } else if (moved && model.dragMode) {
+                            actions.pointer("drag_end", 0, 0, "")
+                        } else if (!moved) {
+                            actions.pointer("tap", 0, 0, "")
+                        }
                     }
                 },
             shape = RoundedCornerShape(16.dp),

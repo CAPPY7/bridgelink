@@ -28,7 +28,10 @@ extension LinkModel {
             } else {
                 relayTrusted = false
                 if live == nil {
-                    if case .paired = phase { phase = .listening }
+                    if case .paired = phase {
+                        MacInput.releaseHeld()
+                        phase = .listening
+                    }
                 }
                 send(type: "error", payload: ["code": "forgotten", "body": "This phone is not paired"], on: nil)
                 away?.stop()
@@ -283,6 +286,7 @@ extension LinkModel {
             relayJoin?.cancel()
             relayAttempt = 0
             phase = .listening
+            MacInput.releaseHeld()
             note("The phone forgot this Mac")
         default:
             if handleSix(envelope, connection) { break }

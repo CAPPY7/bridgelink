@@ -103,7 +103,7 @@ M8. Mac Focus was read with no permission, so it could not work. Fixed: the app 
 M14. A shared path could name a hidden file such as .seen. Fixed: any path part that starts with a dot is refused. NOT TESTED on a device.
 M9. The phone could send the clipboard only while the app was on screen. Fixed: the tile and the notification button wait until the short screen is in front, then read the clipboard once. An empty clipboard says so. NOT TESTED on a device.
 NB2. Send clipboard on the phone skipped the sensitive-clipboard check. Fixed: it uses the same check as the short screen. A sensitive clipboard is not sent. NOT TESTED on a device.
-M19. A drag clicked down and up on every move. Fixed: the button stays down until the drag ends. NOT TESTED on a device.
+M19. A drag clicked down and up on every move. Fixed: the button stays down until the finger lifts, which sends drag_end. A tap, a right-click, a dropped link, or 3 seconds of silence also lets the button up. Old phones that never send drag_end still time out. NOT TESTED on a device.
 M26. The disk image was hidden while it was built, so the icon layout could not be applied. Fixed: it is mounted where that layout step can see it. NOT TESTED on a device.
 N14. Switching to a saved Mac replaced the address list with one address. Fixed: the saved address is added to the list. NOT TESTED on a device.
 L5. Raising the ring volume sat outside the safety net, so a refusal could stop the ring. Fixed: that change is caught, and the ring still starts. NOT TESTED on a device.

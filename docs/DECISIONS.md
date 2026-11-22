@@ -80,6 +80,9 @@ Mirror taps use the real screen size, including the system bars. Android 11 and 
 
 The clipboard tile and the notification button read the clipboard only after the short screen is in front. The read happens once. An empty clipboard shows a short note and does not send. Send clipboard on the phone uses that same read, so a sensitive clipboard is skipped there too.
 
+A drag holds the Mac mouse button until the phone says the finger lifted. A tap, a right-click, or a dropped link lets it up first. If an older phone never says the drag ended, the button is let up after 3 seconds. drag_end is a pointer message, not a tap on the phone screen, so it is not a mirror-control kind.
+
+
 
 
 

@@ -152,7 +152,7 @@ public enum Features {
     }
 
     public static func pointerKind(_ kind: String) -> Bool {
-        ["move", "tap", "right", "scroll", "drag", "key"].contains(kind)
+        ["move", "tap", "right", "scroll", "drag", "drag_end", "key"].contains(kind)
     }
 
     public static func smsParts(_ text: String) -> [String] {

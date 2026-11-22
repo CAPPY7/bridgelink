@@ -306,7 +306,7 @@ public enum StageFive {
     }
 
     public static func knownPointer(_ kind: String) -> Bool {
-        ["move", "tap", "right", "scroll", "drag", "key", "slide", "laser"].contains(kind)
+        ["move", "tap", "right", "scroll", "drag", "drag_end", "key", "slide", "laser"].contains(kind)
     }
 
     public static func keyName(_ raw: String) -> String? {

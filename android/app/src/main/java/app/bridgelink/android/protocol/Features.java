@@ -199,7 +199,7 @@ public final class Features {
 
     public static boolean pointerKind(String kind) {
         return "move".equals(kind) || "tap".equals(kind) || "right".equals(kind)
-                || "scroll".equals(kind) || "drag".equals(kind) || "key".equals(kind);
+                || "scroll".equals(kind) || "drag".equals(kind) || "drag_end".equals(kind) || "key".equals(kind);
     }
 
     /** GSM 160 / Unicode 70, with the multipart limit once the text needs more than one part. */
