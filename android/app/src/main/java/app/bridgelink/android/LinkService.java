@@ -107,6 +107,7 @@ public class LinkService extends Service {
     private static volatile Runnable needKey;
     private final AtomicInteger generation = new AtomicInteger();
     private final AtomicInteger alertIds = new AtomicInteger(100);
+    private final AtomicInteger fileNoteIds = new AtomicInteger();
     private final Dedup seen = new Dedup(500);
     private final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -1554,6 +1555,7 @@ public class LinkService extends Service {
 
     private void askFile(String name, android.net.Uri uri) {
         String title = StageRules.fileTitle(name);
+        int id = StageRules.fileNoteId(fileNoteIds.incrementAndGet());
         Notification.Builder builder = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(title)
@@ -1562,17 +1564,17 @@ public class LinkService extends Service {
         Intent show = new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS);
         show.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         builder.addAction(new Notification.Action.Builder(null, "Show in Downloads",
-                PendingIntent.getActivity(this, 41, show, PendingIntent.FLAG_IMMUTABLE)).build());
+                PendingIntent.getActivity(this, id, show, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)).build());
         if (uri != null && StageRules.canOfferOpen(name, fileMime(uri))) {
             Intent open = new Intent(Intent.ACTION_VIEW, uri);
             open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
                     | PendingIntent.FLAG_GRANT_READ_URI_PERMISSION;
-            PendingIntent pending = PendingIntent.getActivity(this, 42, open, flags);
+            PendingIntent pending = PendingIntent.getActivity(this, id + 50_000, open, flags);
             builder.setContentIntent(pending);
             builder.addAction(new Notification.Action.Builder(null, "Open", pending).build());
         }
-        manager().notify(41, builder.build());
+        manager().notify(id, builder.build());
         publish(title, null);
     }
 

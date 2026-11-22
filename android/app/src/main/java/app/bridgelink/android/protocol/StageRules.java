@@ -54,6 +54,11 @@ public final class StageRules {
                 && !lower.endsWith(".aab");
     }
 
+    public static int fileNoteId(int serial) {
+        int n = serial < 1 ? 1 : serial;
+        return 200 + (n % 40_000);
+    }
+
     public static String fileTitle(String name) {
         String shown = name == null || name.isBlank() ? "file" : name.trim();
         return "File from the Mac: " + shown;

@@ -368,6 +368,9 @@ public class ProtocolTest {
         assertTrue(StageRules.canOfferOpen("notes.pdf"));
         assertTrue(StageRules.canOfferOpen("notes.pdf", "application/pdf"));
         assertEquals("File from the Mac: notes.pdf", StageRules.fileTitle("notes.pdf"));
+        assertEquals(201, StageRules.fileNoteId(1));
+        assertEquals(202, StageRules.fileNoteId(2));
+        assertTrue(StageRules.fileNoteId(1) != StageRules.fileNoteId(2));
         assertTrue(StageRules.skipPasswordClip(true, false, false));
         assertTrue(StageRules.skipPasswordClip(false, true, false));
         assertTrue(StageRules.skipPasswordClip(false, false, true));
