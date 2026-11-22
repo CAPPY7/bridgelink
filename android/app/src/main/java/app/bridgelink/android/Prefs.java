@@ -41,13 +41,14 @@ public final class Prefs {
         if (cached != null) return cached;
         Context app = context.getApplicationContext();
         SharedPreferences raw = app.getSharedPreferences("bridgelink_box", Context.MODE_PRIVATE);
+        SharedPreferences legacy = app.getSharedPreferences("bridgelink", Context.MODE_PRIVATE);
         SecretKey key = null;
         try {
             key = keystoreKey();
         } catch (Exception error) {
             keystoreFailed = true;
         }
-        migrateLegacy(app, raw, key);
+        migrateLegacy(raw, legacy, key);
         cached = new SealedPrefs(raw, key);
         heldKey = key;
         return cached;
@@ -66,30 +67,27 @@ public final class Prefs {
         return SecretBox.open(heldKey, sealed);
     }
 
-    private static void migrateLegacy(Context app, SharedPreferences raw, SecretKey key) {
-        if (raw.getBoolean("migrated", false)) return;
-        SharedPreferences legacy = app.getSharedPreferences("bridgelink", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = raw.edit();
-        for (String name : new String[]{"host", "port", "fp", "pendingFp", "deviceId", "macs"}) {
-            String value = legacy.getString(name, null);
-            if (value != null) editor.putString(name, value);
-        }
-        String token = legacy.getString(TOKEN, null);
-        boolean sealed = false;
-        if (token != null && !token.isEmpty() && key != null) {
-            try {
-                editor.putString(TOKEN, SecretBox.seal(key, token));
-                sealed = true;
-            } catch (Exception error) {
-                sealed = false;
+    static void migrateLegacy(SharedPreferences raw, SharedPreferences legacy, SecretKey key) {
+        if (!raw.getBoolean("migratedPlain", false)) {
+            SharedPreferences.Editor editor = raw.edit();
+            for (String name : new String[]{"host", "port", "fp", "pendingFp", "deviceId", "macs"}) {
+                String value = legacy.getString(name, null);
+                if (value != null) editor.putString(name, value);
             }
+            editor.putBoolean("migratedPlain", true).commit();
         }
-        if (token != null && !token.isEmpty() && !sealed) {
-            editor.apply();
+        if (raw.getBoolean("migrated", false)) return;
+        String token = legacy.getString(TOKEN, null);
+        if (token == null || token.isEmpty()) {
+            raw.edit().putBoolean("migrated", true).commit();
             return;
         }
-        editor.putBoolean("migrated", true).apply();
-        if (sealed) legacy.edit().remove(TOKEN).apply();
+        if (key == null) return;
+        try {
+            boolean saved = raw.edit().putString(TOKEN, SecretBox.seal(key, token)).putBoolean("migrated", true).commit();
+            if (saved) legacy.edit().remove(TOKEN).commit();
+        } catch (Exception ignored) {
+        }
     }
 
     private static SecretKey keystoreKey() throws Exception {
