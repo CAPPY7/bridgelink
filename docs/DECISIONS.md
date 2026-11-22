@@ -225,3 +225,5 @@ The screen-share and camera question can cover the screen only when Android says
 Reset asks "Are you sure?" before it clears the Mac. It also deletes every away secret for this app. A desktop Mac hides the battery line instead of saying "No battery". The first-run window says the keychain prompt is normal for a free sideload and points at scripts/make-mac-cert.sh. That script is not run from here.
 
 History stays on schema version 1. The upgrade path no longer deletes the table. The emulator test taps the Pair button on screen instead of a hidden method.
+
+The shared folder is listed once per check. If a file's size and time match the last list, the old hash is kept. Otherwise the file is hashed in pieces, not loaded whole.

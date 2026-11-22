@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import BridgeLinkCore
 import CoreGraphics
+import CryptoKit
 import Foundation
 import Network
 
@@ -214,8 +215,13 @@ final class SharedBox {
     }
 
     func scan() -> [StageFive.Entry] {
+        let seen = (try? String(contentsOf: root().appendingPathComponent(".seen"), encoding: .utf8)) ?? ""
+        var prior: [String: StageFive.Entry] = [:]
+        for item in StageFive.decodeIndex(seen) where !item.deleted {
+            prior[item.path] = item
+        }
         var items: [StageFive.Entry] = []
-        walk(root(), "", &items)
+        walk(root(), "", &items, prior)
         return items
     }
 
@@ -302,7 +308,7 @@ final class SharedBox {
         return copy
     }
 
-    private func walk(_ dir: URL, _ prefix: String, _ items: inout [StageFive.Entry]) {
+    private func walk(_ dir: URL, _ prefix: String, _ items: inout [StageFive.Entry], _ prior: [String: StageFive.Entry]) {
         let kids = (try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey],
@@ -315,12 +321,33 @@ final class SharedBox {
             let path = prefix.isEmpty ? name : prefix + "/" + name
             var isDir: ObjCBool = false
             if FileManager.default.fileExists(atPath: kid.path, isDirectory: &isDir), isDir.boolValue {
-                walk(kid, path, &items)
-            } else if let data = try? Data(contentsOf: kid) {
-                let mtime = Int64((try? kid.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate?.timeIntervalSince1970) ?? 0) * 1000
-                items.append(StageFive.Entry(path: path, size: Int64(data.count), mtime: mtime, sha: Transfers.sha256Hex(data), deleted: false))
+                walk(kid, path, &items, prior)
+            } else {
+                let values = try? kid.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+                let size = Int64(values?.fileSize ?? 0)
+                let mtime = Int64((values?.contentModificationDate?.timeIntervalSince1970 ?? 0) * 1000)
+                let old = prior[path]
+                let sha: String
+                if let old, old.size == size, old.mtime == mtime, !old.sha.isEmpty {
+                    sha = old.sha
+                } else {
+                    sha = streamSha(kid)
+                }
+                items.append(StageFive.Entry(path: path, size: size, mtime: mtime, sha: sha, deleted: false))
             }
         }
+    }
+
+    private func streamSha(_ file: URL) -> String {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return "" }
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while true {
+            let chunk = (try? handle.read(upToCount: 64 * 1024)) ?? Data()
+            if chunk.isEmpty { break }
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     private func resolve(_ safe: String?) -> URL? {

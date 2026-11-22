@@ -23,7 +23,9 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
@@ -282,12 +284,14 @@ public final class PhoneFive {
 
     private void onIndex(String body) {
         if (paused || !flag("folder")) return;
+        Map<String, StageFive.Entry> local = new HashMap<>();
+        for (StageFive.Entry item : folder.scan(remembered())) local.put(item.path, item);
         for (StageFive.Entry remote : StageFive.decodeIndex(body)) {
-            StageFive.Entry local = find(remote.path);
+            StageFive.Entry mine = local.get(remote.path);
             StageFive.Choice choice = StageFive.decide(
                     false,
-                    local != null,
-                    local == null ? "" : local.sha,
+                    mine != null,
+                    mine == null ? "" : mine.sha,
                     remote.deleted,
                     remote.sha
             );
@@ -338,7 +342,7 @@ public final class PhoneFive {
             return;
         }
         try {
-            List<StageFive.Entry> now = folder.scan();
+            List<StageFive.Entry> now = folder.scan(remembered());
             String seen = readText(seenFile());
             for (StageFive.Entry gone : StageFive.removed(StageFive.decodeIndex(seen), now)) {
                 JsonObject payload = new JsonObject();
@@ -523,11 +527,12 @@ public final class PhoneFive {
         return Features.enabled(Prefs.open(context).getString("flags", ""), name, false);
     }
 
-    private StageFive.Entry find(String path) {
-        for (StageFive.Entry item : folder.scan()) {
-            if (item.path.equals(path)) return item;
+    private Map<String, StageFive.Entry> remembered() {
+        Map<String, StageFive.Entry> prior = new HashMap<>();
+        for (StageFive.Entry old : StageFive.decodeIndex(readText(seenFile()))) {
+            if (!old.deleted) prior.put(old.path, old);
         }
-        return null;
+        return prior;
     }
 
     private File smsFile() {

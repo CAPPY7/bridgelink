@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. X4 and V3 are done. Next is M11: watch the shared folder while the link is up.
+Last fix pass. M12 is done. Next is M11: watch the shared folder while the link is up. Still open after that: M13, M15, H16, L1, L2, L15, R1, R2, R4, R5, R6, D1.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -86,6 +86,7 @@ Last fix pass. X4 and V3 are done. Next is M11: watch the shared folder while th
 - M27. The first-run window explains the keychain prompt and the free certificate script.
 - X4. History does not wipe itself on an upgrade. The schema is saved.
 - V3. The emulator test taps the real Pair button.
+- M12. The shared folder is scanned once. A file is hashed again only when its size or time changed.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

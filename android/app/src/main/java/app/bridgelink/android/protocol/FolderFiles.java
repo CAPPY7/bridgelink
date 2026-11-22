@@ -34,8 +34,12 @@ public final class FolderFiles {
     }
 
     public List<StageFive.Entry> scan() {
+        return scan(java.util.Collections.emptyMap());
+    }
+
+    public List<StageFive.Entry> scan(Map<String, StageFive.Entry> prior) {
         ArrayList<StageFive.Entry> items = new ArrayList<>();
-        walk(root, "", items);
+        walk(root, "", items, prior == null ? java.util.Collections.emptyMap() : prior);
         return items;
     }
 
@@ -148,7 +152,7 @@ public final class FolderFiles {
         return copy;
     }
 
-    private void walk(File dir, String prefix, List<StageFive.Entry> items) {
+    private void walk(File dir, String prefix, List<StageFive.Entry> items, Map<String, StageFive.Entry> prior) {
         File[] kids = dir.listFiles();
         if (kids == null) return;
         for (File kid : kids) {
@@ -156,8 +160,16 @@ public final class FolderFiles {
             String name = kid.getName();
             if (name.startsWith(".")) continue;
             String path = prefix.isEmpty() ? name : prefix + "/" + name;
-            if (kid.isDirectory()) walk(kid, path, items);
-            else if (kid.isFile()) items.add(new StageFive.Entry(path, kid.length(), kid.lastModified(), sha(kid), false));
+            if (kid.isDirectory()) walk(kid, path, items, prior);
+            else if (kid.isFile()) {
+                long size = kid.length();
+                long mtime = kid.lastModified();
+                StageFive.Entry old = prior.get(path);
+                String hash = old != null && old.size == size && old.mtime == mtime && old.sha != null && !old.sha.isEmpty()
+                        ? old.sha
+                        : sha(kid);
+                items.add(new StageFive.Entry(path, size, mtime, hash, false));
+            }
         }
     }
 
