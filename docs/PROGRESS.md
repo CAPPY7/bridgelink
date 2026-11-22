@@ -1,6 +1,6 @@
 # Progress
 
-v1.0.0 is the Stage 7 release.
+v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not every audit item is done. Nothing in 1.0.1 has been tried on a real phone or Mac.
 
 ## Done in code
 - Stage 1 bug fixes are in v0.8.0.

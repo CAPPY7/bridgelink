@@ -194,7 +194,7 @@ struct DeskDetail: View {
             RelayPane()
             Text("The first open needs one extra step because this app is not from the Mac App Store. macOS 13 or 14: right-click the app, choose Open, then Open. macOS 15 or newer: System Settings, Privacy and Security, Open Anyway.")
                 .font(.callout).foregroundStyle(.secondary)
-            Text("BridgeLink 1.0.0").font(.headline)
+            Text("BridgeLink 1.0.1").font(.headline)
             Text("Links this Mac to a paired Android phone on the local network. Traffic uses TLS. The phone pins this Mac's key after the first PIN.")
                 .foregroundStyle(.secondary)
             Button("Quit") { model.quit() }

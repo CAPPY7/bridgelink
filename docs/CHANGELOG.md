@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+- Away from home keeps its room after a sleep, closes only after 10 quiet minutes, and says "Away link down" if it drops. It says paired only after the Mac accepts the phone.
+- A file from the Mac is not opened by itself. You get Open and Show in Downloads. An install file has no Open button.
+- Password-manager clipboard items are not copied or stored.
+- The phone reconnects only after a boot or an app update.
+- This build was not tried on a real phone or Mac yet.
+
 ## 1.0.0
 
 - First open on the Mac is a short setup window: notifications, local network, launch at login, then the pairing QR.
