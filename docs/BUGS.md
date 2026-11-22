@@ -56,7 +56,7 @@ N6. The phone sent the away sign-in once, so a late Mac never accepted it. Fixed
 N7. A late Mac reply on the away relay was thrown away. Fixed: while Wi-Fi is down, replies still go out on the away relay. NOT TESTED on a device.
 N12. The apps said paired as soon as the away relay connected, before the Mac checked the phone. Fixed: paired shows only after the Mac accepts the sign-in, and a drop clears it. NOT TESTED on a device.
 N17. The away relay counted both directions together and never forgot old counts. Fixed: each direction has its own count, and counts older than a few seconds are dropped. NOT TESTED on a device. A local relay test covers it. The worker is not deployed.
-X6. A file from the Mac opened by itself. Fixed: the phone shows "File from the Mac: name" with Open and Show in Downloads. An apk has no Open button. A link is not opened while the screen is off. It gets an Open button instead. NOT TESTED on a device.
+X6. A file from the Mac opened by itself. Partly fixed earlier: the phone showed a notice. The tap did not open the file until the activity button. See the later X6 line.
 V1. The away relay rewrote its idle clock on every frame. Fixed: the clock moves at most once every 30 seconds. A quiet room still closes after 10 minutes. NOT TESTED on a device. A local relay test covers the clock.
 V2. The relay room tests were not part of the checks. Fixed: they run with the other web tests, and a wake-up uses a new socket that only has the saved note, then a frame is forwarded. NOT TESTED on a device.
 M10. Password-manager clipboard items could be copied and stored. Fixed: Android skips clips marked sensitive on Android 13 and newer. The Mac skips concealed and transient pasteboard types. Those clips are not sent and not stored. NOT TESTED on a device.
@@ -67,6 +67,8 @@ X9. A Java key file could be committed by accident. Fixed: .jks files are ignore
 W2. The away sign-in retry ran on the phone's main thread, so the send was dropped, and cancelling it never found the old wait. Fixed: one saved retry posts the sign-in, and the actual write runs on the send thread. NOT TESTED on a device.
 N6. Partly fixed before. The phone now keeps one sign-in until the Mac answers, including when the phone joins first. A test covers relay_ok and forgotten both stopping that retry. NOT TESTED on a device.
 W1. File and link notice buttons used a broadcast, which Android 12 and newer blocks, so Open did nothing. Fixed: Open and Show in Downloads are real activity buttons. NOT TESTED on a device.
+X6. A file from the Mac is not opened by itself. Tapping the notice or Open starts the real view screen for that file. An install file still has no Open button. NOT TESTED on a device.
+
 
 
 

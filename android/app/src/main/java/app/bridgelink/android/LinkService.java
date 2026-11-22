@@ -1569,6 +1569,7 @@ public class LinkService extends Service {
             int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
                     | PendingIntent.FLAG_GRANT_READ_URI_PERMISSION;
             PendingIntent pending = PendingIntent.getActivity(this, 42, open, flags);
+            builder.setContentIntent(pending);
             builder.addAction(new Notification.Action.Builder(null, "Open", pending).build());
         }
         manager().notify(41, builder.build());
