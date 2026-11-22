@@ -58,23 +58,12 @@ public final class MirrorCast {
         }
     }
 
+    /** Opens the virtual display once. Turning the phone must not call this again. */
     private void beginPicture() throws Exception {
         int[] screen = screen(app);
         seenW = screen[0];
         seenH = screen[1];
-        StageSix.Picture shaped = StageSix.fit(StageSix.quality(qualityName), screen[0], screen[1]);
-        MediaFormat format = MediaFormat.createVideoFormat("video/avc", shaped.width, shaped.height);
-        format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        format.setInteger(MediaFormat.KEY_BIT_RATE, shaped.bitrate);
-        format.setInteger(MediaFormat.KEY_FRAME_RATE, shaped.fps);
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-        if (Build.VERSION.SDK_INT >= 29) {
-            format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
-        }
-        codec = MediaCodec.createEncoderByType("video/avc");
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-        surface = codec.createInputSurface();
-        codec.start();
+        StageSix.Picture shaped = openEncoder(screen[0], screen[1]);
         DisplayMetrics metrics = app.getResources().getDisplayMetrics();
         display = projection.createVirtualDisplay(
                 "BridgeLink",
@@ -88,6 +77,27 @@ public final class MirrorCast {
         );
         running = true;
         LinkService.onNeedKey(this::requestKey);
+        startDrain();
+    }
+
+    private StageSix.Picture openEncoder(int width, int height) throws Exception {
+        StageSix.Picture shaped = StageSix.fit(StageSix.quality(qualityName), width, height);
+        MediaFormat format = MediaFormat.createVideoFormat("video/avc", shaped.width, shaped.height);
+        format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, shaped.bitrate);
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, shaped.fps);
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+        if (Build.VERSION.SDK_INT >= 29) {
+            format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
+        }
+        codec = MediaCodec.createEncoderByType("video/avc");
+        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        surface = codec.createInputSurface();
+        codec.start();
+        return shaped;
+    }
+
+    private void startDrain() {
         drain = new Thread(this::drain, "bridgelink-mirror");
         drain.start();
     }
@@ -122,19 +132,57 @@ public final class MirrorCast {
     }
 
     private void rebuild() {
-        if (stopping || !running || projection == null || app == null) return;
+        if (stopping || !running || projection == null || app == null || display == null) return;
         int[] next = screen(app);
         if (next[0] == seenW && next[1] == seenH) return;
         if (next[0] < 2 || next[1] < 2) return;
+        Thread oldDrain = drain;
+        MediaCodec oldCodec = codec;
+        Surface oldSurface = surface;
         running = false;
-        releasePicture();
-        if (stopping || projection == null) return;
+        drain = null;
+        codec = null;
+        surface = null;
+        if (oldDrain != null) oldDrain.interrupt();
+        MirrorStop.joinDrain(oldDrain, MirrorStop.JOIN_MS);
+        if (stopping || projection == null || display == null) {
+            releaseEncoder(oldCodec, oldSurface);
+            return;
+        }
         try {
-            beginPicture();
+            StageSix.Picture shaped = openEncoder(next[0], next[1]);
+            DisplayMetrics metrics = app.getResources().getDisplayMetrics();
+            display.resize(shaped.width, shaped.height, metrics.densityDpi);
+            display.setSurface(surface);
+            releaseEncoder(oldCodec, oldSurface);
+            seenW = next[0];
+            seenH = next[1];
+            running = true;
+            startDrain();
             requestKey();
         } catch (Exception error) {
+            releaseEncoder(oldCodec, oldSurface);
             LinkService.postStatus("This phone could not start the screen encoder.");
             stop();
+        }
+    }
+
+    private static void releaseEncoder(MediaCodec dying, Surface dyingSurface) {
+        if (dyingSurface != null) {
+            try {
+                dyingSurface.release();
+            } catch (Exception ignored) {
+            }
+        }
+        if (dying != null) {
+            try {
+                dying.stop();
+            } catch (Exception ignored) {
+            }
+            try {
+                dying.release();
+            } catch (Exception ignored) {
+            }
         }
     }
 
