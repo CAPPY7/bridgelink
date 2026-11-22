@@ -88,6 +88,9 @@ X12. GitHub Actions were named by a moving tag. Fixed: each one is pinned to the
 X13. Every release job could write to the repository. Fixed: only the publish job can write. The others can only read. NOT TESTED on a device.
 L11. When a paid Apple account exists, the release stapled the app instead of the disk image. Fixed: it staples the disk image. It still skips that step when there is no paid account. NOT TESTED on a device.
 N15. The update file was a static page with size 0. Fixed: the release writes it with the real disk-image size and the date. It still has no signature, because Sparkle is not linked. NOT TESTED on a device.
+X14. The Gradle download was not checked. Fixed: the wrapper uses the official Gradle 8.11.1 checksum.
+C6. The feature check only looked for a word in some test. Fixed: every message type has to be in the test that builds the message and reads it back. The emulator still only pairs and sends one note.
+
 
 
 

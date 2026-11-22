@@ -58,24 +58,28 @@ for row in rows:
         if name not in blob:
             errors.append(f"feature {row[0]} lists missing test {name}")
 
-messages = (root / "android/app/src/main/java/app/bridgelink/android/protocol/FeatureMessages.java").read_text()
-tests = ""
-for path in root.rglob("*Test*.java"):
-    if "build" in path.parts:
-        continue
-    try:
-        tests += path.read_text()
-    except OSError:
-        pass
-for path in (root / "macos/Tests").rglob("*.swift"):
-    try:
-        tests += path.read_text()
-    except OSError:
-        pass
 import re
-for kind in re.findall(r'"([a-z_]+)"', messages):
-    if kind not in tests:
-        errors.append(f"message {kind} is not named in a test")
+proto_path = root / "android/app/src/test/java/app/bridgelink/android/protocol/ProtocolTest.java"
+proto = proto_path.read_text()
+start = proto.find("void everyFeatureMessageRoundTrips()")
+if start < 0:
+    errors.append("missing the round-trip test everyFeatureMessageRoundTrips")
+    body = ""
+else:
+    body = proto[start:]
+    nxt = body.find("\n    @Test")
+    if nxt > 0:
+        body = body[:nxt]
+    if "Envelope.make" not in body or "Envelope.parse" not in body:
+        errors.append("everyFeatureMessageRoundTrips does not make an envelope and read it back")
+types_src = (root / "android/app/src/main/java/app/bridgelink/android/protocol/FeatureMessages.java").read_text()
+types_match = re.search(r"TYPES = \{([^}]+)\}", types_src, re.S)
+types = re.findall(r'"([a-z_]+)"', types_match.group(1) if types_match else "")
+if not types:
+    errors.append("FeatureMessages.TYPES is empty")
+for kind in types:
+    if f'"{kind}"' not in body:
+        errors.append(f"message {kind} is not in the round-trip test")
 
 if errors:
     print("\n".join(errors))
