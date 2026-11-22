@@ -12,6 +12,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.GrantPermissionRule;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.Until;
 
 import com.google.gson.JsonObject;
 
@@ -113,7 +116,11 @@ public class PairingEmulatorTest {
             scenario.onActivity(activity -> ready[0] = activity.getModel().getAskPair());
             return ready[0];
         }, 20_000, "the pair question never showed");
-        scenario.onActivity(activity -> activity.uiAcceptPair());
+        UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        if (!device.wait(Until.hasObject(By.text("Pair")), 10_000)) {
+            Assert.fail("The Pair button never showed. " + dump());
+        }
+        device.findObject(By.text("Pair")).click();
 
         waitFor("Paired with the Mac", 40_000);
         String firstToken = Prefs.open(target).getString("token", "");

@@ -147,9 +147,6 @@ class MainActivity : AppCompatActivity(), PhoneActions {
 
     fun uiConfirm() = confirm()
 
-    /** The pair screen. A deep link does not connect until this runs. */
-    fun uiAcceptPair() = acceptPair()
-
     override fun scan() = work.scan()
     override fun applyLink() = work.applyLink()
     override fun acceptPair() = work.acceptPair()
