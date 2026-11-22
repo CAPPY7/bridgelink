@@ -58,7 +58,7 @@ Full fix pass. N2 is done. Next is N3: the away relay must keep its room across 
 - M2. Connect adds an address. It does not throw away the others.
 - M3. A second waiting connection does not drop the first one.
 - M4. Stop Mac ringing tells the Mac. The Mac plays a loud sound for 30 seconds.
-- N1. The Mac app compiles again. Picture code sees the protocol. The listener does not unwrap itself twice.
+- N1. The Mac app compiles again. Picture code sees the protocol. The listener does not unwrap itself twice. The send-window check does not trap the tests.
 - N2. The emulator pair test taps Pair before it looks for a paired Mac.
 
 ## Battery
