@@ -60,3 +60,4 @@ X6. A file from the Mac opened by itself. Fixed: the phone shows "File from the 
 V1. The away relay rewrote its idle clock on every frame. Fixed: the clock moves at most once every 30 seconds. A quiet room still closes after 10 minutes. NOT TESTED on a device. A local relay test covers the clock.
 V2. The relay room tests were not part of the checks. Fixed: they run with the other web tests, and a wake-up uses a new socket that only has the saved note, then a frame is forwarded. NOT TESTED on a device.
 M10. Password-manager clipboard items could be copied and stored. Fixed: Android skips clips marked sensitive on Android 13 and newer. The Mac skips concealed and transient pasteboard types. Those clips are not sent and not stored. NOT TESTED on a device.
+X8. The phone could start the link for any broadcast the boot receiver saw. Fixed: it starts only after the phone boots or the app is updated. NOT TESTED on a device.

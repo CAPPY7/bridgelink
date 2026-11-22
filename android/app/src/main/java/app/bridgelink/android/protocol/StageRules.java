@@ -59,6 +59,12 @@ public final class StageRules {
         return concealed || transientType || androidSensitive;
     }
 
+    /** Reconnect only after a real boot or an app update. */
+    public static boolean bootReconnect(String action) {
+        return "android.intent.action.BOOT_COMPLETED".equals(action)
+                || "android.intent.action.MY_PACKAGE_REPLACED".equals(action);
+    }
+
     public static boolean imageFits(int bytes) {
         return bytes > 0 && bytes <= IMAGE_CAP;
     }

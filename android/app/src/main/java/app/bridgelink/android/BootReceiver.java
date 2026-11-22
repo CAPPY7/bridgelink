@@ -8,6 +8,8 @@ import android.content.SharedPreferences;
 public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+        String action = intent == null ? "" : intent.getAction();
+        if (!app.bridgelink.android.protocol.StageRules.bootReconnect(action)) return;
         SharedPreferences prefs = Prefs.open(context);
         String host = prefs.getString("host", "");
         String token = prefs.getString("token", "");

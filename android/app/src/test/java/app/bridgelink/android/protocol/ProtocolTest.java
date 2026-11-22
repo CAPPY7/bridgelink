@@ -365,6 +365,10 @@ public class ProtocolTest {
         assertTrue(StageRules.skipPasswordClip(false, true, false));
         assertTrue(StageRules.skipPasswordClip(false, false, true));
         assertFalse(StageRules.skipPasswordClip(false, false, false));
+        assertTrue(StageRules.bootReconnect("android.intent.action.BOOT_COMPLETED"));
+        assertTrue(StageRules.bootReconnect("android.intent.action.MY_PACKAGE_REPLACED"));
+        assertFalse(StageRules.bootReconnect("android.intent.action.BOOT_COMPLETED".replace("BOOT", "LOCKED_BOOT")));
+        assertFalse(StageRules.bootReconnect(null));
         assertEquals("skip", StageRules.clipKind(true, true, true));
         assertEquals("text", StageRules.clipKind(true, true, false));
         assertEquals("image", StageRules.clipKind(false, true, false));
