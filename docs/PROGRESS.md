@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Full fix pass. N4 is done. Next is N5: do not restart a working away relay on every Wi-Fi retry.
+Full fix pass. N5 is done. Next is N6: keep sending the away sign-in until the Mac answers.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -62,6 +62,7 @@ Full fix pass. N4 is done. Next is N5: do not restart a working away relay on ev
 - N2. The emulator pair test waits for the pair screen, then taps Pair.
 - N3. A sleeping relay still knows the phone or the Mac, and it still knows the room key.
 - N4. The away relay closes after 10 minutes of silence. A drop says "Away link down" and both apps try again.
+- N5. A Wi-Fi retry does not restart an away relay that is already up.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

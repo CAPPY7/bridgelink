@@ -20,6 +20,7 @@ extension LinkModel {
 
     func tryRelay() {
         if live != nil { return }
+        if away?.isLive == true { return }
         let id = awayDeviceId.isEmpty ? liveDeviceId : awayDeviceId
         let url = UserDefaults.standard.string(forKey: "relayUrl") ?? six.relayUrl
         let secret = RelayVault.load(id) ?? ""

@@ -45,6 +45,7 @@ public final class RelayDoor {
     }
 
     public void start(String url, String secret, Sink sink) {
+        if (app.bridgelink.android.protocol.RelayRetry.leaveIt(live.get())) return;
         int mine = generation.incrementAndGet();
         closeSocket();
         String[] parts = StageSix.relayParts(url);

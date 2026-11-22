@@ -13,4 +13,9 @@ public final class RelayRetry {
     public static long delayMs(int attempt) {
         return Backoff.nextMs(attempt);
     }
+
+    /** A Wi-Fi retry must not tear down a relay that is already up. */
+    public static boolean leaveIt(boolean relayUp) {
+        return relayUp;
+    }
 }

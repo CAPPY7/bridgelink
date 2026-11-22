@@ -91,6 +91,8 @@ public class ProtocolTest {
         assertFalse(RelayRetry.rejoin("The away relay could not be reached."));
         assertEquals(500L, RelayRetry.delayMs(0));
         assertEquals(30_000L, RelayRetry.delayMs(20));
+        assertTrue(RelayRetry.leaveIt(true));
+        assertFalse(RelayRetry.leaveIt(false));
     }
 
     @Test

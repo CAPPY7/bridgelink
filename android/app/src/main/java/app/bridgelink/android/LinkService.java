@@ -536,7 +536,8 @@ public class LinkService extends Service {
             mine.close();
             if (attempt == mine) {
                 attempt = null;
-                paired = false;
+                boolean relayStill = onRelay && six != null && six.relayLive();
+                if (!app.bridgelink.android.protocol.RelayRetry.leaveIt(relayStill)) paired = false;
                 String next = mine.hopTo;
                 if (next != null && !next.isEmpty()) {
                     main.post(() -> openAttempt(next, port, code));
@@ -546,7 +547,7 @@ public class LinkService extends Service {
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (linkState.afterClose(userStopped, tokenSaved) && !address.isEmpty()) {
                     long delay = linkState.delayMs();
-                    if (linkState.attempt >= 2 && six != null) {
+                    if (linkState.attempt >= 2 && six != null && !six.relayLive()) {
                         six.tryRelay();
                         publish("Wi-Fi missed the Mac. Trying away from home, and still retrying Wi-Fi.", null);
                     } else {
@@ -555,7 +556,7 @@ public class LinkService extends Service {
                     if (BrowseAgain.shouldBrowse(linkState.attempt)) browseSaved();
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (!userStopped && linkState.phase != LinkState.Phase.FATAL) {
-                    if (six != null && six.tryRelay()) {
+                    if (six != null && !six.relayLive() && six.tryRelay()) {
                         publish("Wi-Fi missed the Mac. Trying the away relay.", null);
                     } else {
                         publish("Disconnected", null);
