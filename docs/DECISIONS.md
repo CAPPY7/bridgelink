@@ -14,6 +14,8 @@ The Mac tests must not call a semaphore just to see that the send window is full
 
 The pair question stays on the phone screen. The emulator test reads that screen and taps Pair. A link still does not connect by itself.
 
+A sleeping relay keeps the role on the socket and the room key in storage. Nothing important is only in memory. The free Cloudflare plan already supports that.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".

@@ -1,13 +1,14 @@
 const MAX_MESSAGE = 512 * 1024;
 const WINDOW_SEC = 120;
 const MAX_PER_SECOND = 200;
+const IDLE_MS = 10 * 60 * 1000;
 
-async function sha256hex(text) {
+export async function sha256hex(text) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function ticketOk(hello, now) {
+export async function ticketOk(hello, now) {
   const bits = String(hello || "").trim().split(" ");
   if (bits.length !== 4) return false;
   if (bits[0] !== "phone" && bits[0] !== "mac") return false;
@@ -18,10 +19,24 @@ async function ticketOk(hello, now) {
   return expect === bits[2];
 }
 
+export function readMeta(ws) {
+  if (!ws || typeof ws.deserializeAttachment !== "function") return {};
+  const meta = ws.deserializeAttachment();
+  return meta && typeof meta === "object" ? meta : {};
+}
+
+export function writeMeta(ws, meta) {
+  ws.serializeAttachment(meta);
+}
+
+/** A wake-up must still know the role. The room key lives in storage, not memory. */
+export function keptRole(meta) {
+  return meta && meta.role ? meta.role : "";
+}
+
 export class Room {
   constructor(state) {
     this.state = state;
-    this.key = "";
     this.counts = new Map();
   }
 
@@ -36,7 +51,8 @@ export class Room {
 
   async webSocketMessage(ws, message) {
     const now = Math.floor(Date.now() / 1000);
-    const role = ws.role || "";
+    const meta = readMeta(ws);
+    const role = keptRole(meta);
     if (!role) {
       if (typeof message !== "string" || message.length > 200) {
         ws.close(1008, "hello");
@@ -48,25 +64,37 @@ export class Room {
       }
       const bits = message.trim().split(" ");
       const offered = bits[3];
+      const stored = (await this.state.storage.get("roomKey")) || "";
       const sockets = this.state.getWebSockets();
-      const live = sockets.some((peer) => peer !== ws && peer.role === bits[0] && peer.ready);
-      if (this.key && live && this.key !== offered) {
+      const live = sockets.some((peer) => {
+        if (peer === ws) return false;
+        const peerMeta = readMeta(peer);
+        return peerMeta.role === bits[0] && peerMeta.ready;
+      });
+      if (stored && live && stored !== offered) {
         ws.close(1008, "busy");
         return;
       }
-      if (!this.key) this.key = offered;
-      if (this.key !== offered) {
+      const key = stored || offered;
+      if (!stored) await this.state.storage.put("roomKey", key);
+      if (key !== offered) {
         ws.close(1008, "key");
         return;
       }
-      const others = sockets.filter((peer) => peer !== ws && peer.ready);
+      const others = sockets.filter((peer) => {
+        if (peer === ws) return false;
+        return readMeta(peer).ready;
+      });
       if (others.length >= 2) {
         ws.close(1008, "full");
         return;
       }
-      ws.role = bits[0];
-      ws.ready = true;
-      ws.acceptedAt = Date.now();
+      writeMeta(ws, {
+        role: bits[0],
+        ready: true,
+        acceptedAt: Date.now(),
+        lastFrame: Date.now(),
+      });
       return;
     }
     if (typeof message === "string") {
@@ -82,28 +110,34 @@ export class Room {
       ws.close(1008, "rate");
       return;
     }
+    writeMeta(ws, { ...meta, lastFrame: Date.now() });
     const otherRole = role === "phone" ? "mac" : "phone";
-    const other = this.state.getWebSockets().find((peer) => peer !== ws && peer.role === otherRole && peer.ready);
+    const other = this.state.getWebSockets().find((peer) => {
+      if (peer === ws) return false;
+      const peerMeta = readMeta(peer);
+      return peerMeta.role === otherRole && peerMeta.ready;
+    });
     if (!other) return;
     try {
       other.send(message);
     } catch (error) {
       other.close();
     }
-    this.sweep();
+    await this.sweep();
   }
 
   async webSocketClose() {
-    this.sweep();
+    await this.sweep();
   }
 
-  sweep() {
+  async sweep() {
     const sockets = this.state.getWebSockets();
     const now = Date.now();
     for (const peer of sockets) {
-      if (peer.acceptedAt && now - peer.acceptedAt > 10 * 60 * 1000) peer.close(1000, "idle");
+      const meta = readMeta(peer);
+      if (meta.acceptedAt && now - meta.acceptedAt > IDLE_MS) peer.close(1000, "idle");
     }
-    if (sockets.length === 0) this.key = "";
+    if (sockets.length === 0) await this.state.storage.delete("roomKey");
   }
 }
 
