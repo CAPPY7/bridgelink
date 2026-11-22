@@ -83,6 +83,8 @@ L7. The accessibility service asked for click and focus events it never reads. F
 L8. The Mac started its Bluetooth beacon even when leave-lock was off. Fixed: the beacon starts only while leave-lock is on, and it stops when leave-lock is off. NOT TESTED on a device.
 H15. A release could ship an Android app signed by a different key. Fixed: the release compares the APK signer with the public fingerprint saved in the repo and stops if they differ. NOT TESTED on a device.
 X10. A release rebuilt and published without waiting for the checks. Fixed: the release waits until the checks for that same commit are green. NOT TESTED on a device.
+X11. A hand-started release could build the wrong commit, and the release page was not tied to that commit. Fixed: it checks out the typed tag, and the release points at that commit. NOT TESTED on a device.
+
 
 
 

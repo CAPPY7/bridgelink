@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
       - name: Wait until the checks for this commit are green
         env:
           GH_TOKEN: ${{ github.token }}
@@ -30,6 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -87,6 +91,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
       - name: Build, sign, and make the disk image
         env:
           MAC_SIGN_P12_BASE64: ${{ secrets.MAC_SIGN_P12_BASE64 }}
@@ -124,6 +130,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
       - uses: actions/download-artifact@v4
       - name: Create the release if needed, then attach both apps
         env:
@@ -138,8 +146,10 @@ jobs:
             v*) ;;
             *) echo "Tag must start with v"; exit 1 ;;
           esac
+          SHA=$(git rev-parse HEAD)
           gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
-            || gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --title "$TAG" --generate-notes
+            && gh release edit "$TAG" --repo "${GITHUB_REPOSITORY}" --target "$SHA" \
+            || gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" --target "$SHA" --title "$TAG" --generate-notes
           files=()
           if [ -f android-apk/BridgeLink-android.apk ]; then files+=(android-apk/BridgeLink-android.apk); fi
           if [ -f mac-app/BridgeLink-mac.zip ]; then files+=(mac-app/BridgeLink-mac.zip); fi
