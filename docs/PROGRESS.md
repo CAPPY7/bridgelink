@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. L5 is done. Next is M20: the send page no longer says a folder can be sent.
+Last fix pass. M20 is done. Next is M11: the shared folder is watched, with a 60 second pause between syncs, only while linked.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -53,6 +53,7 @@ Last fix pass. L5 is done. Next is M20: the send page no longer says a folder ca
 - M26. The disk image is mounted where the layout step can see it.
 - N14. Switching to a saved Mac adds that address. It does not throw away the others.
 - L5. Changing the ring volume cannot stop the ring if the phone refuses it.
+- M20. The send pages no longer say a folder can be sent. They send files.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

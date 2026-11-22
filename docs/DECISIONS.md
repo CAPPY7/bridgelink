@@ -72,6 +72,8 @@ Switching to a saved Mac adds that Mac's address to the list. The other addresse
 
 If the phone refuses a ring-volume change, the ring still starts. The volume is put back the same way when the ring stops.
 
+The send pages do not offer a folder. They send files. A folder zip is not added, because a half-finished zip could send the wrong files.
+
 
 
 

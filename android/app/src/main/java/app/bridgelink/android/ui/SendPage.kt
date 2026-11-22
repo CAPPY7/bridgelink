@@ -16,7 +16,7 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
     PageScroll {
         Text("Send", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Text, a link, many files, or the clipboard goes to the paired Mac. A folder is sent as a zip. Files can be up to 4 GB.",
+            "Text, a link, many files, or the clipboard goes to the paired Mac. This page sends files, not a whole folder. Files can be up to 4 GB.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
