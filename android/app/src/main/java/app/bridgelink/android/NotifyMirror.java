@@ -12,12 +12,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import app.bridgelink.android.protocol.Features;
+import app.bridgelink.android.protocol.NoticeGate;
 import app.bridgelink.android.protocol.StageRules;
 
 /** Mirrors notifications only after the user turns the feature on. Text is not logged. */
 public class NotifyMirror extends NotificationListenerService {
     private static volatile NotifyMirror current;
     private static final Set<String> SELF = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<String, String> seenNotes = new ConcurrentHashMap<>();
 
     @Override
     public void onListenerConnected() {
@@ -39,18 +41,23 @@ public class NotifyMirror extends NotificationListenerService {
         boolean ongoing = (notification.flags & Notification.FLAG_ONGOING_EVENT) != 0;
         boolean silent = (notification.flags & Notification.FLAG_GROUP_SUMMARY) != 0;
         boolean allowed = !StageRules.appBlocked(Prefs.open(this).getString("notifyOff", ""), pkg);
-        if (!Features.shouldMirror(ongoing, silent, allowed, false)) return;
         CharSequence title = notification.extras.getCharSequence(Notification.EXTRA_TITLE);
         CharSequence text = notification.extras.getCharSequence(Notification.EXTRA_TEXT);
         String shown = title == null ? "" : title.toString();
         String body = text == null ? "" : text.toString();
+        String key = notice.getKey() == null ? "" : notice.getKey();
+        boolean progress = notification.extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0;
+        String stamp = NoticeGate.stamp(key, shown, body);
+        boolean duplicate = NoticeGate.skipUpdate(progress, seenNotes.get(key), stamp);
+        if (!Features.shouldMirror(ongoing, silent, allowed, duplicate)) return;
+        seenNotes.put(key, stamp);
         Intent send = new Intent(this, LinkService.class);
         send.setAction(LinkService.ACTION_SEND);
         send.putExtra(LinkService.EXTRA_KIND, "notify");
         send.putExtra(LinkService.EXTRA_BODY, shown);
         send.putExtra("app", pkg);
         send.putExtra("detail", body);
-        send.putExtra("key", notice.getKey() == null ? "" : notice.getKey());
+        send.putExtra("key", key);
         send.putExtra("reply", canReply(notification) ? "1" : "0");
         String code = Features.otp(shown + "\n" + body);
         if (code != null && Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) {
@@ -62,6 +69,7 @@ public class NotifyMirror extends NotificationListenerService {
     @Override
     public void onNotificationRemoved(StatusBarNotification notice) {
         if (notice == null || notice.getKey() == null) return;
+        seenNotes.remove(notice.getKey());
         if (SELF.remove(notice.getKey())) return;
         if (!Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
         Intent send = new Intent(this, LinkService.class);
