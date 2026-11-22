@@ -124,7 +124,7 @@ X5. An update deleted the old pairing token instead of sealing it. Fixed: the to
 M22. An incoming file was written to cache and copied again into Downloads. Fixed: the pieces are written straight into a pending Downloads item. NOT TESTED on a device.
 X2. On Android 8 and 9 a new file could replace one with the same name. Fixed: the new file is named with " (1)". NOT TESTED on a device.
 X3. A failed save could leave a pending Downloads item behind. Fixed: that item is deleted when the save fails. NOT TESTED on a device.
-M16. The screen mirror was always 1280 by 720, so a tall phone looked squashed, and turning the phone left the old frame. Fixed: the picture keeps the phone's shape, and turning the phone starts the encoder again at the new size. NOT TESTED on a device.
+M16. The screen mirror was always 1280 by 720, so a tall phone looked squashed, and turning the phone left the old frame. Fixed: the picture keeps the phone's shape. Turning the phone builds a new encoder and resizes the one virtual display. It does not open a second display. NOT TESTED on a device.
 Q2. Each camera frame was turned into a JPEG, decoded, turned again, and encoded again. Fixed: the pixels turn once before the JPEG, using the sensor angle and the way the phone is held. The front camera is mirrored. NOT TESTED on a device.
 Q3. A failed keystore made the phone copy its old address over a newer one on every start. Fixed: the plain settings are copied once. The old token stays until it can be sealed. NOT TESTED on a device.
 Q4. A download could keep the asked-for name after Android renamed it, and a resume trusted a stale size. Fixed: the saved name is read back, and a resume starts over unless the bytes already on disk match. NOT TESTED on a device.
@@ -145,4 +145,23 @@ Q1. The drag test checked a helper the app did not use. Fixed: the Mac mouse but
 M11. The shared folder was checked only when you asked. Fixed: the phone and the Mac watch the folder, wait 60 seconds after a change, then check. The watch runs only while linked, switched on, and not paused. NOT TESTED on a device.
 M13. The shared folder was hidden in the app's private files. Partly: you can choose a folder and the phone remembers it. No broad storage permission was added. Until you choose, Android 10 and newer still use the app's own Documents/BridgeLink Shared folder, because the public Documents folder cannot be listed without that choice. NOT TESTED on a device.
 M15. A shared file over 32 MB was skipped. Fixed: a bigger file is sent with the normal file messages and saved in the shared folder. The sha256 check is the same one used for other files. Smaller files still use the old pieces so an old app keeps working. NOT TESTED on a device.
-H16. Check for update only opened the release page. Fixed: it downloads BridgeLink.dmg and SHA256SUMS off the main thread, checks the hash, and opens the disk image only when the hash matches. A bad file is deleted. There is still no Sparkle signature. NOT TESTED on a device.
+H16. Check for update only opened the release page. Fixed: it downloads the disk image and SHA256SUMS off the main thread, checks the hash against the file name even when the sums line has a folder in front, and opens the disk image only when the hash matches. The file is saved as BridgeLink-version.dmg. A file this code did not write is not deleted. There is still no Sparkle signature. NOT TESTED on a device.
+S0-1. The feature check only allowed "self-tested", so CI stopped before the unit tests. Fixed: it allows Not started, Building, Built – NOT TESTED on a device, Final – owner tested, and Removed. NOT TESTED on a device.
+S0-4. A transfer id from the other side was used as a file name. Fixed: the phone and the Mac accept only 1 to 64 hex characters. NOT TESTED on a device.
+S0-5. A big shared file sent every chunk at once, blocked the folder queue, and the phone sent it on the message thread. Fixed: at most 6 chunks are ahead, the send stops when the link drops, a size change sends file_cancel, and folder disk work stays off the Mac main thread. NOT TESTED on a device.
+S0-6. LinkCore.java is still one long file. Partly: the split waits until the away relay is removed, and it must be finished before the phase 2 audit. NOT TESTED on a device.
+S0-7. The Mac tests did not read the sample messages. Fixed: a Mac test reads docs/fixtures and fails if a message type has no sample. NOT TESTED on a device.
+S0-8. Compose, Room, activity-compose, and core were old. Partly: Room is 2.8.5, core and core-ktx are 1.16.0, activity-compose is 1.10.1, and the Compose BOM is 2026.06.01. The November 2026 Compose BOM needs Android Gradle Plugin 9 and compileSdk 37, which this project does not use. NOT TESTED on a device.
+S0-9. The web test script was checked. The demo page does not use the database, multiplayer, or app data. The app shell still needs the auth provider, so those files stay. The test script already names files that exist. NOT TESTED on a device.
+S0-10. The default shared folder inserted a Documents row on every lookup. Fixed: that insert happens once and is remembered. The default folder is still the app's own Documents/BridgeLink Shared until you pick one. NOT TESTED on a device.
+S0-11. The progress note still said the next step was L1, and the feature list said CI was green. Fixed: the notes match this pass, and "CI is green" is removed until a green run is real.
+S0-12. The folder watch only saw the top folder. Fixed: the phone watches each subfolder, and the Mac uses a recursive folder event stream. NOT TESTED on a device.
+L1. The phone link file is still longer than 900 lines. Partly: the work moved into LinkCore, and the real split is S0-6. NOT TESTED on a device.
+L2. The Mac tests did not parse every sample message. Fixed: see S0-7. NOT TESTED on a device.
+L15. Library versions were old. Partly: see S0-8. NOT TESTED on a device.
+R1. Already kept. The docs were not claiming a device test in this pass.
+R2. Already kept.
+R4. Already kept.
+R5. The demo does not need a database. The shell still uses the auth provider. See S0-9.
+R6. Already kept.
+D1. Docs still said self-tested before this pass. Fixed earlier: the status words say NOT TESTED on a device. NOT TESTED on a device.

@@ -1,6 +1,6 @@
 # Feature matrix
 
-Status words are only: Not started, Building, Built – NOT TESTED on a device, Final – owner tested. Only the owner can set Final. Built – NOT TESTED on a device means the code is in both apps, tests exist, and CI is green. Half-finished work stays Building.
+Status words are only: Not started, Building, Built – NOT TESTED on a device, Final – owner tested. Only the owner can set Final. Built – NOT TESTED on a device means the code is in both apps and tests exist. Half-finished work stays Building. Removed is used when a feature is taken out.
 
 | # | Feature | Status | Android unit | Mac unit | Integration | Manual |
 |---|---|---|---|---|---|---|
