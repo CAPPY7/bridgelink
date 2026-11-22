@@ -66,7 +66,7 @@ L12. A script in the repo could make a new Android signing key. Fixed: that scri
 X9. A Java key file could be committed by accident. Fixed: .jks files are ignored, the same way .keystore files already were.
 W2. The away sign-in retry ran on the phone's main thread, so the send was dropped, and cancelling it never found the old wait. Fixed: one saved retry posts the sign-in, and the actual write runs on the send thread. NOT TESTED on a device.
 N6. Partly fixed before. The phone now keeps one sign-in until the Mac answers, including when the phone joins first. A test covers relay_ok and forgotten both stopping that retry. NOT TESTED on a device.
-W1. File and link notice buttons used a broadcast, which Android 12 and newer blocks, so Open did nothing. Fixed: Open and Show in Downloads are real activity buttons. NOT TESTED on a device.
+W1. File and link notice buttons used a broadcast, which Android 12 and newer blocks, so Open did nothing. Fixed: Open and Show in Downloads are real activity buttons. The file grant sits on the view itself. NOT TESTED on a device.
 X6. A file from the Mac is not opened by itself. Tapping the notice or Open starts the real view screen for that file. An install file still has no Open button. NOT TESTED on a device.
 L9. A link from the Mac opened itself whenever the screen was on. Fixed: it waits for Open unless Always open links is on. NOT TESTED on a device.
 W6. Open was offered for some Android install files, not only .apk. Fixed: .apks, .xapk, .aab, and the Android package type have no Open button. NOT TESTED on a device.

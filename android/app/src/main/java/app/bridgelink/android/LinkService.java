@@ -1579,8 +1579,7 @@ public class LinkService extends Service {
         if (uri != null && StageRules.canOfferOpen(name, fileMime(uri))) {
             Intent open = new Intent(Intent.ACTION_VIEW, uri);
             open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-                    | PendingIntent.FLAG_GRANT_READ_URI_PERMISSION;
+            int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
             PendingIntent pending = PendingIntent.getActivity(this, id + 50_000, open, flags);
             builder.setContentIntent(pending);
             builder.addAction(new Notification.Action.Builder(null, "Open", pending).build());
