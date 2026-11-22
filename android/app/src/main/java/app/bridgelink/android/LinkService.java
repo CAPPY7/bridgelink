@@ -936,7 +936,7 @@ public class LinkService extends Service {
                 JsonObject payload = new JsonObject();
                 String text = body == null ? "" : body;
                 if ("clipboard".equals(kind)) {
-                    sendClipboardNow(true);
+                    sendClipboardText(text);
                     return;
                 }
                 if ("media".equals(kind)) {
@@ -1346,6 +1346,36 @@ public class LinkService extends Service {
         });
     }
 
+    private void sendClipboardText(String value) {
+        outbox.submit(() -> {
+            if (!paired) {
+                publish("Connect and pair before sending", null);
+                return;
+            }
+            if (value == null || value.isEmpty()) {
+                publish("Clipboard was empty", null);
+                return;
+            }
+            if (Features.looksSensitive(value)) {
+                publish("Skipped sensitive clipboard", null);
+                return;
+            }
+            if (Features.isEcho(lastEcho, value)) {
+                publish("Skipped a clipboard echo", null);
+                return;
+            }
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("body", value);
+                writeEnvelope(Envelope.make("clipboard", "android", payload));
+                ClipStore.addText(this, value);
+                publish("Sent clipboard", null);
+            } catch (Exception error) {
+                publish("Send failed. Try again.", null);
+            }
+        });
+    }
+
     private void sendClipboardNow(boolean manual) {
         outbox.submit(() -> {
             if (!paired) {
@@ -1690,12 +1720,17 @@ public class LinkService extends Service {
     private Notification note(String title, String text) {
         Intent open = new Intent(this, MainActivity.class);
         PendingIntent pending = PendingIntent.getActivity(this, 1, open, PendingIntent.FLAG_IMMUTABLE);
+        Intent clip = new Intent(this, ClipSendActivity.class);
+        clip.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        PendingIntent clipPending = PendingIntent.getActivity(
+                this, 6, clip, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setContentIntent(pending)
                 .setOngoing(true)
+                .addAction(new Notification.Action.Builder(null, "Send clipboard", clipPending).build())
                 .build();
     }
 

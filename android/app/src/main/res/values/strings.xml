@@ -20,6 +20,7 @@
     <string name="open_on_mac">Open link on Mac</string>
     <string name="sending">Sending to the Mac…</string>
     <string name="quick_drop">Send to Mac</string>
+    <string name="quick_clip">Send clipboard</string>
     <string name="send_clipboard">Send clipboard</string>
     <string name="stop_ringing">Stop ringing</string>
     <string name="find_mac_sound">Find my Mac</string>

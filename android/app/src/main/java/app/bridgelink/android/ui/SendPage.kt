@@ -19,6 +19,10 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
             "Text, a link, many files, or the clipboard goes to the paired Mac. A folder is sent as a zip. Files can be up to 4 GB.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Text(
+            "Android shares the clipboard only while BridgeLink is open. Use Send clipboard here, the Send clipboard Quick Settings tile, or the button on the BridgeLink notification.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         if (!model.status.startsWith("Paired")) {
             Text(
                 "Pair first. Until then, Send will wait.",
