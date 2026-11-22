@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. X7 is done. Next is N11: remove the Home Wi-Fi automation, because Android 10 and newer never gives the Wi-Fi name without location, and this app does not ask for that.
+Last fix pass. N11 is done. Next is N11b: location is kept only for Android 11 and older, because leave-lock Bluetooth needs it there. Newer phones do not get that permission.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -88,6 +88,7 @@ Last fix pass. X7 is done. Next is N11: remove the Home Wi-Fi automation, becaus
 - W5. The phone uses the away-relay send rule. It is not only a test.
 - W8. The progress note no longer says v1.0.0 was released. The releases are v0.12.0 and v1.0.1.
 - X7. Clipboard history is off until it is turned on. Clear history wipes it. Copies older than 24 hours are dropped. The file is sealed.
+- N11. The Home Wi-Fi automation is removed. It could not see the network name.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

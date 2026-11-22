@@ -7,7 +7,7 @@ public enum StageFive {
     public static let folderCap = 200
     public static let part = 24 * 1024
     public static let folderFileCap: Int64 = 32 * 1024 * 1024
-    public static let events = ["connect", "battery_low", "home_wifi", "sms_code", "file_in", "clip", "notify", "leave"]
+    public static let events = ["connect", "battery_low", "sms_code", "file_in", "clip", "notify", "leave"]
     public static let actions = ["open_app", "alert", "start_sync", "copy_code", "ring", "pause_sync", "note", "none"]
     public static let smsSteps = """
     1. Open Settings.

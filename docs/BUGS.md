@@ -77,6 +77,8 @@ L10. The Mac signing script used to change the home default keychain. Fixed: it 
 W5. The away-relay send rule lived only in a test. Fixed: the phone uses that same rule, so a late reply still goes out on the away relay when it should. NOT TESTED on a device.
 W8. The progress note said v1.0.0 was released. Fixed: it now says there is no v1.0.0 release. The published builds are v0.12.0 and v1.0.1.
 X7. Every phone copy was saved as plain text, even when clipboard history was off. Fixed: history stays off until you turn it on, Clear history wipes it, copies older than 24 hours are dropped, and the file is sealed with the keystore key. If the keystore cannot be used, the copies stay in memory only. NOT TESTED on a device.
+N11. Home Wi-Fi automations cannot see the network name on Android 10 and newer. Fixed: that trigger is removed. Saved rules that used it are ignored. NOT TESTED on a device.
+
 
 
 

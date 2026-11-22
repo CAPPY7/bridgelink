@@ -32,6 +32,9 @@ The away sign-in retry is one saved wait. A new wait replaces that same wait. Th
 
 Clipboard history is off until the user turns it on. Clear history deletes it. Copies older than 24 hours are dropped. The file is sealed with the same keystore key as the pairing token. If that key cannot be used, the copies stay in memory and are not written as plain text.
 
+Home Wi-Fi automations are removed. Android 10 and newer do not tell an app the Wi-Fi name unless it asks for location, and this app does not use location for that. Old Home Wi-Fi rules are ignored.
+
+
 
 Open and Show in Downloads start the real view screen. They are not broadcasts. Android 12 and newer blocks a broadcast that then opens a screen.
 

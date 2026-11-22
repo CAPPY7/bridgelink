@@ -15,7 +15,7 @@ public final class StageFive {
     public static final int PART = 24 * 1024;
     public static final long FOLDER_FILE_CAP = 32L * 1024 * 1024;
     public static final String[] EVENTS = {
-            "connect", "battery_low", "home_wifi", "sms_code", "file_in", "clip", "notify", "leave"
+            "connect", "battery_low", "sms_code", "file_in", "clip", "notify", "leave"
     };
     public static final String[] ACTIONS = {
             "open_app", "alert", "start_sync", "copy_code", "ring", "pause_sync", "note", "none"

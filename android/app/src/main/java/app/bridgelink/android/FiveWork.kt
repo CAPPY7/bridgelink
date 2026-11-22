@@ -115,7 +115,7 @@ class FiveWork(private val activity: MainActivity) {
         val whenName = model.ruleWhen.trim()
         val thenName = model.ruleThen.trim()
         if (!StageFive.knownEvent(whenName) || !StageFive.knownAction(thenName)) {
-            model.status = "When must be one of: connect, battery_low, home_wifi, sms_code, file_in, clip, notify, leave. Then must be one of: open_app, alert, start_sync, copy_code, ring, pause_sync, note, none."
+            model.status = "When must be one of: connect, battery_low, sms_code, file_in, clip, notify, leave. Then must be one of: open_app, alert, start_sync, copy_code, ring, pause_sync, note, none."
             return
         }
         send("auto", "add\t$whenName\t$thenName\t${model.ruleExtra}")

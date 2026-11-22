@@ -608,7 +608,6 @@ extension LinkModel {
             )
             return true
         case "wifi":
-            fireAuto("home_wifi", envelope.text("ssid"))
             return true
         default:
             return false

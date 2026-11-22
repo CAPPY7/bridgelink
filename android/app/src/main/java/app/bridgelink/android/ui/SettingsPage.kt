@@ -99,7 +99,7 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Save lock settings", "lock-save", actions::saveLock, tonal = true)
         Text("Automations", style = MaterialTheme.typography.titleMedium)
         Text(
-            "When and then use short names. When: connect, battery_low, home_wifi, sms_code, file_in, clip, notify, leave. Then: open_app, alert, start_sync, copy_code, ring, pause_sync, note, none. Eight rules at most.",
+            "When and then use short names. When: connect, battery_low, sms_code, file_in, clip, notify, leave. Then: open_app, alert, start_sync, copy_code, ring, pause_sync, note, none. Eight rules at most.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         OutlinedTextField(

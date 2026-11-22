@@ -426,13 +426,6 @@ public final class PhoneFive {
         Prefs.open(context).edit().putString("autoRules", StageFive.encodeRules(rules)).apply();
     }
 
-    private String homeName() {
-        for (StageFive.Rule rule : rules) {
-            if (rule.enabled && "home_wifi".equals(rule.when)) return rule.extra == null ? "" : rule.extra;
-        }
-        return "";
-    }
-
     private void copyCode(String text) {
         if (text == null || text.isEmpty()) {
             out.status("No code to copy");
@@ -483,7 +476,6 @@ public final class PhoneFive {
             out.frame("wifi", payload);
         } catch (Exception ignored) {
         }
-        if (StageFive.homeWifi(ssid, homeName())) fire("home_wifi", ssid);
     }
 
     private String ssid() {
