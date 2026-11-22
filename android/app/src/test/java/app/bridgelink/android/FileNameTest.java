@@ -32,7 +32,7 @@ public class FileNameTest {
 
     @Test
     public void aResumeHashesEveryPieceAlreadyOnDisk() {
-        Transfers.Incoming transfer = Transfers.Incoming.begin("id-1", "notes.txt", 11);
+        Transfers.Incoming transfer = Transfers.Incoming.begin("a1", "notes.txt", 11);
         transfer.seed("hello".getBytes(StandardCharsets.UTF_8));
         transfer.seed(" world".getBytes(StandardCharsets.UTF_8));
         assertFalse(transfer.failed());

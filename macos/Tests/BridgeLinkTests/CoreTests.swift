@@ -228,7 +228,10 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(gap?.accept(offset: 0, base64: Data([1]).base64EncodedString()))
         XCTAssertNotNil(gap?.accept(offset: 1, base64: Data([2]).base64EncodedString()))
         XCTAssertNil(IncomingFile(id: "4", name: "d.txt", size: Transfers.maxBytes + 1))
-        XCTAssertNotNil(IncomingFile(id: "cap", name: "big.bin", size: Transfers.maxBytes))
+        XCTAssertNotNil(IncomingFile(id: "aa", name: "big.bin", size: Transfers.maxBytes))
+        XCTAssertNil(IncomingFile(id: "../x", name: "a.txt", size: 1))
+        XCTAssertNil(IncomingFile(id: "a/b", name: "a.txt", size: 1))
+        XCTAssertNil(IncomingFile(id: "", name: "a.txt", size: 1))
     }
 
     func testStageThreeRules() {

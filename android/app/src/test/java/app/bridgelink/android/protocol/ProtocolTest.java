@@ -322,7 +322,10 @@ public class ProtocolTest {
         assertNull(gap.accept(0, Base64.getEncoder().encodeToString(new byte[]{1})));
         assertNotNull(gap.accept(1, Base64.getEncoder().encodeToString(new byte[]{2})));
         assertNull(Transfers.Incoming.begin("4", "d.txt", Transfers.MAX_BYTES + 1));
-        assertNotNull(Transfers.Incoming.begin("cap", "big.bin", Transfers.MAX_BYTES));
+        assertNotNull(Transfers.Incoming.begin("aa", "big.bin", Transfers.MAX_BYTES));
+        assertNull(Transfers.Incoming.begin("../x", "a.txt", 1));
+        assertNull(Transfers.Incoming.begin("a/b", "a.txt", 1));
+        assertNull(Transfers.Incoming.begin("", "a.txt", 1));
     }
 
     @Test
@@ -331,7 +334,7 @@ public class ProtocolTest {
         byte[] zeros = new byte[Transfers.CHUNK];
         String encoded = Base64.getEncoder().encodeToString(zeros);
         long size = Transfers.CHUNK * 3L;
-        Transfers.Incoming incoming = Transfers.Incoming.begin("big", "big.bin", size);
+        Transfers.Incoming incoming = Transfers.Incoming.begin("bb", "big.bin", size);
         assertNotNull(incoming);
         for (long offset = 0; offset < size; offset += Transfers.CHUNK) {
             assertNotNull(incoming.accept(offset, encoded));

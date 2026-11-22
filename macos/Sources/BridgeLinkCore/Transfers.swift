@@ -35,6 +35,12 @@ public enum Transfers {
         return nil
     }
 
+    /// A transfer id is 1 to 64 hex characters. Anything else could be a path.
+    public static func safeId(_ id: String) -> Bool {
+        if id.isEmpty || id.count > 64 { return false }
+        return id.allSatisfy { ($0 >= "0" && $0 <= "9") || ($0 >= "a" && $0 <= "f") }
+    }
+
     public static func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
@@ -49,7 +55,7 @@ public final class IncomingFile {
     private var digest = SHA256()
 
     public init?(id: String, name: String, size: Int) {
-        if id.isEmpty || size < 0 || size > Transfers.maxBytes { return nil }
+        if !Transfers.safeId(id) || size < 0 || size > Transfers.maxBytes { return nil }
         self.id = id
         self.name = Transfers.sanitizeName(name)
         self.size = size

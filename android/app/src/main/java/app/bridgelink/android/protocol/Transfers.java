@@ -41,6 +41,16 @@ public final class Transfers {
         return null;
     }
 
+    /** A transfer id is 1 to 64 hex characters. Anything else could be a path. */
+    public static boolean safeId(String id) {
+        if (id == null || id.isEmpty() || id.length() > 64) return false;
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if ((c < '0' || c > '9') && (c < 'a' || c > 'f')) return false;
+        }
+        return true;
+    }
+
     public static String sha256Hex(byte[] data) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
@@ -66,7 +76,7 @@ public final class Transfers {
         }
 
         public static Incoming begin(String id, String name, long size) {
-            if (id == null || id.isEmpty()) return null;
+            if (!safeId(id)) return null;
             if (size < 0 || size > MAX_BYTES) return null;
             try {
                 return new Incoming(id, sanitizeName(name), size, MessageDigest.getInstance("SHA-256"));
