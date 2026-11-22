@@ -13,7 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /** Activity lines that stay after the app restarts. Reads and writes stay off the main thread. */
-@Database(entities = {HistoryEntry.class}, version = 1, exportSchema = false)
+@Database(entities = {HistoryEntry.class}, version = 1, exportSchema = true)
 public abstract class HistoryDatabase extends RoomDatabase {
     public abstract HistoryDao history();
 
@@ -29,7 +29,6 @@ public abstract class HistoryDatabase extends RoomDatabase {
             synchronized (HistoryDatabase.class) {
                 if (instance == null) {
                     instance = Room.databaseBuilder(context.getApplicationContext(), HistoryDatabase.class, "history.db")
-                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }

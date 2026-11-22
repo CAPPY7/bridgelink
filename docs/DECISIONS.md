@@ -223,3 +223,5 @@ Open an app sends the name to the Mac. The Mac opens it only from the Applicatio
 The screen-share and camera question can cover the screen only when Android says full-screen alerts are allowed. Otherwise it stays a normal notification you can tap. The unused stop flag was removed because nothing read it.
 
 Reset asks "Are you sure?" before it clears the Mac. It also deletes every away secret for this app. A desktop Mac hides the battery line instead of saying "No battery". The first-run window says the keychain prompt is normal for a free sideload and points at scripts/make-mac-cert.sh. That script is not run from here.
+
+History stays on schema version 1. The upgrade path no longer deletes the table. The emulator test taps the Pair button on screen instead of a hidden method.

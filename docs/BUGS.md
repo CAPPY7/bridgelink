@@ -133,3 +133,5 @@ R3. A stop flag on the phone was written and never read. Fixed: it is gone. Stop
 N13. Reset BridgeLink did not ask, and it left away secrets in the keychain. Fixed: it asks "Are you sure?" and then deletes those secrets. NOT TESTED on a device.
 L14. A desktop Mac showed "Mac: No battery". Fixed: that line is hidden when the Mac has no battery. NOT TESTED on a device.
 M27. Every Mac update can ask for the keychain again while the app is ad-hoc signed. Fixed: the first-run window says that, and it points at the free certificate script. The prompt itself still comes from macOS. NOT TESTED on a device.
+X4. History could wipe itself on an upgrade. Fixed: that wipe is gone, the schema is saved, and a test checks that a saved line stays. NOT TESTED on a device.
+V3. The emulator test pressed Pair by calling a hidden method. Fixed: it taps the real Pair button. The hidden method is gone. NOT TESTED on a device.
