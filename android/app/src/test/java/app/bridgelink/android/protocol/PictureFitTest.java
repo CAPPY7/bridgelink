@@ -17,6 +17,16 @@ public class PictureFitTest {
     }
 
     @Test
+    public void landscapeKeepsItsShape() {
+        StageSix.Picture box = StageSix.quality("medium");
+        StageSix.Picture shaped = StageSix.fit(box, 2400, 1080);
+        assertEquals(1280, shaped.width);
+        assertEquals(576, shaped.height);
+        assertEquals(0, shaped.width % 2);
+        assertEquals(0, shaped.height % 2);
+    }
+
+    @Test
     public void landscapeBoxStaysTheSame() {
         StageSix.Picture box = StageSix.quality("medium");
         StageSix.Picture shaped = StageSix.fit(box, 1280, 720);

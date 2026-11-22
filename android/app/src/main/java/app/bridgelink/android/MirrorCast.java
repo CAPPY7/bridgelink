@@ -2,6 +2,7 @@ package app.bridgelink.android;
 
 import android.content.Context;
 import android.graphics.Rect;
+import android.hardware.display.DisplayManager;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
@@ -27,54 +28,137 @@ public final class MirrorCast {
     private MediaProjection projection;
     private android.hardware.display.VirtualDisplay display;
     private Thread drain;
+    private Context app;
+    private String qualityName = "medium";
+    private DisplayManager.DisplayListener listener;
+    private int seenW;
+    private int seenH;
+    private final Handler main = new Handler(Looper.getMainLooper());
     private volatile boolean running;
     private volatile boolean stopping;
 
     public void start(Context context, MediaProjection mediaProjection, String quality) {
         stop();
         stopping = false;
-        StageSix.Picture picture = StageSix.quality(quality);
+        app = context.getApplicationContext();
+        qualityName = quality;
         projection = mediaProjection;
         projection.registerCallback(new MediaProjection.Callback() {
             @Override
             public void onStop() {
                 stop();
             }
-        }, new Handler(Looper.getMainLooper()));
+        }, main);
+        listen();
         try {
-            int[] screen = screen(context);
-            StageSix.Picture shaped = StageSix.fit(picture, screen[0], screen[1]);
-            MediaFormat format = MediaFormat.createVideoFormat("video/avc", shaped.width, shaped.height);
-            format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, shaped.bitrate);
-            format.setInteger(MediaFormat.KEY_FRAME_RATE, shaped.fps);
-            format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-            if (Build.VERSION.SDK_INT >= 29) {
-                format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
-            }
-            codec = MediaCodec.createEncoderByType("video/avc");
-            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-            surface = codec.createInputSurface();
-            codec.start();
-            DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-            display = projection.createVirtualDisplay(
-                    "BridgeLink",
-                    shaped.width,
-                    shaped.height,
-                    metrics.densityDpi,
-                    android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    surface,
-                    null,
-                    null
-            );
-            running = true;
-            LinkService.onNeedKey(this::requestKey);
-            drain = new Thread(this::drain, "bridgelink-mirror");
-            drain.start();
+            beginPicture();
         } catch (Exception error) {
             LinkService.postStatus("This phone could not start the screen encoder.");
             stop();
         }
+    }
+
+    private void beginPicture() throws Exception {
+        int[] screen = screen(app);
+        seenW = screen[0];
+        seenH = screen[1];
+        StageSix.Picture shaped = StageSix.fit(StageSix.quality(qualityName), screen[0], screen[1]);
+        MediaFormat format = MediaFormat.createVideoFormat("video/avc", shaped.width, shaped.height);
+        format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, shaped.bitrate);
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, shaped.fps);
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+        if (Build.VERSION.SDK_INT >= 29) {
+            format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
+        }
+        codec = MediaCodec.createEncoderByType("video/avc");
+        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        surface = codec.createInputSurface();
+        codec.start();
+        DisplayMetrics metrics = app.getResources().getDisplayMetrics();
+        display = projection.createVirtualDisplay(
+                "BridgeLink",
+                shaped.width,
+                shaped.height,
+                metrics.densityDpi,
+                android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                surface,
+                null,
+                null
+        );
+        running = true;
+        LinkService.onNeedKey(this::requestKey);
+        drain = new Thread(this::drain, "bridgelink-mirror");
+        drain.start();
+    }
+
+    private void listen() {
+        if (app == null) return;
+        DisplayManager manager = (DisplayManager) app.getSystemService(Context.DISPLAY_SERVICE);
+        if (manager == null) return;
+        listener = new DisplayManager.DisplayListener() {
+            @Override
+            public void onDisplayAdded(int displayId) {
+            }
+
+            @Override
+            public void onDisplayRemoved(int displayId) {
+            }
+
+            @Override
+            public void onDisplayChanged(int displayId) {
+                if (displayId != Display.DEFAULT_DISPLAY || !running) return;
+                main.post(MirrorCast.this::rebuild);
+            }
+        };
+        manager.registerDisplayListener(listener, main);
+    }
+
+    private void unlisten() {
+        if (app == null || listener == null) return;
+        DisplayManager manager = (DisplayManager) app.getSystemService(Context.DISPLAY_SERVICE);
+        if (manager != null) manager.unregisterDisplayListener(listener);
+        listener = null;
+    }
+
+    private void rebuild() {
+        if (stopping || !running || projection == null || app == null) return;
+        int[] next = screen(app);
+        if (next[0] == seenW && next[1] == seenH) return;
+        if (next[0] < 2 || next[1] < 2) return;
+        running = false;
+        releasePicture();
+        if (stopping || projection == null) return;
+        try {
+            beginPicture();
+            requestKey();
+        } catch (Exception error) {
+            LinkService.postStatus("This phone could not start the screen encoder.");
+            stop();
+        }
+    }
+
+    private void releasePicture() {
+        Thread thread = drain;
+        drain = null;
+        if (thread != null) thread.interrupt();
+        MediaCodec dying = codec;
+        android.hardware.display.VirtualDisplay dyingDisplay = display;
+        Surface dyingSurface = surface;
+        codec = null;
+        display = null;
+        surface = null;
+        MirrorStop.stopEncoder(thread, MirrorStop.JOIN_MS, () -> {
+            if (dyingDisplay != null) dyingDisplay.release();
+            if (dyingSurface != null) dyingSurface.release();
+            if (dying != null) {
+                try {
+                    dying.stop();
+                } catch (Exception ignored) {
+                }
+                dying.release();
+            }
+        });
     }
 
     @SuppressWarnings("deprecation")
@@ -100,31 +184,18 @@ public final class MirrorCast {
         if (stopping) return;
         stopping = true;
         running = false;
+        unlisten();
         LinkService.onNeedKey(null);
-        Thread thread = drain;
-        drain = null;
-        if (thread != null) thread.interrupt();
-        MediaCodec dying = codec;
-        android.hardware.display.VirtualDisplay dyingDisplay = display;
-        Surface dyingSurface = surface;
+        releasePicture();
         MediaProjection dyingProjection = projection;
-        codec = null;
-        display = null;
-        surface = null;
         projection = null;
-        MirrorStop.stopEncoder(thread, MirrorStop.JOIN_MS, () -> {
-            if (dyingDisplay != null) dyingDisplay.release();
-            if (dyingSurface != null) dyingSurface.release();
-            if (dying != null) {
-                try {
-                    dying.stop();
-                } catch (Exception ignored) {
-                }
-                dying.release();
+        app = null;
+        if (dyingProjection != null) {
+            try {
+                dyingProjection.stop();
+            } catch (Exception ignored) {
             }
-            if (dyingProjection != null) dyingProjection.stop();
-        });
-        drain = null;
+        }
     }
 
     public void requestKey() {
