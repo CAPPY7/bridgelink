@@ -22,10 +22,11 @@ if missing:
 allowed = (
     "not started",
     "building",
-    "built – self-tested",
-    "built - self-tested",
+    "built – not tested on a device",
+    "built - not tested on a device",
     "final – owner tested",
     "final - owner tested",
+    "removed",
 )
 
 sources = []
@@ -43,7 +44,7 @@ for row in rows:
         continue
     status = row[2].strip().lower()
     if status not in allowed:
-        errors.append(f"feature {row[0]} status must be Not started, Building, Built – self-tested, or Final – owner tested")
+        errors.append(f"feature {row[0]} status must be Not started, Building, Built – NOT TESTED on a device, Final – owner tested, or Removed")
     named = []
     for cell in row[3:6]:
         if cell.lower() in {"", "—", "-", "none", "n/a"}:
