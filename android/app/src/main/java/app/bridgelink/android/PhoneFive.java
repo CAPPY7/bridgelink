@@ -529,8 +529,11 @@ public final class PhoneFive {
 
     private Map<String, StageFive.Entry> remembered() {
         Map<String, StageFive.Entry> prior = new HashMap<>();
-        for (StageFive.Entry old : StageFive.decodeIndex(readText(seenFile()))) {
-            if (!old.deleted) prior.put(old.path, old);
+        try {
+            for (StageFive.Entry old : StageFive.decodeIndex(readText(seenFile()))) {
+                if (!old.deleted) prior.put(old.path, old);
+            }
+        } catch (Exception ignored) {
         }
         return prior;
     }
