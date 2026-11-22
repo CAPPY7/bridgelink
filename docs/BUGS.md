@@ -86,6 +86,8 @@ X10. A release rebuilt and published without waiting for the checks. Fixed: the 
 X11. A hand-started release could build the wrong commit, and the release page was not tied to that commit. Fixed: it checks out the typed tag, and the release points at that commit. NOT TESTED on a device.
 X12. GitHub Actions were named by a moving tag. Fixed: each one is pinned to the commit that tag pointed at, and the tag name is written beside it. NOT TESTED on a device.
 X13. Every release job could write to the repository. Fixed: only the publish job can write. The others can only read. NOT TESTED on a device.
+L11. When a paid Apple account exists, the release stapled the app instead of the disk image. Fixed: it staples the disk image. It still skips that step when there is no paid account. NOT TESTED on a device.
+
 
 
 

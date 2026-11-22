@@ -113,7 +113,7 @@ jobs:
           fi
           if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
             xcrun notarytool submit macos/BridgeLink.dmg --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
-            xcrun stapler staple macos/BridgeLink.app || true
+            xcrun stapler staple macos/BridgeLink.dmg
           else
             echo "Skipping notarization. No paid Apple account is configured."
           fi
