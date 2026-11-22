@@ -1563,7 +1563,7 @@ public class LinkService extends Service {
         show.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         builder.addAction(new Notification.Action.Builder(null, "Show in Downloads",
                 PendingIntent.getActivity(this, 41, show, PendingIntent.FLAG_IMMUTABLE)).build());
-        if (uri != null && StageRules.canOfferOpen(name)) {
+        if (uri != null && StageRules.canOfferOpen(name, fileMime(uri))) {
             Intent open = new Intent(Intent.ACTION_VIEW, uri);
             open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
@@ -1574,6 +1574,28 @@ public class LinkService extends Service {
         }
         manager().notify(41, builder.build());
         publish(title, null);
+    }
+
+    /** The file type stored with the download, when MediaStore has one. */
+    private String fileMime(android.net.Uri uri) {
+        try (android.database.Cursor cursor = getContentResolver().query(
+                uri,
+                new String[]{android.provider.MediaStore.MediaColumns.MIME_TYPE},
+                null,
+                null,
+                null)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                String mime = cursor.getString(0);
+                if (mime != null && !mime.isEmpty()) return mime;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            String mime = getContentResolver().getType(uri);
+            return mime == null ? "" : mime;
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     private void askLink(String url) {

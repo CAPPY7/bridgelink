@@ -37,10 +37,21 @@ public final class StageRules {
         return alwaysAllow;
     }
 
-    /** A received file is never opened by itself. An apk has no Open button. */
+    public static final String PACKAGE_MIME = "application/vnd.android.package-archive";
+
+    /** A received file is never opened by itself. Install packages have no Open button. */
     public static boolean canOfferOpen(String name) {
+        return canOfferOpen(name, "");
+    }
+
+    public static boolean canOfferOpen(String name, String mime) {
+        if (mime != null && PACKAGE_MIME.equals(mime.trim())) return false;
         if (name == null) return false;
-        return !name.toLowerCase(Locale.US).endsWith(".apk");
+        String lower = name.toLowerCase(Locale.US);
+        return !lower.endsWith(".apk")
+                && !lower.endsWith(".apks")
+                && !lower.endsWith(".xapk")
+                && !lower.endsWith(".aab");
     }
 
     public static String fileTitle(String name) {

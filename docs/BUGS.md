@@ -69,6 +69,8 @@ N6. Partly fixed before. The phone now keeps one sign-in until the Mac answers, 
 W1. File and link notice buttons used a broadcast, which Android 12 and newer blocks, so Open did nothing. Fixed: Open and Show in Downloads are real activity buttons. NOT TESTED on a device.
 X6. A file from the Mac is not opened by itself. Tapping the notice or Open starts the real view screen for that file. An install file still has no Open button. NOT TESTED on a device.
 L9. A link from the Mac opened itself whenever the screen was on. Fixed: it waits for Open unless Always open links is on. NOT TESTED on a device.
+W6. Open was offered for some Android install files, not only .apk. Fixed: .apks, .xapk, .aab, and the Android package type have no Open button. NOT TESTED on a device.
+
 
 
 
