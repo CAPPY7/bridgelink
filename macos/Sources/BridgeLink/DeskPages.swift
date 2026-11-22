@@ -95,7 +95,7 @@ struct DeskDetail: View {
 
     private var files: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Drop files anywhere on this window, on the menu-bar icon, or in the drop zone. This window sends files, not a whole folder. Files can be up to 4 GB.")
+            Text("Drop files anywhere on this window, on the menu-bar icon, or in the drop zone. A folder is sent as a zip. Files can be up to 4 GB.")
                 .foregroundStyle(.secondary)
             Button("Send files") { model.pickFile() }
             Button("Show drop zone") { model.showDropZone() }

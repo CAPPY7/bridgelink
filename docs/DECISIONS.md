@@ -84,6 +84,9 @@ A drag holds the Mac mouse button until the phone says the finger lifted. A tap,
 
 A hand-started release uses the commit of the typed tag. It waits up to 60 minutes for the checks of that commit. If the tag does not exist, it stops before building.
 
+The Mac sends a folder as a zip. Its window says so. The phone does not send a folder, and its page does not claim that it does.
+
+
 
 
 
