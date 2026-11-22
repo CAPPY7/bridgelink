@@ -23,8 +23,8 @@ public final class TouchGate extends AccessibilityService {
 
     public static String perform(android.content.Context context, StageSix.Tap tap) {
         TouchGate gate = live;
-        if (gate == null || tap == null) return StageSix.CONTROL_STEPS;
-        int[] size = screen(context);
+        if (context == null || gate == null || tap == null) return StageSix.CONTROL_STEPS;
+        int[] size = screen(gate);
         int[] start = StageSix.phonePixel(size[0], size[1], tap.x, tap.y);
         int[] end = StageSix.phonePixel(size[0], size[1], tap.x2, tap.y2);
         boolean ok = switch (tap.kind) {
@@ -44,7 +44,7 @@ public final class TouchGate extends AccessibilityService {
     static int[] screen(Context context) {
         WindowManager window = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         if (window != null && Build.VERSION.SDK_INT >= 30) {
-            Rect bounds = window.getCurrentWindowMetrics().getBounds();
+            Rect bounds = window.getMaximumWindowMetrics().getBounds();
             return new int[] {bounds.width(), bounds.height()};
         }
         if (window != null) {
