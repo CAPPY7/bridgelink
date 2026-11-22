@@ -30,7 +30,8 @@ public final class FolderPlace {
         if (Build.VERSION.SDK_INT < 29) {
             File docs = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "BridgeLink Shared");
             if (docs.isDirectory() || docs.mkdirs()) return docs;
-        } else {
+        }
+        if (Build.VERSION.SDK_INT >= 29 && !Prefs.open(context).getBoolean("folderMarked", false)) {
             markDocuments(context);
         }
         File base = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
@@ -59,6 +60,7 @@ public final class FolderPlace {
             values.put(MediaStore.MediaColumns.MIME_TYPE, DocumentsContract.Document.MIME_TYPE_DIR);
             values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS);
             resolver.insert(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values);
+            Prefs.open(context).edit().putBoolean("folderMarked", true).apply();
         } catch (Exception ignored) {
         }
     }
