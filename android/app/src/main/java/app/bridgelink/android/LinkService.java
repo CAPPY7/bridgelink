@@ -151,20 +151,39 @@ public class LinkService extends Service {
     private MacBrowser browser;
     private volatile boolean onRelay;
     private volatile boolean relayAuthed;
-
-    private void sendRelayAuth() {
-        main.removeCallbacks(this::sendRelayAuth);
-        if (!onRelay || six == null || !six.relayLive()) return;
-        if (!app.bridgelink.android.protocol.RelayAuth.keepSending(relayAuthed, "")) return;
-        try {
-            JsonObject auth = new JsonObject();
-            String token = Prefs.open(this).getString("token", "");
-            auth.addProperty("token", token == null ? "" : token);
-            writeEnvelope(Envelope.make(app.bridgelink.android.protocol.RelayAuth.AUTH, "android", auth));
-        } catch (Exception ignored) {
+    private final Runnable rejoinTick = new Runnable() {
+        @Override
+        public void run() {
+            rejoinRelay();
         }
-        main.postDelayed(this::sendRelayAuth, 2_000);
-    }
+    };
+    private final app.bridgelink.android.protocol.AwayAuth awayAuth =
+            new app.bridgelink.android.protocol.AwayAuth(new app.bridgelink.android.protocol.AwayAuth.Sink() {
+                @Override
+                public void writeAuth() {
+                    outbox.submit(() -> {
+                        if (!onRelay || six == null || !six.relayLive()) return;
+                        if (!app.bridgelink.android.protocol.RelayAuth.keepSending(relayAuthed, "")) return;
+                        try {
+                            JsonObject auth = new JsonObject();
+                            String token = Prefs.open(LinkService.this).getString("token", "");
+                            auth.addProperty("token", token == null ? "" : token);
+                            writeEnvelope(Envelope.make(app.bridgelink.android.protocol.RelayAuth.AUTH, "android", auth));
+                        } catch (Exception ignored) {
+                        }
+                    });
+                }
+
+                @Override
+                public void post(Runnable task, long delayMs) {
+                    main.postDelayed(task, delayMs);
+                }
+
+                @Override
+                public void remove(Runnable task) {
+                    main.removeCallbacks(task);
+                }
+            });
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -231,11 +250,11 @@ public class LinkService extends Service {
             public void relayUp() {
                 relayAttempt = 0;
                 relayAuthed = false;
-                main.removeCallbacks(LinkService.this::rejoinRelay);
+                main.removeCallbacks(rejoinTick);
                 onRelay = true;
                 paired = false;
                 publish("Connecting through the away relay…", null);
-                sendRelayAuth();
+                awayAuth.start();
             }
 
             @Override
@@ -243,7 +262,7 @@ public class LinkService extends Service {
                 boolean wasRelay = onRelay;
                 if (app.bridgelink.android.protocol.RelayRetry.rejoin(reason)) {
                     relayAuthed = false;
-                    main.removeCallbacks(LinkService.this::sendRelayAuth);
+                    awayAuth.stop();
                     if (wasRelay) {
                         paired = false;
                         onRelay = false;
@@ -251,8 +270,8 @@ public class LinkService extends Service {
                     publish(app.bridgelink.android.protocol.RelayRetry.DOWN, null);
                     if (wasRelay) {
                         long delay = app.bridgelink.android.protocol.RelayRetry.delayMs(relayAttempt++);
-                        main.removeCallbacks(LinkService.this::rejoinRelay);
-                        main.postDelayed(LinkService.this::rejoinRelay, delay);
+                        main.removeCallbacks(rejoinTick);
+                        main.postDelayed(rejoinTick, delay);
                     }
                     return;
                 }
@@ -415,6 +434,7 @@ public class LinkService extends Service {
             batteryWatch = null;
         }
         main.removeCallbacksAndMessages(null);
+        awayAuth.stop();
         linkState.stop();
         generation.incrementAndGet();
         if (running == this) running = null;
@@ -623,8 +643,8 @@ public class LinkService extends Service {
                     onRelay = false;
                     relayAuthed = false;
                     relayAttempt = 0;
-                    main.removeCallbacks(LinkService.this::sendRelayAuth);
-                    main.removeCallbacks(LinkService.this::rejoinRelay);
+                    main.removeCallbacks(rejoinTick);
+                    awayAuth.stop();
                     if (six != null) six.stopRelay();
                     linkState.paired();
                     String issued = message.text("token");
@@ -687,7 +707,7 @@ public class LinkService extends Service {
                 case "ping" -> {
                     if (onRelay) {
                         relayAuthed = false;
-                        sendRelayAuth();
+                        awayAuth.macJoined();
                     }
                     try {
                         writeEnvelope(Envelope.make("pong", "android", new JsonObject()));
@@ -696,7 +716,7 @@ public class LinkService extends Service {
                 }
                 case "relay_ok" -> {
                     relayAuthed = true;
-                    main.removeCallbacks(this::sendRelayAuth);
+                    awayAuth.ok();
                     if (onRelay) {
                         paired = true;
                         publish("Away (relay). The relay cannot read the link.", null);
@@ -723,7 +743,7 @@ public class LinkService extends Service {
                     String code = message.code();
                     if (onRelay && app.bridgelink.android.protocol.RelayAuth.forgotten(code)) {
                         relayAuthed = false;
-                        main.removeCallbacks(this::sendRelayAuth);
+                        awayAuth.forgot();
                         onRelay = false;
                         paired = false;
                         if (six != null) six.stopRelay();
