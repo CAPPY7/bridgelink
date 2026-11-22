@@ -54,6 +54,8 @@ A file send shows "Sending — N%" at most once a second. The finished line, 100
 
 Seek uses milliseconds into the song. Volume is still 0 to 100. A seek time is not treated as a volume.
 
+Each phone notification keeps its own Mac banner, named by the phone's key. Dismissing it on the phone removes that banner. Reply is on the banner when the phone says a reply is possible. The in-app reply box still answers the newest one.
+
 
 
 

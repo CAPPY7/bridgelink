@@ -131,18 +131,51 @@ extension LinkModel {
     }
 
     func notify(_ title: String, _ body: String) {
+        postNote(key: "", title: title, body: body, reply: false)
+    }
+
+    func postNote(key: String, title: String, body: String, reply: Bool) {
+        ensureNoteCategories()
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        let stable = Features.notifyId(key)
+        if reply && !stable.isEmpty {
+            content.categoryIdentifier = "bridgelink.reply"
+            content.userInfo = ["key": key]
+        }
+        let request = UNNotificationRequest(
+            identifier: stable.isEmpty ? UUID().uuidString : stable,
+            content: content,
+            trigger: nil
+        )
         UNUserNotificationCenter.current().add(request)
     }
 
-    func notifySaved(_ name: String, _ url: URL, opened: Bool) {
+    func removeNote(key: String) {
+        let stable = Features.notifyId(key)
+        guard !stable.isEmpty else { return }
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [stable])
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [stable])
+    }
+
+    private func ensureNoteCategories() {
         let open = UNNotificationAction(identifier: "open", title: "Open", options: [])
         let finder = UNNotificationAction(identifier: "finder", title: "Show in Finder", options: [])
-        let category = UNNotificationCategory(identifier: "bridgelink.file", actions: [open, finder], intentIdentifiers: [], options: [])
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        let file = UNNotificationCategory(identifier: "bridgelink.file", actions: [open, finder], intentIdentifiers: [], options: [])
+        let reply = UNTextInputNotificationAction(
+            identifier: "reply",
+            title: "Reply",
+            options: [],
+            textInputButtonTitle: "Send",
+            textInputPlaceholder: "Reply"
+        )
+        let note = UNNotificationCategory(identifier: "bridgelink.reply", actions: [reply], intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([file, note])
+    }
+
+    func notifySaved(_ name: String, _ url: URL, opened: Bool) {
+        ensureNoteCategories()
         let content = UNMutableNotificationContent()
         content.title = "\(name) saved"
         content.body = opened ? "Opened because Open scans automatically is on." : "Open or show it in Finder."

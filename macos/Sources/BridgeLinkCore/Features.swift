@@ -214,6 +214,13 @@ public enum Features {
         !ongoing && !silent && appAllowed && !duplicate
     }
 
+    /// One Mac banner per phone notification. An empty key does not share a banner.
+    public static func notifyId(_ key: String) -> String {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed.count > 180 { return "" }
+        return "notify-" + trimmed
+    }
+
     public static func roomId(_ pairingSecret: String) -> String {
         if pairingSecret.count < 16 { return "" }
         return String(sha256Hex(pairingSecret).prefix(32))

@@ -183,10 +183,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         for url in urls { model.sendFile(url) }
     }
 
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let path = response.notification.request.content.userInfo["path"] as? String ?? ""
         let url = URL(fileURLWithPath: path)
-        if response.actionIdentifier == "open" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+        if response.actionIdentifier == "reply",
+           let typed = response as? UNTextInputNotificationResponse {
+            let key = response.notification.request.content.userInfo["key"] as? String ?? ""
+            model.replyFromBanner(key, typed.userText)
+        } else if response.actionIdentifier == "open" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             if !path.isEmpty { NSWorkspace.shared.open(url) }
         } else if response.actionIdentifier == "finder", !path.isEmpty {
             NSWorkspace.shared.activateFileViewerSelecting([url])

@@ -57,6 +57,13 @@ extension LinkModel {
         UserDefaults.standard.set(on, forKey: "dndSync")
     }
 
+    func replyFromBanner(_ key: String, _ text: String) {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, !body.isEmpty else { return }
+        send(type: "notify_reply", payload: ["key": key, "body": body], on: live)
+        note("Sent a reply")
+    }
+
     func replyToNotification() {
         let text = replyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !lastNotifyKey.isEmpty, !text.isEmpty else {

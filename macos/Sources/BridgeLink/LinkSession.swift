@@ -164,6 +164,8 @@ extension LinkModel {
             board.setData(data, forType: .png)
             note("Clipboard image updated")
         case "notify_dismiss":
+            removeNote(key: envelope.text("key"))
+            if lastNotifyKey == envelope.text("key") { lastNotifyKey = "" }
             note("The phone dismissed a notification")
         case "dnd":
             if envelope.text("label") == "mac" { break }
@@ -225,7 +227,7 @@ extension LinkModel {
                 unlocked: macUnlocked(),
                 showText: showNotificationText
             )
-            notify(shown.title, shown.body)
+            postNote(key: envelope.text("key"), title: shown.title, body: shown.body, reply: canReply)
             rememberInbox(kind: "notify", title: shown.title, detail: shown.body)
             note("Notification from the phone")
             fireAuto("notify", app)
