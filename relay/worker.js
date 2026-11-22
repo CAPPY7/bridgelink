@@ -30,8 +30,20 @@ export function writeMeta(ws, meta) {
 }
 
 /** A wake-up must still know the role. The room key lives in storage, not memory. */
+/** A wake-up must still know the role. The room key lives in storage, not memory. */
 export function keptRole(meta) {
   return meta && meta.role ? meta.role : "";
+}
+
+export function noteRate(counts, role, second, max) {
+  for (const key of [...counts.keys()]) {
+    const sec = Number(String(key).split(":")[1]);
+    if (!Number.isFinite(sec) || sec < second - 2) counts.delete(key);
+  }
+  const bucket = `${role}:${second}`;
+  const used = (counts.get(bucket) || 0) + 1;
+  counts.set(bucket, used);
+  return used <= max;
 }
 
 export class Room {
@@ -104,9 +116,7 @@ export class Room {
     const size = message.byteLength || message.size || 0;
     if (!size || size > MAX_MESSAGE) return;
     const second = now;
-    const used = (this.counts.get(second) || 0) + 1;
-    this.counts.set(second, used);
-    if (used > MAX_PER_SECOND) {
+    if (!noteRate(this.counts, role, second, MAX_PER_SECOND)) {
       ws.close(1008, "rate");
       return;
     }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Room, keptRole, readMeta, sha256hex, writeMeta } from "./worker.js";
+import { Room, keptRole, noteRate, readMeta, sha256hex, writeMeta } from "./worker.js";
 
 function memoryState(sockets) {
   const saved = new Map();
@@ -73,4 +73,17 @@ test("silence closes the room, a recent frame does not, and a new join works", a
   await next.webSocketMessage(again, await hello("phone", stamp, key));
   assert.equal(keptRole(readMeta(again)), "phone");
   assert.equal(await next.state.storage.get("roomKey"), key);
+});
+
+test("each direction has its own rate limit and old counts are dropped", () => {
+  const counts = new Map();
+  counts.set("phone:1", 200);
+  counts.set("mac:1", 200);
+  assert.equal(noteRate(counts, "phone", 10, 200), true);
+  assert.equal(noteRate(counts, "mac", 10, 200), true);
+  for (let i = 0; i < 200; i++) noteRate(counts, "phone", 10, 200);
+  assert.equal(noteRate(counts, "phone", 10, 200), false);
+  assert.equal(noteRate(counts, "mac", 10, 200), true);
+  assert.equal(counts.has("phone:1"), false);
+  assert.equal(counts.has("mac:1"), false);
 });

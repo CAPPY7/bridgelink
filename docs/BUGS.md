@@ -55,3 +55,4 @@ N5. Each Wi-Fi retry tore down a working away relay and started it again. Fixed:
 N6. The phone sent the away sign-in once, so a late Mac never accepted it. Fixed: the phone keeps sending until the Mac answers relay_ok, and sends again when the Mac joins. Forgotten stops the away link. Old message types still work. NOT TESTED on a device.
 N7. A late Mac reply on the away relay was thrown away. Fixed: while Wi-Fi is down, replies still go out on the away relay. NOT TESTED on a device.
 N12. The apps said paired as soon as the away relay connected, before the Mac checked the phone. Fixed: paired shows only after the Mac accepts the sign-in, and a drop clears it. NOT TESTED on a device.
+N17. The away relay counted both directions together and never forgot old counts. Fixed: each direction has its own count, and counts older than a few seconds are dropped. NOT TESTED on a device. A local relay test covers it. The worker is not deployed.

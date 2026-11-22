@@ -26,6 +26,8 @@ A late reply uses the away relay when Wi-Fi is down, or when that reply belongs 
 
 Away from home says paired only after the Mac checks the phone. Until then the phone says it is still connecting. A drop clears that.
 
+The free relay counts phone-to-Mac and Mac-to-phone separately, 200 messages a second each. Counts older than a few seconds are dropped so the map does not grow.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".
