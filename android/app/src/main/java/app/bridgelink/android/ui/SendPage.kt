@@ -130,6 +130,8 @@ fun FilesPage(model: PhoneModel, actions: PhoneActions) {
             if (model.folderPaused) "Paused. New files wait until you resume." else "One folder on this phone stays in sync with BridgeLink Shared on the Mac. A changed file is kept, and the other copy is saved beside it.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Text(model.folderLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        BigButton("Choose shared folder", "folder-choose", actions::chooseFolder, tonal = true)
         BigButton("Turn shared folder on", "folder-on", actions::syncFolder)
         BigButton(if (model.folderPaused) "Resume sync" else "Pause sync", "folder-pause", actions::pauseFolder, tonal = true)
         Text(

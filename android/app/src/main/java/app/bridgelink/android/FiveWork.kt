@@ -22,6 +22,7 @@ class FiveWork(private val activity: MainActivity) {
         model.smsOn = Features.enabled(flags, "sms", false)
         model.folderOn = Features.enabled(flags, "folder", false)
         model.folderPaused = prefs.getBoolean("folderPaused", false)
+        model.folderLabel = FolderPlace.label(activity)
         model.trackpadOn = Features.enabled(flags, "input", false)
         model.simCount = PhoneFive.simCount(activity)
         model.messages = readSms()
@@ -102,7 +103,14 @@ class FiveWork(private val activity: MainActivity) {
         model.folderOn = true
         model.folderPaused = false
         send("folder_sync", "")
-        model.status = "Shared folder is on. It lives in Android/data/app.bridgelink.android/files/Shared."
+        model.folderLabel = FolderPlace.label(activity)
+        model.status = "Shared folder is on. " + model.folderLabel
+    }
+
+    fun chooseFolder() {
+        model.folderLabel = FolderPlace.label(activity)
+        model.status = "Shared folder is " + model.folderLabel
+        send("folder_root", "")
     }
 
     fun pauseFolder() {

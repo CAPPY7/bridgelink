@@ -38,6 +38,21 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         if (!uris.isNullOrEmpty()) work.sendMany(uris)
     }
 
+    private val folderPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        try {
+            contentResolver.takePersistableUriPermission(uri, flags)
+        } catch (_: SecurityException) {
+            model.status = "That folder was not kept."
+            return@registerForActivityResult
+        }
+        Prefs.open(this).edit().putString("folderTree", uri.toString()).apply()
+        model.folderLabel = FolderPlace.label(this)
+        model.status = "Shared folder is " + model.folderLabel
+        five.chooseFolder()
+    }
+
     private val scanPhoto = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) easy.sendScan(uri)
     }
@@ -188,6 +203,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun sendSms() = five.sendSms()
     override fun smsSteps() = five.smsSteps()
     override fun syncFolder() = five.syncFolder()
+    override fun chooseFolder() = folderPicker.launch(null)
     override fun pauseFolder() = five.pauseFolder()
     override fun addRule() = five.addRule()
     override fun toggleRule(id: String) = five.toggleRule(id)

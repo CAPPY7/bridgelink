@@ -19,7 +19,7 @@ Each permission stays off until a feature needs it. BridgeLink does not change a
 | Screen share | The Mac mirror window | Every time you start a mirror. Android asks each time |
 | Full screen intent | Show the screen-share or camera question over the lock screen | Android 14 and newer can turn this off. The notification still waits if it is off |
 | Camera and microphone | The camera inside BridgeLink, and a scan | When you open the camera or scan |
-| Files you pick | Send a file or use the shared folder | When you pick them. The shared folder uses the app's own folder |
+| Files you pick | Send a file, or choose the shared folder | When you pick them. The choice is remembered. There is no broad storage permission |
 
 The document scanner uses Play services. If that is missing, pick a photo instead. The in-app QR scanner also uses Play services. Paste the link if it is missing.
 

@@ -8,6 +8,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.FileObserver;
@@ -46,12 +47,14 @@ public final class PhoneFive {
 
     private final Context context;
     private final Out out;
-    private final FolderFiles folder;
+    private FolderFiles folder;
+    private FolderTree tree;
     private boolean paused;
     private boolean linked;
     private boolean batteryFired;
     private List<StageFive.Rule> rules = new ArrayList<>();
     private FileObserver folderWatch;
+    private ContentObserver treeWatch;
     private long watchDue;
     private final Handler watchHandler = new Handler(Looper.getMainLooper());
     private final Runnable watchTick = () -> {
@@ -63,9 +66,9 @@ public final class PhoneFive {
     public PhoneFive(Context context, Out out) {
         this.context = context.getApplicationContext();
         this.out = out;
-        File base = context.getExternalFilesDir(null);
-        if (base == null) base = context.getFilesDir();
-        folder = new FolderFiles(new File(base, "Shared"));
+        folder = new FolderFiles(FolderPlace.defaultDir(this.context));
+        android.net.Uri granted = FolderPlace.grantedTree(this.context);
+        tree = granted == null ? null : new FolderTree(this.context, granted);
         paused = Prefs.open(this.context).getBoolean("folderPaused", false);
         rules = StageFive.decodeRules(Prefs.open(this.context).getString("autoRules", ""));
     }
@@ -134,6 +137,7 @@ public final class PhoneFive {
                     pushIndex();
                 }
                 case "folder_pause" -> setPaused("1".equals(body), false);
+                case "folder_root" -> reloadFolder();
                 case "auto" -> edit(body);
                 case "input_on" -> {
                     setFlag("input", !"0".equals(body));
@@ -320,7 +324,7 @@ public final class PhoneFive {
     private void onIndex(String body) {
         if (paused || !flag("folder")) return;
         Map<String, StageFive.Entry> local = new HashMap<>();
-        for (StageFive.Entry item : folder.scan(remembered())) local.put(item.path, item);
+        for (StageFive.Entry item : scanFolder()) local.put(item.path, item);
         for (StageFive.Entry remote : StageFive.decodeIndex(body)) {
             StageFive.Entry mine = local.get(remote.path);
             StageFive.Choice choice = StageFive.decide(
@@ -331,7 +335,7 @@ public final class PhoneFive {
                     remote.sha
             );
             if (remote.deleted) {
-                if (choice == StageFive.Choice.DELETE && folder.remove(remote.path, remote.sha)) {
+                if (choice == StageFive.Choice.DELETE && removeFolder(remote.path, remote.sha)) {
                     out.status("Removed a shared file");
                 }
                 continue;
@@ -350,7 +354,7 @@ public final class PhoneFive {
 
     private void onPart(Envelope message) {
         if (paused || !flag("folder")) return;
-        String status = folder.part(
+        String status = putFolder(
                 message.text("path"),
                 parseLong(message.text("offset")),
                 parseLong(message.text("size")),
@@ -367,7 +371,7 @@ public final class PhoneFive {
 
     private void onDelete(String path, String sha) {
         if (paused || !flag("folder")) return;
-        if (folder.remove(path, sha)) out.status("Removed a shared file");
+        if (removeFolder(path, sha)) out.status("Removed a shared file");
     }
 
     public void pushIndex() {
@@ -377,7 +381,7 @@ public final class PhoneFive {
             return;
         }
         try {
-            List<StageFive.Entry> now = folder.scan(remembered());
+            List<StageFive.Entry> now = scanFolder();
             String seen = readText(seenFile());
             for (StageFive.Entry gone : StageFive.removed(StageFive.decodeIndex(seen), now)) {
                 JsonObject payload = new JsonObject();
@@ -398,7 +402,7 @@ public final class PhoneFive {
 
     private void sendShared(String path) throws Exception {
         if (paused || !flag("folder")) return;
-        String problem = folder.send(path, (offset, size, mtime, sha, data) -> {
+        String problem = sendFolder(path, (offset, size, mtime, sha, data) -> {
             JsonObject payload = new JsonObject();
             payload.addProperty("path", Features.safeRelative(path));
             payload.addProperty("offset", Long.toString(offset));
@@ -431,9 +435,43 @@ public final class PhoneFive {
         }
     }
 
+    public void reloadFolder() {
+        disarmWatch();
+        folder = new FolderFiles(FolderPlace.defaultDir(context));
+        android.net.Uri granted = FolderPlace.grantedTree(context);
+        tree = granted == null ? null : new FolderTree(context, granted);
+        if (linked) armWatch();
+    }
+
+    private java.util.List<StageFive.Entry> scanFolder() {
+        return tree != null ? tree.scan(remembered()) : folder.scan(remembered());
+    }
+
+    private String putFolder(String path, long offset, long size, long mtime, String sha, String data) {
+        return tree != null ? tree.part(path, offset, size, mtime, sha, data) : folder.part(path, offset, size, mtime, sha, data);
+    }
+
+    private String sendFolder(String path, app.bridgelink.android.protocol.FolderFiles.ChunkOut out) throws Exception {
+        return tree != null ? tree.send(path, out) : folder.send(path, out);
+    }
+
+    private boolean removeFolder(String path, String sha) {
+        return tree != null ? tree.remove(path, sha) : folder.remove(path, sha);
+    }
+
     private void armWatch() {
         stopWatch();
         if (!linked || paused || !flag("folder")) return;
+        if (tree != null) {
+            treeWatch = new ContentObserver(watchHandler) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    bumpWatch(null);
+                }
+            };
+            context.getContentResolver().registerContentObserver(tree.tree(), true, treeWatch);
+            return;
+        }
         File root = folder.root();
         if (root == null || (!root.isDirectory() && !root.mkdirs())) return;
         int mask = FileObserver.CLOSE_WRITE | FileObserver.DELETE | FileObserver.CREATE
@@ -452,6 +490,10 @@ public final class PhoneFive {
         if (folderWatch != null) {
             folderWatch.stopWatching();
             folderWatch = null;
+        }
+        if (treeWatch != null) {
+            context.getContentResolver().unregisterContentObserver(treeWatch);
+            treeWatch = null;
         }
     }
 
@@ -637,7 +679,7 @@ public final class PhoneFive {
     }
 
     private File seenFile() {
-        return new File(folder.root(), ".seen");
+        return new File(context.getFilesDir(), "folder-seen.txt");
     }
 
     private SmsManager manager(int sim) {
