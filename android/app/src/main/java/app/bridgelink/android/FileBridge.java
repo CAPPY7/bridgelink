@@ -74,17 +74,23 @@ public final class FileBridge {
                     created = slot.uri != null;
                 }
                 if (slot.uri == null) return "Could not store the file.";
-                long have = downloadSize(slot.uri);
-                if (from > size) from = 0;
-                if (have > size || have < 0) have = 0;
-                if (have > 0) {
+                String shown = displayName(slot.uri);
+                if (!shown.isEmpty()) slot.display = shown;
+                long counted = 0;
+                if (!created) {
                     try (InputStream prior = context.getContentResolver().openInputStream(slot.uri)) {
-                        if (prior == null) throw new IllegalStateException("empty");
-                        seed(transfer, prior, have);
+                        if (prior != null) counted = seedCount(transfer, prior);
                     }
-                    slot.out = context.getContentResolver().openOutputStream(slot.uri, "wa");
+                }
+                boolean resume = !created && !transfer.failed() && counted > 0
+                        && counted == from && counted == transfer.written() && counted <= size;
+                if (!resume) {
+                    transfer = Transfers.Incoming.begin(id, name, size);
+                    if (transfer == null) return "That file is too big.";
+                    slot.transfer = transfer;
+                    slot.out = context.getContentResolver().openOutputStream(slot.uri, "wt");
                 } else {
-                    slot.out = context.getContentResolver().openOutputStream(slot.uri, "w");
+                    slot.out = context.getContentResolver().openOutputStream(slot.uri, "wa");
                 }
                 if (slot.out == null) {
                     if (created) deleteUri(slot.uri);
@@ -358,12 +364,33 @@ public final class FileBridge {
         return null;
     }
 
-    private long downloadSize(Uri uri) {
-        try (Cursor cursor = context.getContentResolver().query(uri, new String[]{OpenableColumns.SIZE}, null, null, null)) {
-            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0);
+    static String chosenName(String asked, String stored) {
+        if (stored == null || stored.isBlank()) return asked == null ? "" : asked;
+        return stored;
+    }
+
+    @androidx.annotation.RequiresApi(29)
+    private String displayName(Uri uri) {
+        try (Cursor cursor = context.getContentResolver().query(
+                uri, new String[]{MediaStore.Downloads.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst() && cursor.getString(0) != null) {
+                return chosenName("", cursor.getString(0));
+            }
         } catch (Exception ignored) {
         }
-        return 0;
+        return "";
+    }
+
+    private static long seedCount(Transfers.Incoming transfer, InputStream prior) throws Exception {
+        byte[] buf = new byte[Transfers.CHUNK];
+        long total = 0;
+        int count;
+        while ((count = prior.read(buf)) > 0) {
+            transfer.seed(java.util.Arrays.copyOf(buf, count));
+            total += count;
+            if (transfer.failed()) break;
+        }
+        return total;
     }
 
     private void deleteUri(Uri uri) {

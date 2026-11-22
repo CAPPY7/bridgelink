@@ -127,6 +127,7 @@ X3. A failed save could leave a pending Downloads item behind. Fixed: that item 
 M16. The screen mirror was always 1280 by 720, so a tall phone looked squashed, and turning the phone left the old frame. Fixed: the picture keeps the phone's shape, and turning the phone starts the encoder again at the new size. NOT TESTED on a device.
 Q2. Each camera frame was turned into a JPEG, decoded, turned again, and encoded again. Fixed: the pixels turn once before the JPEG, using the sensor angle and the way the phone is held. The front camera is mirrored. NOT TESTED on a device.
 Q3. A failed keystore made the phone copy its old address over a newer one on every start. Fixed: the plain settings are copied once. The old token stays until it can be sealed. NOT TESTED on a device.
+Q4. A download could keep the asked-for name after Android renamed it, and a resume trusted a stale size. Fixed: the saved name is read back, and a resume starts over unless the bytes already on disk match. NOT TESTED on a device.
 M18. The phone camera picture was sideways. Fixed: it is turned by the camera's sensor direction, and the front camera is mirrored. NOT TESTED on a device.
 N16. Locking the Mac could freeze the window for a few seconds. Fixed: the lock command runs off the main thread, then the status line comes back. NOT TESTED on a device.
 H14. Open an app only showed a status line on the phone. Fixed: the phone asks the Mac, and the Mac opens that app from the Applications folder. NOT TESTED on a device.

@@ -239,3 +239,5 @@ Reset asks "Are you sure?" before it clears the Mac. It also deletes every away 
 History stays on schema version 1. The upgrade path no longer deletes the table. The emulator test taps the Pair button on screen instead of a hidden method.
 
 The shared folder is listed once per check. If a file's size and time match the last list, the old hash is kept. Otherwise the file is hashed in pieces, not loaded whole.
+
+A Downloads save uses the name Android stored, which can be "name (1)" when the first name is taken. A resume continues only when the bytes already in that file match what the sender has sent. Otherwise the file starts again, and a fresh file is opened with "wt" so Android 10 truncates it.

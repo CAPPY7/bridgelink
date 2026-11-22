@@ -81,13 +81,13 @@ public final class Transfers {
 
         /** Hash bytes already on disk so a later chunk can continue this file. */
         public void seed(byte[] prefix) {
-            if (failed || prefix == null) return;
-            if (prefix.length > size) {
+            if (failed || prefix == null || prefix.length == 0) return;
+            if (written > size || prefix.length > size - written) {
                 failed = true;
                 return;
             }
             digest.update(prefix);
-            written = prefix.length;
+            written += prefix.length;
         }
 
         public boolean failed() {
