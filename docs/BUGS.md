@@ -117,3 +117,4 @@ NB6. Picture lanes forgot the key-frame flag after the first piece, and the scre
 NB10. A shared-folder delete or scan could run while a file piece was still writing. Fixed: scan, send, write, and delete all use the same folder queue, and they stop when the folder is off or paused. NOT TESTED on a device.
 NB11. The phone still read the Wi-Fi name and sent it after that automation was removed. Fixed: it no longer reads or sends the name. The Mac still ignores an old wifi message. NOT TESTED on a device.
 NB13. The Mac signing script could crash on an empty keychain list, and a failed sign could leave the certificate file and the temporary keychain. Fixed: an empty list is skipped, and leaving the script deletes both. NOT TESTED on a device.
+NB12. A stale update file with size 0 was stored in the repo. Fixed: that file is gone. The release still writes a fresh one. Nothing in the apps reads the repo copy. NOT TESTED on a device.

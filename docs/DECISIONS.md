@@ -201,3 +201,5 @@ Shared-folder scan, send, write, and delete on the Mac all use one queue. A paus
 The phone does not read or send the Wi-Fi name. Home Wi-Fi automations cannot see that name on current Android. The Mac still accepts an old wifi message and does nothing, so an old phone does not break.
 
 Mac signing never prints the certificate password. If the saved keychain list is empty, the script does not expand that list. When signing finishes or fails, it deletes the certificate file and the temporary keychain.
+
+The update file in the repo root was a leftover with size 0. Check for update reads the copy on the GitHub release, and the release script writes a new one. The leftover file is deleted. The bug list does not keep blank lines at the end.
