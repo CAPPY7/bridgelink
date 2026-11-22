@@ -1047,6 +1047,8 @@ public class LinkService extends Service {
         }, "bridgelink-file").start();
     }
 
+    private long lastProgressAt;
+
     private FileBridge.Out fileOut() {
         return new FileBridge.Out() {
             @Override
@@ -1061,6 +1063,9 @@ public class LinkService extends Service {
 
             @Override
             public void progress(String name, int percent) {
+                long now = System.currentTimeMillis();
+                if (!app.bridgelink.android.protocol.ProgressPace.show(lastProgressAt, now, percent)) return;
+                lastProgressAt = now;
                 publish("Sending " + name + " — " + percent + "%", null);
             }
 

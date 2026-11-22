@@ -50,6 +50,8 @@ A shared-folder piece is decoded, written, and checked off the Mac main thread, 
 
 Activity history is saved on one background thread. The phone screen updates after that write. The database does not allow a query on the main thread.
 
+A file send shows "Sending — N%" at most once a second. The finished line, 100%, is always shown.
+
 
 
 
