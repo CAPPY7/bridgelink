@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. M12 is done. Next is M11: watch the shared folder while the link is up. Still open after that: M13, M15, H16, L1, L2, L15, R1, R2, R4, R5, R6, D1.
+Final fix pass. NB13 is done. Next is NB10: the Mac shared-folder check must leave the main thread.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -67,7 +67,7 @@ Last fix pass. M12 is done. Next is M11: watch the shared folder while the link 
 - NB6. A picture frame keeps the key flag from its first piece. The screen, camera, and mic take turns.
 - NB10. Shared-folder scan, send, write, and delete stay on one Mac queue, and they check pause inside that queue.
 - NB11. The phone no longer reads or sends the Wi-Fi name. An old wifi message is still ignored on the Mac.
-- NB13. Mac signing skips an empty keychain list and deletes the certificate file and temporary keychain when it exits.
+- NB13. Mac signing cleans up before the temporary keychain is created, so a failed import still deletes the certificate file and that keychain.
 - NB12. The stale update file in the repo root is deleted. A release still writes a fresh one.
 - V4. A finished file chunk wakes a waiting sender only. It does not signal when nobody is waiting.
 - L13. The phone bar shows Home, Send, Alerts, Texts, and Files. Remote, Mirror, and Settings are under More.

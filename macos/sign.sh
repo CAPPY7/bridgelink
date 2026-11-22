@@ -8,6 +8,16 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
   mkdir -p "$WORK"
   KC="$WORK/bridgelink.keychain-db"
   PASS="$(openssl rand -base64 24 | tr -d '\n')"
+  SAVED_LIST=0
+  OLD_ARGS=()
+  cleanup_sign() {
+    if [ "$SAVED_LIST" = "1" ] && [ "${#OLD_ARGS[@]}" -gt 0 ]; then
+      security list-keychains -d user -s ${OLD_ARGS[@]+"${OLD_ARGS[@]}"}
+    fi
+    rm -f "$WORK/sign.p12"
+    security delete-keychain "$KC" >/dev/null 2>&1 || true
+  }
+  trap cleanup_sign EXIT
   security delete-keychain "$KC" >/dev/null 2>&1 || true
   security create-keychain -p "$PASS" "$KC"
   if [ "${CI:-}" = "true" ]; then
@@ -25,19 +35,11 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
   fi
   OLD_FILE="$WORK/old-keychains.txt"
   security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//' > "$OLD_FILE"
-  OLD_ARGS=()
   while IFS= read -r line; do
     [ -n "$line" ] && OLD_ARGS+=("$line")
   done < "$OLD_FILE"
+  SAVED_LIST=1
   security list-keychains -d user -s "$KC" ${OLD_ARGS[@]+"${OLD_ARGS[@]}"}
-  cleanup_sign() {
-    if [ "${#OLD_ARGS[@]}" -gt 0 ]; then
-      security list-keychains -d user -s ${OLD_ARGS[@]+"${OLD_ARGS[@]}"}
-    fi
-    rm -f "$WORK/sign.p12"
-    security delete-keychain "$KC" >/dev/null 2>&1 || true
-  }
-  trap cleanup_sign EXIT
   if [ -d "$APP/Contents/PlugIns" ]; then
     find "$APP/Contents/PlugIns" -name '*.appex' -print0 | while IFS= read -r -d '' plugin; do
       codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime --timestamp=none "$plugin"
