@@ -94,6 +94,7 @@ N8. Switching Macs rewrote the token during the handshake, then treated that as 
 N9. The picture queue dropped 24 KB pieces, so a frame arrived broken. Fixed: a full queue drops a whole frame. The screen, the camera, and the mic do not share one queue. NOT TESTED on a device.
 N10. A search for the Mac stayed running in the app, so the next search never started, and the multicast lock could stay held. Fixed: the search is cleared when it stops, and the lock is released. NOT TESTED on a device.
 H6. A shared-folder piece was decoded, written, and hashed on the Mac main thread. Fixed: that work runs on a folder queue, then the status line returns to the main thread. NOT TESTED on a device.
+X1. Activity history was written on the phone's main thread. Fixed: reads and writes run on one history thread, and the database refuses main-thread queries. NOT TESTED on a device.
 
 
 

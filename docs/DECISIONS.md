@@ -48,6 +48,8 @@ Looking for the Mac on Wi-Fi releases the multicast lock when the search stops o
 
 A shared-folder piece is decoded, written, and checked off the Mac main thread, one piece at a time. The status line is still shown on the main thread.
 
+Activity history is saved on one background thread. The phone screen updates after that write. The database does not allow a query on the main thread.
+
 
 
 

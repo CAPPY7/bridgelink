@@ -46,10 +46,14 @@ class PhoneWork(private val activity: MainActivity) {
         } catch (_: Exception) {
             ""
         }
-        showHistory(HistoryDatabase.get(activity).history().latest(200))
-        if (Prefs.keystoreFailed()) rememberOnce(Prefs.WARNING)
-        val macs = MacList.names(prefs.getString("macs", "[]"))
-        if (macs.isNotEmpty()) rememberOnce(activity.getString(R.string.saved_macs, macs))
+        HistoryDatabase.readLatest(activity) { lines ->
+            activity.runOnUiThread {
+                showHistory(lines)
+                if (Prefs.keystoreFailed()) rememberOnce(Prefs.WARNING)
+                val macs = MacList.names(prefs.getString("macs", "[]"))
+                if (macs.isNotEmpty()) rememberOnce(activity.getString(R.string.saved_macs, macs))
+            }
+        }
         model.restricted = restrictedBlocked()
     }
 
@@ -423,14 +427,15 @@ class PhoneWork(private val activity: MainActivity) {
     }
 
     fun remember(line: String) {
-        try {
-            val dao = HistoryDatabase.get(activity).history()
-            dao.insert(HistoryEntry(0, line))
-            dao.trim(200)
-            showHistory(dao.latest(200))
-        } catch (_: Exception) {
-            model.lines = listOf(line) + model.lines
-            model.macBattery = StatusText.macBattery(model.lines)
+        HistoryDatabase.addLine(activity, line) { lines ->
+            activity.runOnUiThread {
+                if (lines == null) {
+                    model.lines = listOf(line) + model.lines
+                    model.macBattery = StatusText.macBattery(model.lines)
+                } else {
+                    showHistory(lines)
+                }
+            }
         }
     }
 
