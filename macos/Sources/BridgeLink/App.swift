@@ -93,7 +93,8 @@ final class LinkModel: ObservableObject {
         }
     }
     let folderFlags = FolderFlags()
-    var folderWatch: DispatchSourceFileSystemObject?
+    var folderStream: FSEventStreamRef?
+    var folderWatchBox: FolderWatchBox?
     let folderSendQueue = DispatchQueue(label: "app.bridgelink.mac.folder-send", qos: .utility)
     let largeWindow = SendWindow()
     var folderDebounce: DispatchWorkItem?

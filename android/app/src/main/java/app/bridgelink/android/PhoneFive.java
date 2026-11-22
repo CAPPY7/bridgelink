@@ -71,7 +71,7 @@ public final class PhoneFive {
     private boolean batteryFired;
     private List<StageFive.Rule> rules = new ArrayList<>();
     private final Map<String, FolderIn> folderIn = new HashMap<>();
-    private FileObserver folderWatch;
+    private final List<FileObserver> folderWatches = new ArrayList<>();
     private ContentObserver treeWatch;
     private long watchDue;
     private final Handler watchHandler = new Handler(Looper.getMainLooper());
@@ -728,8 +728,7 @@ public final class PhoneFive {
         if (root == null || (!root.isDirectory() && !root.mkdirs())) return;
         int mask = FileObserver.CLOSE_WRITE | FileObserver.DELETE | FileObserver.CREATE
                 | FileObserver.MOVED_FROM | FileObserver.MOVED_TO | FileObserver.MODIFY;
-        folderWatch = Build.VERSION.SDK_INT >= 29 ? watchTree(root, mask) : watchPath(root.getAbsolutePath(), mask);
-        folderWatch.startWatching();
+        watchFolder(root, mask);
     }
 
     private void disarmWatch() {
@@ -739,9 +738,9 @@ public final class PhoneFive {
     }
 
     private void stopWatch() {
-        if (folderWatch != null) {
-            folderWatch.stopWatching();
-            folderWatch = null;
+        if (!folderWatches.isEmpty()) {
+            for (FileObserver observer : folderWatches) observer.stopWatching();
+            folderWatches.clear();
         }
         if (treeWatch != null) {
             context.getContentResolver().unregisterContentObserver(treeWatch);
@@ -759,22 +758,43 @@ public final class PhoneFive {
         });
     }
 
+    private void watchFolder(File dir, int mask) {
+        if (dir == null || !dir.isDirectory() || dir.getName().startsWith(".")) return;
+        if (folderWatches.size() >= 200) return;
+        FileObserver observer = Build.VERSION.SDK_INT >= 29 ? watchTree(dir, mask) : watchPath(dir.getAbsolutePath(), mask);
+        observer.startWatching();
+        folderWatches.add(observer);
+        File[] children = dir.listFiles();
+        if (children == null) return;
+        for (File child : children) {
+            if (child.isDirectory()) watchFolder(child, mask);
+        }
+    }
+
     @androidx.annotation.RequiresApi(29)
     private FileObserver watchTree(File root, int mask) {
         return new FileObserver(root, mask) {
             @Override
             public void onEvent(int event, String path) {
+                if (path != null && (event & FileObserver.CREATE) != 0) {
+                    File created = new File(root, path);
+                    if (created.isDirectory()) watchHandler.post(() -> watchFolder(created, mask));
+                }
                 bumpWatch(path);
             }
         };
     }
 
     @SuppressWarnings("deprecation")
-    private FileObserver watchPath(String path, int mask) {
-        return new FileObserver(path, mask) {
+    private FileObserver watchPath(String directory, int mask) {
+        return new FileObserver(directory, mask) {
             @Override
-            public void onEvent(int event, String path) {
-                bumpWatch(path);
+            public void onEvent(int event, String relative) {
+                if (relative != null && (event & FileObserver.CREATE) != 0) {
+                    File created = new File(directory, relative);
+                    if (created.isDirectory()) watchHandler.post(() -> watchFolder(created, mask));
+                }
+                bumpWatch(relative);
             }
         };
     }

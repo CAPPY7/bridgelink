@@ -499,6 +499,12 @@ final class FolderSink {
     }
 }
 
+/// Holds the folder-watch callback so the event stream can call it.
+final class FolderWatchBox {
+    let fire: () -> Void
+    init(_ fire: @escaping () -> Void) { self.fire = fire }
+}
+
 private let folderPartKey = DispatchSpecificKey<UInt8>()
 private let folderPartQueue: DispatchQueue = {
     let queue = DispatchQueue(label: "app.bridgelink.mac.folder-part", qos: .utility)
@@ -960,28 +966,46 @@ extension LinkModel {
     func startFolderWatch() {
         stopFolderWatch()
         guard folderFlags.live() else { return }
-        let fd = open(sharedBox.root().path, O_EVTONLY)
-        if fd < 0 { return }
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .rename, .delete, .extend, .attrib],
-            queue: folderPartQueue
+        let root = sharedBox.root().path
+        let box = FolderWatchBox { [weak self] in
+            DispatchQueue.main.async { self?.armFolderDebounce() }
+        }
+        var context = FSEventStreamContext(
+            version: 0,
+            info: Unmanaged.passUnretained(box).toOpaque(),
+            retain: nil,
+            release: nil,
+            copyDescription: nil
         )
-        source.setEventHandler { [weak self] in
-            self?.armFolderDebounce()
-        }
-        source.setCancelHandler {
-            close(fd)
-        }
-        folderWatch = source
-        source.resume()
+        let flags = FSEventStreamCreateFlags(kFSEventStreamCreateFlagNoDefer)
+        guard let stream = FSEventStreamCreate(
+            nil,
+            { _, info, _, _, _, _ in
+                guard let info else { return }
+                Unmanaged<FolderWatchBox>.fromOpaque(info).takeUnretainedValue().fire()
+            },
+            &context,
+            [root] as CFArray,
+            FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
+            1.0,
+            flags
+        ) else { return }
+        folderWatchBox = box
+        folderStream = stream
+        FSEventStreamSetDispatchQueue(stream, folderPartQueue)
+        FSEventStreamStart(stream)
     }
 
     func stopFolderWatch() {
         folderDebounce?.cancel()
         folderDebounce = nil
-        folderWatch?.cancel()
-        folderWatch = nil
+        if let stream = folderStream {
+            FSEventStreamStop(stream)
+            FSEventStreamInvalidate(stream)
+            FSEventStreamRelease(stream)
+            folderStream = nil
+        }
+        folderWatchBox = nil
     }
 
     func shipLarge(_ file: URL, path: String, size: Int64) {
