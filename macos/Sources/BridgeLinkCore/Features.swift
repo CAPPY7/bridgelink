@@ -202,8 +202,7 @@ public enum Features {
         if path.isEmpty || path.count > 240 || path.contains("\u{0}") || path.hasPrefix("/") || path.contains(":") { return nil }
         var keep: [String] = []
         for part in path.split(separator: "/", omittingEmptySubsequences: false) {
-            if part.isEmpty || part == "." { continue }
-            if part == ".." { return nil }
+            if part.isEmpty || part.hasPrefix(".") || part == ".." { return nil }
             keep.append(Transfers.sanitizeName(String(part)))
         }
         if keep.isEmpty { return nil }

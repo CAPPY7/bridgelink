@@ -337,6 +337,8 @@ final class CoreTests: XCTestCase {
         XCTAssertFalse(Features.autoOpenScan("run.command", true))
         XCTAssertEqual(Features.safeRelative("photos/cat.jpg"), "photos/cat.jpg" as String?)
         XCTAssertNil(Features.safeRelative("../etc/passwd"))
+        XCTAssertNil(Features.safeRelative("photos/.seen"))
+        XCTAssertNil(Features.safeRelative(".hidden"))
         XCTAssertEqual(Features.unseen(already: ["a"], current: ["a", "b"]), ["b"])
         let hidden = Features.notificationShown(app: "Mail", title: "Salary", body: "secret body", unlocked: false, showText: true)
         XCTAssertEqual(hidden.title, "Mail")

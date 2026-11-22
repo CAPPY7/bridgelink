@@ -60,6 +60,8 @@ A notification is sent again only when its title or text changes. A progress bar
 
 Mac Focus is not sent to the phone on a free sideload. The app asks, then says a paid Apple account is required for that direction. Phone Do Not Disturb still quiets Mac banners. That direction does not need Mac Focus.
 
+A shared-folder name that starts with a dot is refused. That keeps .seen and other hidden files out of the folder.
+
 
 
 

@@ -257,7 +257,7 @@ public final class Features {
         String[] parts = path.split("/");
         List<String> keep = new ArrayList<>();
         for (String part : parts) {
-            if (part.isEmpty() || ".".equals(part)) continue;
+            if (part.isEmpty() || part.startsWith(".")) return null;
             if ("..".equals(part)) return null;
             keep.add(Transfers.sanitizeName(part));
         }
