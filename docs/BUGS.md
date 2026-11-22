@@ -79,6 +79,8 @@ W8. The progress note said v1.0.0 was released. Fixed: it now says there is no v
 X7. Every phone copy was saved as plain text, even when clipboard history was off. Fixed: history stays off until you turn it on, Clear history wipes it, copies older than 24 hours are dropped, and the file is sealed with the keystore key. If the keystore cannot be used, the copies stay in memory only. NOT TESTED on a device.
 N11. Home Wi-Fi automations cannot see the network name on Android 10 and newer. Fixed: that trigger is removed. Saved rules that used it are ignored. NOT TESTED on a device.
 N11b. Precise location was declared for every Android version. Fixed: it is only declared through Android 11, where leave-lock Bluetooth still needs it. Android 12 and newer do not get it. NOT TESTED on a device.
+L7. The accessibility service asked for click and focus events it never reads. Fixed: it only keeps gesture and window content, which the mirror taps use. NOT TESTED on a device.
+
 
 
 
