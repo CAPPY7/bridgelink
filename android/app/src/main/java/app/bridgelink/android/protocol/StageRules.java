@@ -31,8 +31,10 @@ public final class StageRules {
         return false;
     }
 
+    /** A link opens by itself only when Always open links is on. The screen does not matter. */
     public static boolean openLinkNow(boolean screenOn, boolean alwaysAllow) {
-        return alwaysAllow || screenOn;
+        if (screenOn && !alwaysAllow) return false;
+        return alwaysAllow;
     }
 
     /** A received file is never opened by itself. An apk has no Open button. */

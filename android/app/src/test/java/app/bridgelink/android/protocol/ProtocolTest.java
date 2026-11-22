@@ -357,7 +357,9 @@ public class ProtocolTest {
         assertTrue(StageRules.appBlocked("com.a, com.b", "com.b"));
         assertFalse(StageRules.appBlocked("com.a", "com.b"));
         assertFalse(StageRules.openLinkNow(false, false));
+        assertFalse(StageRules.openLinkNow(true, false));
         assertTrue(StageRules.openLinkNow(false, true));
+        assertTrue(StageRules.openLinkNow(true, true));
         assertFalse(StageRules.canOfferOpen("update.apk"));
         assertTrue(StageRules.canOfferOpen("notes.pdf"));
         assertEquals("File from the Mac: notes.pdf", StageRules.fileTitle("notes.pdf"));

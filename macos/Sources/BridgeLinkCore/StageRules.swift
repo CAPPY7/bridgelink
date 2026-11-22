@@ -25,8 +25,10 @@ public enum StageRules {
         return false
     }
 
+    /// A link opens by itself only when Always open links is on.
     public static func openLinkNow(screenOn: Bool, alwaysAllow: Bool) -> Bool {
-        alwaysAllow || screenOn
+        if screenOn && !alwaysAllow { return false }
+        return alwaysAllow
     }
 
     public static func clipKind(hasText: Bool, hasImage: Bool, sensitive: Bool) -> String {

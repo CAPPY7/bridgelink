@@ -12,7 +12,7 @@ v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not eve
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Last fix pass. X6 is done. Next is L9: a link from the Mac waits for Open unless Always open links is on.
+Last fix pass. L9 is done. Next is W6: do not offer Open for .apks, .xapk, .aab, or an Android package file.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -79,6 +79,7 @@ Last fix pass. X6 is done. Next is L9: a link from the Mac waits for Open unless
 - N6. Away sign-in keeps going until the Mac answers. relay_ok and forgotten both stop it. A unit test covers phone-first, then Mac.
 - W1. Open and Show in Downloads on a file notice start an activity. The old broadcast receiver is gone.
 - X6. Tapping the file notice opens that file. An install file still has no Open button.
+- L9. A link from the Mac waits for Open unless Always open links is on.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

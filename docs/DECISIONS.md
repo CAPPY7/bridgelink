@@ -48,7 +48,7 @@ Away from home says paired only after the Mac checks the phone. Until then the p
 
 The free relay counts phone-to-Mac and Mac-to-phone separately, 200 messages a second each. Counts older than a few seconds are dropped so the map does not grow.
 
-A file from the Mac is never opened by itself. The notice has Open and Show in Downloads. An apk install file has no Open button. A link is still opened when the screen is on, unless you turned that off. When the screen is off, the link waits for Open.
+A file from the Mac is never opened by itself. The notice has Open and Show in Downloads. An apk install file has no Open button. A link waits for Open unless Always open links is on. The screen being on is not enough.
 
 ## v0.7.0 link threads and signing
 
