@@ -1559,15 +1559,17 @@ public class LinkService extends Service {
                 .setContentTitle(title)
                 .setContentText("Saved in Downloads. It was not opened.")
                 .setAutoCancel(true);
-        Intent show = new Intent(this, FileActions.class).setAction(FileActions.SHOW_DOWNLOADS);
+        Intent show = new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS);
+        show.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         builder.addAction(new Notification.Action.Builder(null, "Show in Downloads",
-                android.app.PendingIntent.getBroadcast(this, 41, show, android.app.PendingIntent.FLAG_IMMUTABLE)).build());
+                PendingIntent.getActivity(this, 41, show, PendingIntent.FLAG_IMMUTABLE)).build());
         if (uri != null && StageRules.canOfferOpen(name)) {
-            Intent open = new Intent(this, FileActions.class).setAction(FileActions.OPEN_FILE);
-            open.putExtra("name", name);
-            open.putExtra("uri", uri.toString());
-            builder.addAction(new Notification.Action.Builder(null, "Open",
-                    android.app.PendingIntent.getBroadcast(this, 42, open, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build());
+            Intent open = new Intent(Intent.ACTION_VIEW, uri);
+            open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+                    | PendingIntent.FLAG_GRANT_READ_URI_PERMISSION;
+            PendingIntent pending = PendingIntent.getActivity(this, 42, open, flags);
+            builder.addAction(new Notification.Action.Builder(null, "Open", pending).build());
         }
         manager().notify(41, builder.build());
         publish(title, null);
@@ -1575,15 +1577,15 @@ public class LinkService extends Service {
 
     private void askLink(String url) {
         publish("Link from the Mac is waiting", null);
-        Intent open = new Intent(this, FileActions.class).setAction(FileActions.OPEN_LINK);
-        open.putExtra("url", url);
+        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Notification note = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle("Link from the Mac")
-                .setContentText("The screen was off, so the link was not opened.")
+                .setContentText("Tap Open. The link was not opened by itself.")
                 .setAutoCancel(true)
                 .addAction(new Notification.Action.Builder(null, "Open",
-                        android.app.PendingIntent.getBroadcast(this, 43, open, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build())
+                        PendingIntent.getActivity(this, 43, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)).build())
                 .build();
         manager().notify(43, note);
     }
