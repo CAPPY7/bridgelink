@@ -5,25 +5,27 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +37,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -131,15 +137,33 @@ private fun PhoneShell(model: PhoneModel, actions: PhoneActions) {
 
 @Composable
 private fun BottomNav(model: PhoneModel) {
+    val primary = listOf(Page.Home, Page.Send, Page.Notifications, Page.Messages, Page.Files)
+    val extra = listOf(Page.Remote, Page.Mirror, Page.Settings)
+    var moreOpen by remember { mutableStateOf(false) }
     Surface(tonalElevation = 3.dp) {
         Row(
             modifier = Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Page.entries.forEach { page ->
+            primary.forEach { page ->
                 NavPill(page, selected = model.page == page, onClick = { model.page = page })
+            }
+            Box {
+                MorePill(selected = extra.contains(model.page), onClick = { moreOpen = true })
+                DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+                    extra.forEach { page ->
+                        DropdownMenuItem(
+                            text = { Text(page.label) },
+                            onClick = {
+                                model.page = page
+                                moreOpen = false
+                            },
+                            modifier = Modifier.testTag("nav-" + page.name.lowercase()),
+                        )
+                    }
+                }
             }
         }
     }
@@ -157,11 +181,32 @@ private fun NavPill(page: Page, selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier.testTag("nav-" + page.name.lowercase()),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(page.icon(), contentDescription = page.title, tint = content)
             Text(page.label, color = content, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MorePill(selected: Boolean, onClick: () -> Unit) {
+    val background = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    val content = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = background,
+        modifier = Modifier.testTag("nav-more"),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(Icons.Filled.MoreHoriz, contentDescription = "More", tint = content)
+            Text("More", color = content, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

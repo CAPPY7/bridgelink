@@ -205,3 +205,5 @@ Mac signing never prints the certificate password. If the saved keychain list is
 The update file in the repo root was a leftover with size 0. Check for update reads the copy on the GitHub release, and the release script writes a new one. The leftover file is deleted. The bug list does not keep blank lines at the end.
 
 A Mac file send wakes the next chunk only when a sender is already waiting. An empty wake is skipped, so a signal cannot pile up.
+
+The phone bar shows five pages plus More. More holds Remote, Mirror, and Settings, so the bar does not scroll sideways.
