@@ -95,7 +95,7 @@ N9. The picture queue dropped 24 KB pieces, so a frame arrived broken. Fixed: a 
 N10. A search for the Mac stayed running in the app, so the next search never started, and the multicast lock could stay held. Fixed: the search is cleared when it stops, and the lock is released. NOT TESTED on a device.
 H6. A shared-folder piece was decoded, written, and hashed on the Mac main thread. Fixed: that work runs on a folder queue, then the status line returns to the main thread. NOT TESTED on a device.
 X1. Activity history was written on the phone's main thread. Fixed: reads and writes run on one history thread, and the database refuses main-thread queries. NOT TESTED on a device.
-L6. "Sending — N%" was posted on every file piece. Fixed: that line shows at most once a second, and 100% still shows. NOT TESTED on a device.
+L6. "Sending — N%" was posted on every file piece. Fixed: that line shows at most once a second, and 100% still shows. A line in the same second is skipped. NOT TESTED on a device.
 L3. Seek always jumped to the start of the song. Fixed: it uses the time that was sent, in milliseconds. NOT TESTED on a device.
 
 
