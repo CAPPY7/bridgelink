@@ -65,4 +65,6 @@ L10. Signing the Mac app changed the default keychain even on a home computer. F
 L12. A script in the repo could make a new Android signing key. Fixed: that script is deleted, and the docs no longer tell anyone to run it. Do not add it back.
 X9. A Java key file could be committed by accident. Fixed: .jks files are ignored, the same way .keystore files already were.
 W2. The away sign-in retry ran on the phone's main thread, so the send was dropped, and cancelling it never found the old wait. Fixed: one saved retry posts the sign-in, and the actual write runs on the send thread. NOT TESTED on a device.
+N6. Partly fixed before. The phone now keeps one sign-in until the Mac answers, including when the phone joins first. A test covers relay_ok and forgotten both stopping that retry. NOT TESTED on a device.
+
 

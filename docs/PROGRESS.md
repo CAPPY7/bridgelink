@@ -12,7 +12,7 @@ v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not eve
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Last fix pass. W2 is done. Next is N6: a test where the phone joins the away relay first, the Mac joins later, relay_ok stops the retry, and forgotten stops it too.
+Last fix pass. N6 is done. Next is W1: file and link notice buttons must open an activity, not a broadcast, so they work on Android 12 and newer.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -76,6 +76,7 @@ Last fix pass. W2 is done. Next is N6: a test where the phone joins the away rel
 - L12. The Android key-making script is deleted.
 - X9. Java key files ending in .jks are ignored.
 - W2. The away sign-in uses one saved retry, and the write runs on the send thread, not the main thread.
+- N6. Away sign-in keeps going until the Mac answers. relay_ok and forgotten both stop it. A unit test covers phone-first, then Mac.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
