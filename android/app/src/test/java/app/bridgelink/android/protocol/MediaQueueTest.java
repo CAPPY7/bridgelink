@@ -50,6 +50,29 @@ public class MediaQueueTest {
         assertEquals(MediaQueue.CAP + 1, queue.size());
     }
 
+    @Test
+    public void pollTakesTurnsSoTheMicIsNotStuck() {
+        MediaQueue queue = new MediaQueue();
+        byte[] video = piece(1, 0, 0, 1);
+        byte[] mic = piece(3, 0, 0, 1);
+        assertTrue(queue.offer(video, false).kept);
+        assertTrue(queue.offer(mic, false).kept);
+        assertTrue(java.util.Arrays.equals(video, queue.poll()));
+        assertTrue(java.util.Arrays.equals(mic, queue.poll()));
+    }
+
+    @Test
+    public void theKeyFlagIsSavedOnTheFirstPiece() {
+        MediaQueue queue = new MediaQueue();
+        for (int i = 0; i < MediaQueue.CAP; i++) {
+            assertTrue(queue.offer(piece(1, 0, 0, 1), false).kept);
+        }
+        assertTrue(queue.offer(piece(1, 1, 0, 2), true).kept);
+        MediaQueue.Result end = queue.offer(piece(1, 0, 1, 2), false);
+        assertTrue(end.kept);
+        assertEquals(MediaQueue.CAP, queue.size(1));
+    }
+
     private static byte[] piece(int stream, int flags, int part, int parts) {
         byte[] packed = StageSix.pack(stream, flags, part, parts, new byte[]{1, 2, 3});
         return Frame.encode(Frame.BINARY, packed);

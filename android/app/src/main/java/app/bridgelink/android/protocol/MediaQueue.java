@@ -21,15 +21,27 @@ public final class MediaQueue {
         }
     }
 
+    private static final class Held {
+        final byte[][] parts;
+        final boolean key;
+
+        Held(byte[][] parts, boolean key) {
+            this.parts = parts;
+            this.key = key;
+        }
+    }
+
     private static final class Lane {
-        final ArrayDeque<byte[][]> ready = new ArrayDeque<>();
+        final ArrayDeque<Held> ready = new ArrayDeque<>();
         byte[][] building;
+        boolean buildingKey;
         int filled;
         boolean dropRest;
         int pieces;
     }
 
     private final Lane[] lanes = new Lane[] {null, new Lane(), new Lane(), new Lane()};
+    private int turn = 1;
 
     public synchronized Result offer(byte[] framed, boolean key) {
         StageSix.Piece piece = pieceOf(framed);
@@ -38,6 +50,7 @@ public final class MediaQueue {
         if (piece.part == 0) {
             lane.dropRest = false;
             lane.building = new byte[piece.parts][];
+            lane.buildingKey = key;
             lane.filled = 0;
         }
         if (lane.dropRest || lane.building == null || piece.part != lane.filled || piece.parts != lane.building.length) {
@@ -50,38 +63,46 @@ public final class MediaQueue {
         lane.filled++;
         if (lane.filled < lane.building.length) return new Result(true, false);
         byte[][] done = lane.building;
+        boolean frameKey = lane.buildingKey;
         lane.building = null;
         lane.filled = 0;
         if (lane.ready.size() >= CAP) {
-            if (!key) {
+            if (!frameKey) {
                 return new Result(false, piece.stream == 1);
             }
-            byte[][] old = lane.ready.pollFirst();
-            if (old != null) lane.pieces -= old.length;
+            Held old = lane.ready.pollFirst();
+            if (old != null) lane.pieces -= old.parts.length;
         }
-        lane.ready.addLast(done);
+        lane.ready.addLast(new Held(done, frameKey));
         lane.pieces += done.length;
         return new Result(true, false);
     }
 
     public synchronized byte[] poll() {
-        for (int stream = 1; stream <= 3; stream++) {
-            Lane lane = lanes[stream];
-            byte[][] frame = lane.ready.peekFirst();
-            if (frame == null) continue;
-            for (int i = 0; i < frame.length; i++) {
-                if (frame[i] != null) {
-                    byte[] next = frame[i];
-                    frame[i] = null;
-                    lane.pieces--;
-                    boolean empty = true;
-                    for (byte[] part : frame) if (part != null) empty = false;
-                    if (empty) lane.ready.pollFirst();
-                    return next;
-                }
-            }
-            lane.ready.pollFirst();
+        for (int n = 0; n < 3; n++) {
+            int stream = turn;
+            turn = stream == 3 ? 1 : stream + 1;
+            byte[] next = take(lanes[stream]);
+            if (next != null) return next;
         }
+        return null;
+    }
+
+    private static byte[] take(Lane lane) {
+        Held frame = lane.ready.peekFirst();
+        if (frame == null) return null;
+        for (int i = 0; i < frame.parts.length; i++) {
+            if (frame.parts[i] != null) {
+                byte[] next = frame.parts[i];
+                frame.parts[i] = null;
+                lane.pieces--;
+                boolean empty = true;
+                for (byte[] part : frame.parts) if (part != null) empty = false;
+                if (empty) lane.ready.pollFirst();
+                return next;
+            }
+        }
+        lane.ready.pollFirst();
         return null;
     }
 
