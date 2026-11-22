@@ -114,3 +114,4 @@ M17. Mirror taps used the wrong screen size, so they landed in the wrong place. 
 NB4. Alert notices could grow into the file notice numbers. Fixed: alerts stay between 100 and 189. NOT TESTED on a device.
 NB5. Mirror taps measured the link screen, which can be the wrong size. Fixed: they measure from the accessibility service, using the maximum window on Android 11 and newer. NOT TESTED on a device.
 NB6. Picture lanes forgot the key-frame flag after the first piece, and the screen lane was always served first. Fixed: the flag is saved when part 0 arrives, and the screen, camera, and mic take turns. NOT TESTED on a device.
+NB10. A shared-folder delete or scan could run while a file piece was still writing. Fixed: scan, send, write, and delete all use the same folder queue, and they stop when the folder is off or paused. NOT TESTED on a device.

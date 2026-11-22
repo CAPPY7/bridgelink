@@ -511,7 +511,7 @@ extension LinkModel {
         }
     }
 
-    func handleFive(_ envelope: ParsedEnvelope, _ connection: NWConnection) -> Bool {
+    func handleFive(_ envelope: ParsedEnvelope, _: NWConnection) -> Bool {
         switch envelope.type {
         case "sms_list":
             messages = StageFive.decodeSms(envelope.text("body"))
@@ -537,44 +537,68 @@ extension LinkModel {
             if let code = Features.otp(item.body) { fireAuto("sms_code", code) }
             return true
         case "folder_index":
-            guard folderOn, !folderPaused else { return true }
-            let local = sharedBox.scan()
-            for remote in StageFive.decodeIndex(envelope.text("body")) {
-                let mine = local.first { $0.path == remote.path }
-                let choice = StageFive.decide(
-                    paused: false,
-                    localExists: mine != nil,
-                    localSha: mine?.sha ?? "",
-                    remoteDeleted: remote.deleted,
-                    remoteSha: remote.sha
-                )
-                if remote.deleted {
-                    if choice == .delete, sharedBox.remove(path: remote.path, sha: remote.sha) {
-                        note("Removed a shared file")
+            let indexBody = envelope.text("body")
+            folderPartQueue.async { [weak self] in
+                guard let self else { return }
+                guard self.folderOn, !self.folderPaused else { return }
+                let local = self.sharedBox.scan()
+                var wants: [String] = []
+                var removed = false
+                for remote in StageFive.decodeIndex(indexBody) {
+                    let mine = local.first { $0.path == remote.path }
+                    let choice = StageFive.decide(
+                        paused: false,
+                        localExists: mine != nil,
+                        localSha: mine?.sha ?? "",
+                        remoteDeleted: remote.deleted,
+                        remoteSha: remote.sha
+                    )
+                    if remote.deleted {
+                        if choice == .delete, self.sharedBox.remove(path: remote.path, sha: remote.sha) {
+                            removed = true
+                        }
+                        continue
                     }
-                    continue
+                    if choice == .take || choice == .conflict {
+                        wants.append(remote.path)
+                    }
                 }
-                if choice == .take || choice == .conflict {
-                    send(type: "folder_want", payload: ["path": remote.path], on: connection)
+                let didRemove = removed
+                let paths = wants
+                DispatchQueue.main.async {
+                    guard self.folderOn, !self.folderPaused else { return }
+                    if didRemove { self.note("Removed a shared file") }
+                    for path in paths {
+                        self.send(type: "folder_want", payload: ["path": path], on: self.live)
+                    }
                 }
             }
             return true
         case "folder_want":
-            guard folderOn, !folderPaused else { return true }
-            let problem = sharedBox.send(path: envelope.text("path")) { offset, size, mtime, sha, data in
-                self.send(type: "folder_part", payload: [
-                    "path": envelope.text("path"),
-                    "offset": String(offset),
-                    "size": String(size),
-                    "mtime": String(mtime),
-                    "sha": sha,
-                    "data": data,
-                ], on: connection)
+            let wantPath = envelope.text("path")
+            folderPartQueue.async { [weak self] in
+                guard let self else { return }
+                guard self.folderOn, !self.folderPaused else { return }
+                let problem = self.sharedBox.send(path: wantPath) { offset, size, mtime, sha, data in
+                    let payload = [
+                        "path": wantPath,
+                        "offset": String(offset),
+                        "size": String(size),
+                        "mtime": String(mtime),
+                        "sha": sha,
+                        "data": data,
+                    ]
+                    DispatchQueue.main.async {
+                        guard self.folderOn, !self.folderPaused else { return }
+                        self.send(type: "folder_part", payload: payload, on: self.live)
+                    }
+                }
+                if let problem {
+                    DispatchQueue.main.async { self.note(problem) }
+                }
             }
-            if let problem { note(problem) }
             return true
         case "folder_part":
-            guard folderOn, !folderPaused else { return true }
             let path = envelope.text("path")
             let offset = Int64(envelope.text("offset")) ?? -1
             let size = Int64(envelope.text("size")) ?? -1
@@ -583,6 +607,7 @@ extension LinkModel {
             let data = envelope.text("data")
             folderPartQueue.async { [weak self] in
                 guard let self else { return }
+                guard self.folderOn, !self.folderPaused else { return }
                 let problem = self.sharedBox.part(
                     path: path,
                     offset: offset,
@@ -602,9 +627,18 @@ extension LinkModel {
             }
             return true
         case "folder_delete":
-            guard folderOn, !folderPaused else { return true }
-            if sharedBox.remove(path: envelope.text("path"), sha: envelope.text("sha")) {
-                note("Removed a shared file")
+            let deletePath = envelope.text("path")
+            let deleteSha = envelope.text("sha")
+            folderPartQueue.async { [weak self] in
+                guard let self else { return }
+                guard self.folderOn, !self.folderPaused else { return }
+                let removed = self.sharedBox.remove(path: deletePath, sha: deleteSha)
+                if removed {
+                    DispatchQueue.main.async {
+                        guard self.folderOn, !self.folderPaused else { return }
+                        self.note("Removed a shared file")
+                    }
+                }
             }
             return true
         case "folder_pause":

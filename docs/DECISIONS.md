@@ -195,3 +195,5 @@ iMessage, FaceTime, AirDrop, Handoff, unlocking the Mac, silent system setting c
 Mirror taps measure the screen from the accessibility service. On Android 11 and newer that is the maximum window. Older phones still use the real display size.
 
 Picture lanes remember the key-frame flag from the first piece only. Later pieces cannot turn a normal frame into a key frame. The screen, camera, and mic each get a turn, so the mic is not stuck behind the screen.
+
+Shared-folder scan, send, write, and delete on the Mac all use one queue. A paused or off folder is checked on that queue, so a late piece cannot bring a file back. Status text still updates on the main thread.
