@@ -38,6 +38,8 @@
     <string>BridgeLink uses Bluetooth to notice when the phone leaves, if you turn on lock-when-away.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>BridgeLink controls media and the pointer only after you turn those features on.</string>
+    <key>NSFocusStatusUsageDescription</key>
+    <string>BridgeLink reads Mac Focus only to tell the paired phone. A free sideload cannot turn this on. Phone Do Not Disturb still quiets Mac banners.</string>
     <key>NSServices</key>
     <array>
         <dict>

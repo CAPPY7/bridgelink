@@ -58,6 +58,8 @@ Each phone notification keeps its own Mac banner, named by the phone's key. Dism
 
 A notification is sent again only when its title or text changes. A progress bar is sent the first time, then skipped until the text changes without a progress bar.
 
+Mac Focus is not sent to the phone on a free sideload. The app asks, then says a paid Apple account is required for that direction. Phone Do Not Disturb still quiets Mac banners. That direction does not need Mac Focus.
+
 
 
 

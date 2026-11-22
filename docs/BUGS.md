@@ -99,6 +99,7 @@ L6. "Sending — N%" was posted on every file piece. Fixed: that line shows at m
 L3. Seek always jumped to the start of the song. Fixed: it uses the time that was sent, in milliseconds. NOT TESTED on a device.
 M5. Only the newest phone notification could be answered or dismissed on the Mac. Fixed: the phone's key is the Mac banner id, dismiss removes that banner, and a replyable banner has its own Reply action. NOT TESTED on a device.
 M6. Every notification update was sent, including progress bars. Fixed: the same key with the same title and text is skipped, and later progress-bar updates are skipped. NOT TESTED on a device.
+M8. Mac Focus was read with no permission, so it could not work. Fixed: the app asks, and the screen says a free sideload cannot send Mac Focus to the phone. Phone Do Not Disturb still quiets Mac banners. NOT TESTED on a device.
 
 
 

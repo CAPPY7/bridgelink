@@ -87,6 +87,8 @@ struct DeskDetail: View {
             }
             Button("Dismiss on the phone") { model.dismissNotification() }
             Toggle("Quiet while the phone is in Do Not Disturb", isOn: Binding(get: { model.dndSync }, set: { model.setDndSync($0) }))
+            Text("Phone Do Not Disturb quiets these banners. Sending Mac Focus to the phone needs a paid Apple account, so that direction stays off.")
+                .font(.callout).foregroundStyle(.secondary)
             EmptyNote(symbol: "bell", title: "Banners show above, not in a stored list.", line: "Message text is not written into the activity log.")
         }
     }

@@ -55,6 +55,14 @@ extension LinkModel {
     func setDndSync(_ on: Bool) {
         dndSync = on
         UserDefaults.standard.set(on, forKey: "dndSync")
+        guard on else { return }
+        INFocusStatusCenter.default.requestAuthorization { status in
+            Task { @MainActor in
+                if status != .authorized {
+                    self.note("Mac Focus cannot be sent to the phone without a paid Apple account. Phone Do Not Disturb still quiets Mac banners.")
+                }
+            }
+        }
     }
 
     func replyFromBanner(_ key: String, _ text: String) {
@@ -109,6 +117,7 @@ extension LinkModel {
 
     func sendMacFocus() {
         guard dndSync, case .paired = phase else { return }
+        guard INFocusStatusCenter.default.authorizationStatus == .authorized else { return }
         let on = INFocusStatusCenter.default.focusStatus.isFocused == true
         if sawFocus && on == lastFocus { return }
         sawFocus = true

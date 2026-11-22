@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. M6 is done. Next is M8: Mac Do Not Disturb sync needs a permission note, or it stays off with a clear line.
+Last fix pass. M8 is done. Next is M9: the phone can send the clipboard from a Quick Settings tile, because Android will not share it in the background.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -46,6 +46,7 @@ Last fix pass. M6 is done. Next is M8: Mac Do Not Disturb sync needs a permissio
 - L3. Seek uses the real time in the song. It no longer jumps to the start.
 - M5. Each phone notification uses its own Mac banner. Dismiss removes that banner. A banner that can be answered has its own Reply action.
 - M6. The same notification is not sent again. A progress-bar update is sent once, then later progress updates are skipped.
+- M8. Mac Focus is asked for, and the reason is in the app. A free sideload cannot send Mac Focus to the phone. Phone Do Not Disturb still quiets Mac banners.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.
