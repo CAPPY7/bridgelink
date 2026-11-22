@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. N8 is done. Next is N9: picture queues must drop a whole frame, with separate queues for the screen, the camera, and the mic.
+Last fix pass. N9 is done. Next is N10: stop looking for the Mac must clear the browser and always release the multicast lock.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -38,6 +38,7 @@ Last fix pass. N8 is done. Next is N9: picture queues must drop a whole frame, w
 - C5. Each phone has its own away secret. Forgetting that phone deletes the secret.
 - C6 partly. Every feature message is named in a test and round-trips. The emulator still only sends one real note.
 - N8. Switching to a saved Mac uses that Mac's token. The handshake does not swap the token in the middle, and a mismatch does not erase a saved token. Forget removes that Mac from the token book.
+- N9. Picture send drops a whole frame, not a 24 KB piece. The screen, the camera, and the mic each have their own queue.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

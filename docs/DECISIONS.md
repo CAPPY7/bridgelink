@@ -42,6 +42,8 @@ The Android release signer is checked against the public fingerprint in android/
 
 Switching to a saved Mac uses that Mac's own token. The handshake does not change the token while it is running. A certificate that is not a saved Mac does not erase the saved token. Forget removes that one Mac from the token book and leaves the others.
 
+The screen, the camera, and the mic each keep at most 3 whole frames. A full lane drops the next whole frame, not one 24 KB piece of it. Only the screen asks for a new key frame.
+
 
 
 
