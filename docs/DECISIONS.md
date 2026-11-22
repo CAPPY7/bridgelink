@@ -199,3 +199,5 @@ Picture lanes remember the key-frame flag from the first piece only. Later piece
 Shared-folder scan, send, write, and delete on the Mac all use one queue. A paused or off folder is checked on that queue, so a late piece cannot bring a file back. Status text still updates on the main thread.
 
 The phone does not read or send the Wi-Fi name. Home Wi-Fi automations cannot see that name on current Android. The Mac still accepts an old wifi message and does nothing, so an old phone does not break.
+
+Mac signing never prints the certificate password. If the saved keychain list is empty, the script does not expand that list. When signing finishes or fails, it deletes the certificate file and the temporary keychain.

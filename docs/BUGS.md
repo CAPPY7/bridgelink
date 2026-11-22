@@ -116,3 +116,4 @@ NB5. Mirror taps measured the link screen, which can be the wrong size. Fixed: t
 NB6. Picture lanes forgot the key-frame flag after the first piece, and the screen lane was always served first. Fixed: the flag is saved when part 0 arrives, and the screen, camera, and mic take turns. NOT TESTED on a device.
 NB10. A shared-folder delete or scan could run while a file piece was still writing. Fixed: scan, send, write, and delete all use the same folder queue, and they stop when the folder is off or paused. NOT TESTED on a device.
 NB11. The phone still read the Wi-Fi name and sent it after that automation was removed. Fixed: it no longer reads or sends the name. The Mac still ignores an old wifi message. NOT TESTED on a device.
+NB13. The Mac signing script could crash on an empty keychain list, and a failed sign could leave the certificate file and the temporary keychain. Fixed: an empty list is skipped, and leaving the script deletes both. NOT TESTED on a device.
