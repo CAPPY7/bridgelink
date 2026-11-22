@@ -33,6 +33,8 @@ public final class CamCast {
     private HandlerThread thread;
     private volatile boolean running;
     private long lastFrame;
+    private int jpegRotation;
+    private boolean jpegMirror;
 
     public void start(Context context, String facing, int zoom, boolean flash, boolean withMic) {
         stop();
@@ -48,6 +50,12 @@ public final class CamCast {
                 return;
             }
             CameraCharacteristics info = manager.getCameraCharacteristics(id);
+            Integer sensor = info.get(CameraCharacteristics.SENSOR_ORIENTATION);
+            Integer lens = info.get(CameraCharacteristics.LENS_FACING);
+            jpegMirror = lens != null && lens == CameraCharacteristics.LENS_FACING_FRONT;
+            int degrees = sensor == null ? 0 : sensor;
+            if (jpegMirror) degrees = (360 - degrees) % 360;
+            jpegRotation = degrees;
             thread = new HandlerThread("bridgelink-cam");
             thread.start();
             Handler handler = new Handler(thread.getLooper());
@@ -153,7 +161,7 @@ public final class CamCast {
             YuvImage yuv = new YuvImage(nv21, ImageFormat.NV21, image.getWidth(), image.getHeight(), null);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             yuv.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), quality, out);
-            byte[] jpeg = out.toByteArray();
+            byte[] jpeg = upright(out.toByteArray(), jpegRotation, jpegMirror, quality);
             if (jpeg.length > 400_000) return;
             List<byte[]> parts = StageSix.chunks(jpeg);
             for (int i = 0; i < parts.size(); i++) {
@@ -207,6 +215,23 @@ public final class CamCast {
         int x = full.centerX() - width / 2;
         int y = full.centerY() - height / 2;
         return new Rect(x, y, x + width, y + height);
+    }
+
+    private static byte[] upright(byte[] jpeg, int degrees, boolean mirror, int quality) {
+        if (jpeg == null) return null;
+        if ((degrees % 360) == 0 && !mirror) return jpeg;
+        android.graphics.Bitmap src = android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+        if (src == null) return jpeg;
+        android.graphics.Matrix matrix = new android.graphics.Matrix();
+        if (mirror) matrix.postScale(-1, 1);
+        if ((degrees % 360) != 0) matrix.postRotate(degrees);
+        android.graphics.Bitmap turned = android.graphics.Bitmap.createBitmap(
+                src, 0, 0, src.getWidth(), src.getHeight(), matrix, true);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        turned.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out);
+        if (turned != src) turned.recycle();
+        src.recycle();
+        return out.toByteArray();
     }
 
     private static byte[] nv21(Image image) {
