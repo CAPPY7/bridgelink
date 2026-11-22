@@ -107,6 +107,7 @@ M26. The disk image was hidden while it was built, so the icon layout could not 
 N14. Switching to a saved Mac replaced the address list with one address. Fixed: the saved address is added to the list. NOT TESTED on a device.
 L5. Raising the ring volume sat outside the safety net, so a refusal could stop the ring. Fixed: that change is caught, and the ring still starts. NOT TESTED on a device.
 M20. The send page said a folder could be sent. Fixed: the phone and the Mac say they send files, not a whole folder. NOT TESTED on a device.
+L4. A code could be sent twice, once from the text and once from the notification. Fixed: the same code is sent once per minute. NOT TESTED on a device.
 
 
 

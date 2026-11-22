@@ -1009,7 +1009,7 @@ public class LinkService extends Service {
                 if ("1".equals(intent.getStringExtra("otp"))
                         && Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) {
                     String code = Features.otp(safe(intent.getStringExtra(EXTRA_BODY)) + "\n" + safe(intent.getStringExtra("detail")));
-                    if (code != null) {
+                    if (code != null && otpFresh(code)) {
                         JsonObject otp = new JsonObject();
                         otp.addProperty("body", code);
                         writeEnvelope(Envelope.make("otp", "android", otp));
@@ -1047,7 +1047,17 @@ public class LinkService extends Service {
         }, "bridgelink-file").start();
     }
 
+    private String lastOtp = "";
+    private long lastOtpAt;
     private long lastProgressAt;
+
+    private boolean otpFresh(String code) {
+        long now = System.currentTimeMillis();
+        if (!app.bridgelink.android.protocol.OtpGate.fresh(lastOtp, lastOtpAt, code, now)) return false;
+        lastOtp = code;
+        lastOtpAt = now;
+        return true;
+    }
 
     private FileBridge.Out fileOut() {
         return new FileBridge.Out() {
@@ -1490,6 +1500,7 @@ public class LinkService extends Service {
     private void sendOtp(String code) {
         outbox.submit(() -> {
             if (!paired || code == null || code.isEmpty()) return;
+            if (!otpFresh(code)) return;
             if (!Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) return;
             try {
                 JsonObject payload = new JsonObject();

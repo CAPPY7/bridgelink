@@ -74,6 +74,8 @@ If the phone refuses a ring-volume change, the ring still starts. The volume is 
 
 The send pages do not offer a folder. They send files. A folder zip is not added, because a half-finished zip could send the wrong files.
 
+The same code is sent once. A different code is sent right away. The same code can be sent again after a minute.
+
 
 
 
