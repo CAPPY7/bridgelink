@@ -873,7 +873,7 @@ public class ProtocolTest {
     }
 
     @Test
-    public void everyFeatureMessageRoundTrips() {
+    public void everyFeatureMessageRoundTrips() throws Exception {
         String[] types = {
                 "text", "clipboard", "clipboard_image", "link", "ping", "pong",
                 "file_begin", "file_chunk", "file_end", "file_have", "file_cancel",
