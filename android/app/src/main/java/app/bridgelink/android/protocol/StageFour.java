@@ -124,13 +124,31 @@ public final class StageFour {
         }
         if (Features.mediaAction(action) == null) return null;
         if (!volume.isEmpty()) {
-            try {
-                volume = Integer.toString(clampVolume(Integer.parseInt(volume)));
-            } catch (NumberFormatException error) {
-                return null;
+            if ("seek".equals(action)) {
+                long ms = seekMs(volume);
+                if (ms < 0) return null;
+                volume = Long.toString(ms);
+            } else {
+                try {
+                    volume = Integer.toString(clampVolume(Integer.parseInt(volume)));
+                } catch (NumberFormatException error) {
+                    return null;
+                }
             }
         }
         return new String[] {action, volume};
+    }
+
+    /** Milliseconds into a song. Negative means the number is not a position. */
+    public static long seekMs(String raw) {
+        if (raw == null || raw.isBlank()) return -1;
+        try {
+            long n = Long.parseLong(raw.trim());
+            if (n < 0 || n > 24L * 60 * 60 * 1000) return -1;
+            return n;
+        } catch (NumberFormatException error) {
+            return -1;
+        }
     }
 
     /** on, far, delay seconds, at desk. Null when the text is not four numbers. */

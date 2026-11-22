@@ -52,6 +52,8 @@ Activity history is saved on one background thread. The phone screen updates aft
 
 A file send shows "Sending — N%" at most once a second. The finished line, 100%, is always shown.
 
+Seek uses milliseconds into the song. Volume is still 0 to 100. A seek time is not treated as a volume.
+
 
 
 

@@ -80,10 +80,22 @@ public enum StageFour {
         }
         if Features.mediaAction(action) == nil { return nil }
         if !volume.isEmpty {
-            guard let number = Int(volume) else { return nil }
-            volume = String(clampVolume(number))
+            if action == "seek" {
+                guard let ms = seekMs(volume) else { return nil }
+                volume = String(ms)
+            } else {
+                guard let number = Int(volume) else { return nil }
+                volume = String(clampVolume(number))
+            }
         }
         return (action, volume)
+    }
+
+    /// Milliseconds into a song. Nil means the number is not a position.
+    public static func seekMs(_ raw: String) -> Int64? {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let n = Int64(text), n >= 0, n <= 24 * 60 * 60 * 1000 else { return nil }
+        return n
     }
 
     public static func parseSetup(_ raw: String) -> (on: Int, far: Int, delay: Int, desk: Int)? {

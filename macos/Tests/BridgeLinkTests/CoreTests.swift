@@ -274,6 +274,8 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(StageFour.splitCommand("shutdown"))
         XCTAssertEqual(StageFour.splitCommand("pause")?.action, "pause")
         XCTAssertEqual(StageFour.splitCommand("volume:140")?.volume, "100")
+        XCTAssertEqual(StageFour.splitCommand("seek:90000")?.volume, "90000")
+        XCTAssertEqual(StageFour.seekMs("90000"), 90000)
         XCTAssertEqual(StageFour.formatSetup(on: true, far: 70, delay: 30, desk: false), "1,70,30,0")
         XCTAssertEqual(StageFour.parseSetup("1,200,1,2")?.far, 95)
         XCTAssertEqual(StageFour.nowLine("Sunny", "Ada", true), "Playing Sunny - Ada")

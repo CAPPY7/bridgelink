@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. L6 is done. Next is M5: each phone notification keeps its own Mac banner, with a Reply action.
+Last fix pass. L3 is done. Next is M5: each phone notification keeps its own Mac banner, with a Reply action.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -43,6 +43,7 @@ Last fix pass. L6 is done. Next is M5: each phone notification keeps its own Mac
 - H6. A shared-folder piece is decoded, written, and hashed off the Mac main thread. The status line still updates on the main thread.
 - X1. Activity history is read and written off the phone's main thread. The database no longer allows main-thread queries.
 - L6. The "Sending — N%" line is shown at most once a second. 100% is always shown.
+- L3. Seek uses the real time in the song. It no longer jumps to the start.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

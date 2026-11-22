@@ -58,7 +58,11 @@ public final class MediaControl {
             case "pause" -> controls.pause();
             case "next" -> controls.skipToNext();
             case "previous" -> controls.skipToPrevious();
-            case "seek" -> controls.seekTo(0);
+            case "seek" -> {
+                long at = StageFour.seekMs(volumeText);
+                if (at < 0) return new Result("Seek needs a time in the song", null);
+                controls.seekTo(at);
+            }
             default -> {
                 return new Result("That media button is not supported", null);
             }
