@@ -10,7 +10,9 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
   PASS="$(openssl rand -base64 24 | tr -d '\n')"
   security delete-keychain "$KC" >/dev/null 2>&1 || true
   security create-keychain -p "$PASS" "$KC"
-  security default-keychain -s "$KC"
+  if [ "${CI:-}" = "true" ]; then
+    security default-keychain -s "$KC"
+  fi
   security unlock-keychain -p "$PASS" "$KC"
   security set-keychain-settings -t 3600 "$KC"
   echo "$MAC_SIGN_P12_BASE64" | base64 -d > "$WORK/sign.p12"
