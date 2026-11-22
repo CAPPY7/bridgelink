@@ -108,6 +108,7 @@ N14. Switching to a saved Mac replaced the address list with one address. Fixed:
 L5. Raising the ring volume sat outside the safety net, so a refusal could stop the ring. Fixed: that change is caught, and the ring still starts. NOT TESTED on a device.
 M20. The send page said a folder could be sent. Fixed: the phone and the Mac say they send files, not a whole folder. NOT TESTED on a device.
 L4. A code could be sent twice, once from the text and once from the notification. Fixed: the same code is sent once per minute. NOT TESTED on a device.
+M17. Mirror taps used the wrong screen size, so they landed in the wrong place. Fixed: the tap uses the real screen, including the system bars. NOT TESTED on a device.
 
 
 

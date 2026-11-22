@@ -2,8 +2,13 @@ package app.bridgelink.android;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.content.Context;
 import android.graphics.Path;
+import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import app.bridgelink.android.protocol.StageSix;
@@ -19,10 +24,9 @@ public final class TouchGate extends AccessibilityService {
     public static String perform(android.content.Context context, StageSix.Tap tap) {
         TouchGate gate = live;
         if (gate == null || tap == null) return StageSix.CONTROL_STEPS;
-        int width = context.getResources().getDisplayMetrics().widthPixels;
-        int height = context.getResources().getDisplayMetrics().heightPixels;
-        int[] start = StageSix.phonePixel(width, height, tap.x, tap.y);
-        int[] end = StageSix.phonePixel(width, height, tap.x2, tap.y2);
+        int[] size = screen(context);
+        int[] start = StageSix.phonePixel(size[0], size[1], tap.x, tap.y);
+        int[] end = StageSix.phonePixel(size[0], size[1], tap.x2, tap.y2);
         boolean ok = switch (tap.kind) {
             case "back" -> gate.performGlobalAction(GLOBAL_ACTION_BACK);
             case "home" -> gate.performGlobalAction(GLOBAL_ACTION_HOME);
@@ -33,6 +37,23 @@ public final class TouchGate extends AccessibilityService {
         };
         if ("text".equals(tap.kind) && !ok) return "Tap a text field on the phone, then type again.";
         return ok ? "Sent" : "That touch did not land.";
+    }
+
+    /** The real screen, including the system bars. Older phones use the real metrics. */
+    @SuppressWarnings("deprecation")
+    static int[] screen(Context context) {
+        WindowManager window = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        if (window != null && Build.VERSION.SDK_INT >= 30) {
+            Rect bounds = window.getCurrentWindowMetrics().getBounds();
+            return new int[] {bounds.width(), bounds.height()};
+        }
+        if (window != null) {
+            DisplayMetrics metrics = new DisplayMetrics();
+            window.getDefaultDisplay().getRealMetrics(metrics);
+            return new int[] {metrics.widthPixels, metrics.heightPixels};
+        }
+        DisplayMetrics fallback = context.getResources().getDisplayMetrics();
+        return new int[] {fallback.widthPixels, fallback.heightPixels};
     }
 
     @Override

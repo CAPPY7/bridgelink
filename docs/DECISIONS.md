@@ -76,6 +76,8 @@ The send pages do not offer a folder. They send files. A folder zip is not added
 
 The same code is sent once. A different code is sent right away. The same code can be sent again after a minute.
 
+Mirror taps use the real screen size, including the system bars. Android 11 and newer use the current window. Older phones use the real display size.
+
 
 
 
