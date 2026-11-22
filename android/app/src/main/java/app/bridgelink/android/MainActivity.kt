@@ -181,6 +181,8 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun useClip(id: String) = easy.useClip(id)
     override fun pinClip(id: String) = easy.pinClip(id)
     override fun deleteClip(id: String) = easy.deleteClip(id)
+    override fun toggleClipHistory() = easy.toggleClipHistory()
+    override fun clearClips() = easy.clearClips()
     override fun toggleLock() = requestLock()
     override fun toggleDesk() = easy.toggleDesk()
     override fun saveLock() = easy.saveLock()

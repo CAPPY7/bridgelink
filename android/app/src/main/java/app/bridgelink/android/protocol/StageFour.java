@@ -171,6 +171,24 @@ public final class StageFour {
         return text.isEmpty() ? "File" : text;
     }
 
+    public static final long CLIP_KEEP_MS = 24L * 60L * 60L * 1000L;
+
+    /** History is stored only after the user turns it on. */
+    public static boolean keepHistory(boolean turnedOn) {
+        return turnedOn;
+    }
+
+    /** Drop copies older than the keep window. */
+    public static List<Clip> dropOlderThan(List<Clip> existing, long now, long keepMs) {
+        ArrayList<Clip> next = new ArrayList<>();
+        if (existing == null) return next;
+        for (Clip clip : existing) {
+            if (keepMs > 0 && now - clip.at > keepMs) continue;
+            next.add(clip);
+        }
+        return next;
+    }
+
     public static List<Clip> add(List<Clip> existing, String text, boolean sensitive, long now) {
         List<Clip> base = existing == null ? List.of() : existing;
         if (text == null) return cap(base);

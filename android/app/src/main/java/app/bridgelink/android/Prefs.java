@@ -28,6 +28,7 @@ public final class Prefs {
             "Android Keystore is unavailable. The pairing token will not be saved on this phone.";
 
     private static SharedPreferences cached;
+    private static SecretKey heldKey;
     private static boolean keystoreFailed;
 
     private Prefs() {}
@@ -48,7 +49,21 @@ public final class Prefs {
             keystoreFailed = true;
         }
         cached = new SealedPrefs(raw, key);
+        heldKey = key;
         return cached;
+    }
+
+    /** Seal a short text with the same keystore key. Fails closed if the keystore is missing. */
+    public static synchronized String sealText(Context context, String plain) throws Exception {
+        open(context);
+        if (heldKey == null) throw new IllegalStateException("keystore");
+        return SecretBox.seal(heldKey, plain == null ? "" : plain);
+    }
+
+    public static synchronized String openText(Context context, String sealed) throws Exception {
+        open(context);
+        if (heldKey == null) throw new IllegalStateException("keystore");
+        return SecretBox.open(heldKey, sealed);
     }
 
     private static void migrateLegacy(Context app, SharedPreferences raw) {

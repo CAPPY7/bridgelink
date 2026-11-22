@@ -30,6 +30,9 @@ Java key files ending in .jks are ignored, the same as .keystore files. Do not c
 
 The away sign-in retry is one saved wait. A new wait replaces that same wait. The sign-in bytes are written on the send thread, never on the main thread.
 
+Clipboard history is off until the user turns it on. Clear history deletes it. Copies older than 24 hours are dropped. The file is sealed with the same keystore key as the pairing token. If that key cannot be used, the copies stay in memory and are not written as plain text.
+
+
 Open and Show in Downloads start the real view screen. They are not broadcasts. Android 12 and newer blocks a broadcast that then opens a screen.
 
 

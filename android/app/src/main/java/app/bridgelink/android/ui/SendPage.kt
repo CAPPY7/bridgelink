@@ -46,9 +46,15 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
         BigButton("Cancel send", "cancel-file", actions::cancelFile, tonal = true)
         Text("Clipboard history", style = MaterialTheme.typography.titleMedium)
         Text(
-            "The last 100 copies stay on this phone. Passwords, card numbers, and codes are not kept. Pictures are not kept.",
+            "Off until you turn it on. Copies older than 24 hours are removed. The saved file is locked to this phone. Passwords are not kept.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        BigButton(
+            if (model.clipHistory) "Turn off clipboard history" else "Keep clipboard history",
+            "clip-history",
+            actions::toggleClipHistory,
+        )
+        BigButton("Clear history", "clip-clear", actions::clearClips, tonal = true)
         OutlinedTextField(
             value = model.clipQuery,
             onValueChange = { model.clipQuery = it },

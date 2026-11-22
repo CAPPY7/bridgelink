@@ -458,6 +458,14 @@ public class ProtocolTest {
         assertEquals(1, StageFour.filter(inbox, "all", "pdf").size());
         assertEquals("a.pdf", StageFour.decodeInbox(StageFour.encodeInbox(inbox)).get(2).title);
         assertEquals(StageFour.BLE_UUID, "f1a0b4c0-6d3e-4a5b-8c7d-9e0f1a2b3c4d");
+        assertFalse(StageFour.keepHistory(false));
+        assertTrue(StageFour.keepHistory(true));
+        long now = 1_000L + StageFour.CLIP_KEEP_MS + 1;
+        java.util.List<StageFour.Clip> aged = StageFour.add(java.util.List.of(), "old", false, 1_000L);
+        aged = StageFour.add(aged, "now", false, now);
+        aged = StageFour.dropOlderThan(aged, now, StageFour.CLIP_KEEP_MS);
+        assertEquals(1, aged.size());
+        assertEquals("now", aged.get(0).text);
     }
 
     @Test

@@ -17,6 +17,7 @@ class EasyWork(private val activity: MainActivity) {
         model.atDesk = prefs.getString("atDesk", "0") == "1"
         model.lockFar = prefs.getString("lockFar", "70") ?: "70"
         model.lockDelay = prefs.getString("lockDelay", "30") ?: "30"
+        model.clipHistory = ClipStore.historyOn(activity)
         refreshClips()
     }
 
@@ -49,6 +50,20 @@ class EasyWork(private val activity: MainActivity) {
     fun deleteClip(id: String) {
         ClipStore.save(activity, StageFour.delete(ClipStore.load(activity), id))
         refreshClips()
+    }
+
+    fun toggleClipHistory() {
+        val on = !ClipStore.historyOn(activity)
+        ClipStore.setHistory(activity, on)
+        model.clipHistory = on
+        refreshClips()
+        model.status = if (on) "Clipboard history is on. Copies older than 24 hours are removed." else "Clipboard history is off."
+    }
+
+    fun clearClips() {
+        ClipStore.clear(activity)
+        refreshClips()
+        model.status = "Clipboard history cleared"
     }
 
     fun toggleLock() {
