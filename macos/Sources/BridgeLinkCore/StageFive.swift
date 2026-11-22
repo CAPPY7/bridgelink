@@ -7,6 +7,8 @@ public enum StageFive {
     public static let folderCap = 200
     public static let part = 24 * 1024
     public static let folderFileCap: Int64 = 32 * 1024 * 1024
+    /// One wait after a folder change. A newer change replaces the old wait.
+    public static let folderQuietMs: Int64 = 60_000
     public static let events = ["connect", "battery_low", "sms_code", "file_in", "clip", "notify", "leave"]
     public static let actions = ["open_app", "alert", "start_sync", "copy_code", "ring", "pause_sync", "note", "none"]
     public static let smsSteps = """
@@ -23,6 +25,16 @@ public enum StageFive {
     3. Turn BridgeLink on.
     4. If BridgeLink is missing, click + and choose the app in Applications.
     """
+
+    /// When the shared folder should push after one quiet wait.
+    public static func folderPushAt(_ nowMs: Int64) -> Int64 {
+        nowMs + folderQuietMs
+    }
+
+    /// Push only after the wait, and only while the link is up, the folder is on, and it is not paused.
+    public static func folderWatchDue(_ linked: Bool, _ on: Bool, _ paused: Bool, _ dueMs: Int64, _ nowMs: Int64) -> Bool {
+        linked && on && !paused && dueMs > 0 && nowMs >= dueMs
+    }
 
     public struct Sms: Equatable, Identifiable {
         public let id: String

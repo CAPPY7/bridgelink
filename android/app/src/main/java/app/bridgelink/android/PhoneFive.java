@@ -10,6 +10,9 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Build;
+import android.os.FileObserver;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Telephony;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionInfo;
@@ -45,8 +48,17 @@ public final class PhoneFive {
     private final Out out;
     private final FolderFiles folder;
     private boolean paused;
+    private boolean linked;
     private boolean batteryFired;
     private List<StageFive.Rule> rules = new ArrayList<>();
+    private FileObserver folderWatch;
+    private long watchDue;
+    private final Handler watchHandler = new Handler(Looper.getMainLooper());
+    private final Runnable watchTick = () -> {
+        if (!StageFive.folderWatchDue(linked, flag("folder"), paused, watchDue, System.currentTimeMillis())) return;
+        watchDue = 0;
+        pushIndex();
+    };
 
     public PhoneFive(Context context, Out out) {
         this.context = context.getApplicationContext();
@@ -59,10 +71,25 @@ public final class PhoneFive {
     }
 
     public void onPaired() {
+        onLinked();
         pushSms();
         pushRules(false);
         pushIndex();
         fire("connect", "");
+    }
+
+    /** The folder watch follows the link, including an away link. */
+    public void onLinked() {
+        linked = true;
+        armWatch();
+    }
+
+    /** Stop the folder watch when the link drops, the phone forgets the Mac, or the service stops. */
+    public void onUnlinked() {
+        linked = false;
+        watchDue = 0;
+        watchHandler.removeCallbacks(watchTick);
+        stopWatch();
     }
 
     public boolean handle(Envelope message) throws Exception {
@@ -76,7 +103,12 @@ public final class PhoneFive {
             case "folder_pause" -> setPaused("1".equals(message.text("on")), true);
             case "auto_rules" -> replaceRules(message.text("body"), true);
             case "input" -> setFlag("input", "1".equals(message.text("on")));
-            case "folder" -> setFlag("folder", "1".equals(message.text("on")));
+            case "folder" -> {
+                boolean on = "1".equals(message.text("on"));
+                setFlag("folder", on);
+                if (on && !paused) armWatch();
+                else disarmWatch();
+            }
             default -> {
                 return false;
             }
@@ -96,6 +128,9 @@ public final class PhoneFive {
                 case "sms_in" -> smsIn(body);
                 case "folder_sync" -> {
                     setFlag("folder", true);
+                    paused = false;
+                    Prefs.open(context).edit().putBoolean("folderPaused", false).apply();
+                    armWatch();
                     pushIndex();
                 }
                 case "folder_pause" -> setPaused("1".equals(body), false);
@@ -388,7 +423,66 @@ public final class PhoneFive {
             } catch (Exception ignored) {
             }
         }
-        if (!on) pushIndex();
+        if (!on) {
+            armWatch();
+            pushIndex();
+        } else {
+            disarmWatch();
+        }
+    }
+
+    private void armWatch() {
+        stopWatch();
+        if (!linked || paused || !flag("folder")) return;
+        File root = folder.root();
+        if (root == null || (!root.isDirectory() && !root.mkdirs())) return;
+        int mask = FileObserver.CLOSE_WRITE | FileObserver.DELETE | FileObserver.CREATE
+                | FileObserver.MOVED_FROM | FileObserver.MOVED_TO | FileObserver.MODIFY;
+        folderWatch = Build.VERSION.SDK_INT >= 29 ? watchTree(root, mask) : watchPath(root.getAbsolutePath(), mask);
+        folderWatch.startWatching();
+    }
+
+    private void disarmWatch() {
+        watchDue = 0;
+        watchHandler.removeCallbacks(watchTick);
+        stopWatch();
+    }
+
+    private void stopWatch() {
+        if (folderWatch != null) {
+            folderWatch.stopWatching();
+            folderWatch = null;
+        }
+    }
+
+    private void bumpWatch(String path) {
+        if (path != null && (path.startsWith(".") || path.contains("/."))) return;
+        watchHandler.post(() -> {
+            if (!linked || paused || !flag("folder")) return;
+            watchDue = StageFive.folderPushAt(System.currentTimeMillis());
+            watchHandler.removeCallbacks(watchTick);
+            watchHandler.postDelayed(watchTick, StageFive.FOLDER_QUIET_MS);
+        });
+    }
+
+    @androidx.annotation.RequiresApi(29)
+    private FileObserver watchTree(File root, int mask) {
+        return new FileObserver(root, mask) {
+            @Override
+            public void onEvent(int event, String path) {
+                bumpWatch(path);
+            }
+        };
+    }
+
+    @SuppressWarnings("deprecation")
+    private FileObserver watchPath(String path, int mask) {
+        return new FileObserver(path, mask) {
+            @Override
+            public void onEvent(int event, String path) {
+                bumpWatch(path);
+            }
+        };
     }
 
     private void edit(String body) {

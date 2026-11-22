@@ -243,3 +243,5 @@ The shared folder is listed once per check. If a file's size and time match the 
 A Downloads save uses the name Android stored, which can be "name (1)" when the first name is taken. A resume continues only when the bytes already in that file match what the sender has sent. Otherwise the file starts again, and a fresh file is opened with "wt" so Android 10 truncates it.
 
 The message-type check is only partly done. Every type is built and read back in a unit test. The emulator still only pairs and sends one note, so that line stays partly.
+
+The shared folder is watched with one 60 second wait on each side. A new change restarts that wait. The watch stops when the link drops, the folder is paused, or the app quits. Hidden files such as the folder list do not start another wait.

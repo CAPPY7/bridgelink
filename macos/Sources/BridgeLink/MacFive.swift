@@ -3,6 +3,7 @@ import ApplicationServices
 import BridgeLinkCore
 import CoreGraphics
 import CryptoKit
+import Darwin
 import Foundation
 import Network
 
@@ -384,6 +385,7 @@ final class FolderFlags: @unchecked Sendable {
     private let lock = NSLock()
     private var on = false
     private var paused = false
+    private var linked = false
 
     func update(on: Bool, paused: Bool) {
         lock.lock()
@@ -392,10 +394,23 @@ final class FolderFlags: @unchecked Sendable {
         lock.unlock()
     }
 
+    func setLinked(_ value: Bool) {
+        lock.lock()
+        linked = value
+        lock.unlock()
+    }
+
     func allows() -> Bool {
         lock.lock()
         defer { lock.unlock() }
         return on && !paused
+    }
+
+    /// Watch and push only while the link is up and the folder is on and not paused.
+    func live() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return on && !paused && linked
     }
 }
 
@@ -495,8 +510,10 @@ extension LinkModel {
             let seenURL = self.sharedBox.root().appendingPathComponent(".seen")
             let seen = (try? String(contentsOf: seenURL, encoding: .utf8)) ?? ""
             let gone = StageFive.removed(StageFive.decodeIndex(seen), now)
-            try? StageFive.encodeIndex(now).write(to: seenURL, atomically: true, encoding: .utf8)
             let body = StageFive.encodeIndex(now)
+            if seen != body {
+                try? body.write(to: seenURL, atomically: true, encoding: .utf8)
+            }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 guard self.folderOn, !self.folderPaused else { return }
@@ -794,5 +811,53 @@ extension LinkModel {
         let folder = dir.appendingPathComponent("BridgeLink", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appendingPathComponent("sms.txt")
+    }
+
+    func refreshFolderWatch() {
+        if folderFlags.live() {
+            startFolderWatch()
+        } else {
+            stopFolderWatch()
+        }
+    }
+
+    func startFolderWatch() {
+        stopFolderWatch()
+        guard folderFlags.live() else { return }
+        let fd = open(sharedBox.root().path, O_EVTONLY)
+        if fd < 0 { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: [.write, .rename, .delete, .extend, .attrib],
+            queue: folderPartQueue
+        )
+        source.setEventHandler { [weak self] in
+            self?.armFolderDebounce()
+        }
+        source.setCancelHandler {
+            close(fd)
+        }
+        folderWatch = source
+        source.resume()
+    }
+
+    func stopFolderWatch() {
+        folderDebounce?.cancel()
+        folderDebounce = nil
+        folderWatch?.cancel()
+        folderWatch = nil
+    }
+
+    private func armFolderDebounce() {
+        folderDebounce?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard self.folderFlags.live() else { return }
+            DispatchQueue.main.async { [weak self] in
+                self?.pushFolder()
+            }
+        }
+        folderDebounce = work
+        folderPartQueue.asyncAfter(deadline: .now() + 60, execute: work)
     }
 }

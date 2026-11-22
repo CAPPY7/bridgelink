@@ -941,6 +941,17 @@ public class ProtocolTest {
         assertFalse(RelayRules.knownPhone("tokentokentoken1", new String[] {"someoneelse123456"}, new String[0]));
     }
 
+    @Test
+    public void folderWatchWaitsAndStaysQuietWhenPaused() {
+        long due = StageFive.folderPushAt(1_000L);
+        assertEquals(61_000L, due);
+        assertFalse(StageFive.folderWatchDue(true, true, false, due, 60_999L));
+        assertTrue(StageFive.folderWatchDue(true, true, false, due, 61_000L));
+        assertFalse(StageFive.folderWatchDue(false, true, false, due, 61_000L));
+        assertFalse(StageFive.folderWatchDue(true, false, false, due, 61_000L));
+        assertFalse(StageFive.folderWatchDue(true, true, true, due, 61_000L));
+    }
+
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */
     public static final class ForegroundServiceStartNotAllowedException extends IllegalStateException {
         public ForegroundServiceStartNotAllowedException() {

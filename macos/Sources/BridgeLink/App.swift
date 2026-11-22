@@ -28,7 +28,9 @@ final class LinkModel: ObservableObject {
     @Published var pin: String
     @Published var pinLeft = 120
     @Published var matchCode = ""
-    @Published var phase: Phase = .idle
+    @Published var phase: Phase = .idle {
+        didSet { refreshFolderWatchFromPhase() }
+    }
     @Published var addresses = ""
     @Published var addressChoices: [String] = []
     @Published var chosenAddress = ""
@@ -79,12 +81,20 @@ final class LinkModel: ObservableObject {
     @Published var smsSim = 0
     @Published var simCount = 1
     @Published var folderOn = false {
-        didSet { folderFlags.update(on: folderOn, paused: folderPaused) }
+        didSet {
+            folderFlags.update(on: folderOn, paused: folderPaused)
+            refreshFolderWatch()
+        }
     }
     @Published var folderPaused = false {
-        didSet { folderFlags.update(on: folderOn, paused: folderPaused) }
+        didSet {
+            folderFlags.update(on: folderOn, paused: folderPaused)
+            refreshFolderWatch()
+        }
     }
     let folderFlags = FolderFlags()
+    var folderWatch: DispatchSourceFileSystemObject?
+    var folderDebounce: DispatchWorkItem?
     @Published var folderPath = ""
     @Published var rules: [StageFive.Rule] = []
     let six = SixHold()
@@ -217,7 +227,15 @@ final class LinkModel: ObservableObject {
     }
 
     func quit() {
+        stopFolderWatch()
         NSApp.terminate(nil)
+    }
+
+    func refreshFolderWatchFromPhase() {
+        let up: Bool
+        if case .paired = phase { up = true } else { up = false }
+        folderFlags.setLinked(up)
+        refreshFolderWatch()
     }
 
     func refreshMacBatteryLabel() {

@@ -14,6 +14,8 @@ public final class StageFive {
     public static final int FOLDER_CAP = 200;
     public static final int PART = 24 * 1024;
     public static final long FOLDER_FILE_CAP = 32L * 1024 * 1024;
+    /** One wait after a folder change. A newer change replaces the old wait. */
+    public static final long FOLDER_QUIET_MS = 60_000L;
     public static final String[] EVENTS = {
             "connect", "battery_low", "sms_code", "file_in", "clip", "notify", "leave"
     };
@@ -34,6 +36,16 @@ public final class StageFive {
                     + "4. If BridgeLink is missing, click + and choose the app in Applications.";
 
     private StageFive() {}
+
+    /** When the shared folder should push after one quiet wait. */
+    public static long folderPushAt(long nowMs) {
+        return nowMs + FOLDER_QUIET_MS;
+    }
+
+    /** Push only after the wait, and only while the link is up, the folder is on, and it is not paused. */
+    public static boolean folderWatchDue(boolean linked, boolean on, boolean paused, long dueMs, long nowMs) {
+        return linked && on && !paused && dueMs > 0 && nowMs >= dueMs;
+    }
 
     public static final class Sms {
         public final String id;

@@ -142,3 +142,4 @@ Q6. The bug list said the message-type check was fully fixed. Partly: that check
 M12. The shared folder scanned every file again for each name, and the Mac read each whole file to hash it. Fixed: each side scans once, and a file is hashed again only when its size or time changed. NOT TESTED on a device.
 Q5. The shared-folder queue read the window's folder switches from a background queue. Fixed: the queue reads a locked copy, and the window updates that copy whenever the switches change. NOT TESTED on a device.
 Q1. The drag test checked a helper the app did not use. Fixed: the Mac mouse button uses that helper for drag, drag end, tap, right-click, a dropped link, and the 3 second wait. NOT TESTED on a device.
+M11. The shared folder was checked only when you asked. Fixed: the phone and the Mac watch the folder, wait 60 seconds after a change, then check. The watch runs only while linked, switched on, and not paused. NOT TESTED on a device.

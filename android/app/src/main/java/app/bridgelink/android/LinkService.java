@@ -255,7 +255,7 @@ public class LinkService extends Service {
                 main.removeCallbacks(rejoinTick);
                 onRelay = true;
                 replyOnRelay = true;
-                paired = false;
+                markUnpaired();
                 publish("Connecting through the away relay…", null);
                 awayAuth.start();
             }
@@ -268,7 +268,7 @@ public class LinkService extends Service {
                     relayAuthed = false;
                     awayAuth.stop();
                     if (wasRelay) {
-                        paired = false;
+                        markUnpaired();
                         onRelay = false;
                     }
                     publish(app.bridgelink.android.protocol.RelayRetry.DOWN, null);
@@ -419,6 +419,7 @@ public class LinkService extends Service {
 
     @Override
     public void onDestroy() {
+        if (five != null) five.onUnlinked();
         stopRing();
         if (leave != null) leave.stop();
         if (networkCallback != null) {
@@ -479,7 +480,7 @@ public class LinkService extends Service {
 
     private void runConnect(Attempt mine, String address, int port, String code) {
         if (mine.closed || generation.get() != mine.gen) return;
-        if (!onRelay) paired = false;
+        if (!onRelay) markUnpaired();
         SharedPreferences prefs = Prefs.open(this);
         String savedToken = prefs.getString("token", "");
         String pinned = prefs.getString("fp", "");
@@ -580,7 +581,7 @@ public class LinkService extends Service {
             if (attempt == mine) {
                 attempt = null;
                 boolean relayStill = onRelay && six != null && six.relayLive();
-                if (!app.bridgelink.android.protocol.RelayRetry.leaveIt(relayStill)) paired = false;
+                if (!app.bridgelink.android.protocol.RelayRetry.leaveIt(relayStill)) markUnpaired();
                 String next = mine.hopTo;
                 if (next != null && !next.isEmpty()) {
                     main.post(() -> openAttempt(next, port, code));
@@ -681,7 +682,7 @@ public class LinkService extends Service {
                         editor.putString("host", lastHost);
                         editor.remove("pendingFp").remove("pin").commit();
                         if (prefs.getString("token", "").length() < 16) {
-                            paired = false;
+                            markUnpaired();
                             linkState.failFatal(Prefs.WARNING);
                             publish(Prefs.WARNING, null);
                             return;
@@ -737,6 +738,7 @@ public class LinkService extends Service {
                     awayAuth.ok();
                     if (onRelay) {
                         paired = true;
+                        if (five != null) five.onLinked();
                         publish("Away (relay). The relay cannot read the link.", null);
                         main.removeCallbacks(heartbeat);
                         main.postDelayed(heartbeat, 1_000);
@@ -768,7 +770,7 @@ public class LinkService extends Service {
                         awayAuth.forgot();
                         onRelay = false;
                         replyOnRelay = false;
-                        paired = false;
+                        markUnpaired();
                         if (six != null) six.stopRelay();
                         publish("This phone is not paired with that Mac.", null);
                     } else if ("busy".equals(code)) {
@@ -885,6 +887,11 @@ public class LinkService extends Service {
         }
     }
 
+    private void markUnpaired() {
+        paired = false;
+        if (five != null) five.onUnlinked();
+    }
+
     private void forgetMac() {
         try {
             JsonObject payload = new JsonObject();
@@ -907,7 +914,7 @@ public class LinkService extends Service {
         linkState.stop();
         generation.incrementAndGet();
         closeSocket();
-        paired = false;
+        markUnpaired();
         publish("Forgot this Mac", null);
     }
 
