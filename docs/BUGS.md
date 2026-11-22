@@ -105,6 +105,7 @@ M9. The phone could send the clipboard only while the app was on screen. Fixed: 
 M19. A drag clicked down and up on every move. Fixed: the button stays down until the drag ends. NOT TESTED on a device.
 M26. The disk image was hidden while it was built, so the icon layout could not be applied. Fixed: it is mounted where that layout step can see it. NOT TESTED on a device.
 N14. Switching to a saved Mac replaced the address list with one address. Fixed: the saved address is added to the list. NOT TESTED on a device.
+L5. Raising the ring volume sat outside the safety net, so a refusal could stop the ring. Fixed: that change is caught, and the ring still starts. NOT TESTED on a device.
 
 
 

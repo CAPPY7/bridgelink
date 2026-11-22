@@ -1529,7 +1529,10 @@ public class LinkService extends Service {
         AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
         if (audio != null) {
             savedAlarmVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM);
-            audio.setStreamVolume(AudioManager.STREAM_ALARM, audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
+            try {
+                audio.setStreamVolume(AudioManager.STREAM_ALARM, audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
+            } catch (RuntimeException ignored) {
+            }
         }
         try {
             Uri alarm = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
@@ -1580,7 +1583,10 @@ public class LinkService extends Service {
         }
         AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
         if (audio != null && savedAlarmVolume >= 0) {
-            audio.setStreamVolume(AudioManager.STREAM_ALARM, savedAlarmVolume, 0);
+            try {
+                audio.setStreamVolume(AudioManager.STREAM_ALARM, savedAlarmVolume, 0);
+            } catch (RuntimeException ignored) {
+            }
             savedAlarmVolume = -1;
         }
         Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);

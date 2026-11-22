@@ -70,6 +70,8 @@ The disk image is mounted in view while it is built, so the icon layout can be a
 
 Switching to a saved Mac adds that Mac's address to the list. The other addresses stay.
 
+If the phone refuses a ring-volume change, the ring still starts. The volume is put back the same way when the ring stops.
+
 
 
 
