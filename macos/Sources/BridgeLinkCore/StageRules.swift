@@ -36,6 +36,11 @@ public enum StageRules {
         return "empty"
     }
 
+    /// Password-manager clips are never synced or stored.
+    public static func skipPasswordClip(_ concealed: Bool, _ transientType: Bool, _ androidSensitive: Bool) -> Bool {
+        concealed || transientType || androidSensitive
+    }
+
     public static func imageFits(_ bytes: Int) -> Bool {
         bytes > 0 && bytes <= imageCap
     }

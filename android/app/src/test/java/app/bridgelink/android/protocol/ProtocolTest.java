@@ -361,6 +361,10 @@ public class ProtocolTest {
         assertFalse(StageRules.canOfferOpen("update.apk"));
         assertTrue(StageRules.canOfferOpen("notes.pdf"));
         assertEquals("File from the Mac: notes.pdf", StageRules.fileTitle("notes.pdf"));
+        assertTrue(StageRules.skipPasswordClip(true, false, false));
+        assertTrue(StageRules.skipPasswordClip(false, true, false));
+        assertTrue(StageRules.skipPasswordClip(false, false, true));
+        assertFalse(StageRules.skipPasswordClip(false, false, false));
         assertEquals("skip", StageRules.clipKind(true, true, true));
         assertEquals("text", StageRules.clipKind(true, true, false));
         assertEquals("image", StageRules.clipKind(false, true, false));

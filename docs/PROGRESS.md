@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Full fix pass. V2 is done. Next is M10: skip password-manager clipboard items.
+Full fix pass. M10 is done. Next is X7: clipboard history only when it is turned on, with clear and a 24 hour drop.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -70,6 +70,7 @@ Full fix pass. V2 is done. Next is M10: skip password-manager clipboard items.
 - X6. A file from the Mac is not opened by itself. An apk has no Open button. A link waits when the screen is off.
 - V1. The away relay writes its idle clock at most once every 30 seconds.
 - V2. The relay room tests run with the web checks. A wake-up uses a new socket and still forwards a frame.
+- M10. Password-manager clipboard items are not sent or stored.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

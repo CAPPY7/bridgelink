@@ -85,6 +85,7 @@ extension LinkModel {
         let board = NSPasteboard.general
         if board.changeCount != pasteCount {
             pasteCount = board.changeCount
+            if pasteMarked(board) { return }
             let text = board.string(forType: .string) ?? ""
             let image = board.data(forType: .png) ?? board.data(forType: .tiff)
             if clipboardMode == "auto", case .paired = phase, !text.isEmpty || image != nil {

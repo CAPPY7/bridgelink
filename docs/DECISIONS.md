@@ -18,6 +18,8 @@ The away relay writes its idle clock at most once every 30 seconds, so a busy ro
 
 The relay room tests run with the web checks. A wake-up is a new socket that only has the saved note. It must still forward a frame.
 
+Password-manager clips are never synced or stored. On Android 13 and newer that is the sensitive clip flag. On the Mac that is the concealed and transient pasteboard types.
+
 A sleeping relay keeps the role on the socket and the room key in storage. Nothing important is only in memory. The free Cloudflare plan already supports that.
 
 A quiet away relay closes after 10 minutes without a frame, not because the connection is old. A drop shows "Away link down" and rejoins with the same wait used for Wi-Fi. A relay that never came up does not loop by itself.

@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
@@ -1041,6 +1042,14 @@ public class LinkService extends Service {
         });
     }
 
+    private boolean passwordClip(ClipboardManager clipboard) {
+        if (clipboard == null || Build.VERSION.SDK_INT < 33) return false;
+        ClipDescription description = clipboard.getPrimaryClipDescription();
+        if (description == null || description.getExtras() == null) return false;
+        boolean marked = description.getExtras().getBoolean(ClipDescription.EXTRA_IS_SENSITIVE);
+        return StageRules.skipPasswordClip(false, false, marked);
+    }
+
     private static String clipboardText(ClipboardManager clipboard) {
         if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.getPrimaryClip() == null) return "";
         ClipData clip = clipboard.getPrimaryClip();
@@ -1272,6 +1281,7 @@ public class LinkService extends Service {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         if (clipboard == null) return;
         clipboard.addPrimaryClipChangedListener(() -> {
+            if (passwordClip(clipboard)) return;
             ClipStore.addText(this, clipboardText(clipboard));
             if (!paired) return;
             if (!Features.enabled(Prefs.open(this).getString("flags", ""), "clipboard", false)) return;
@@ -1291,6 +1301,10 @@ public class LinkService extends Service {
                 return;
             }
             ClipData clip = clipboard.getPrimaryClip();
+            if (passwordClip(clipboard)) {
+                if (manual) publish("Skipped a password-manager clipboard", null);
+                return;
+            }
             CharSequence text = clip.getItemCount() > 0 ? clip.getItemAt(0).getText() : null;
             String value = text == null ? "" : text.toString();
             boolean image = clip.getItemCount() > 0 && clip.getItemAt(0).getUri() != null && value.isEmpty();

@@ -54,6 +54,11 @@ public final class StageRules {
         return "empty";
     }
 
+    /** Password-manager clips are never synced or stored. */
+    public static boolean skipPasswordClip(boolean concealed, boolean transientType, boolean androidSensitive) {
+        return concealed || transientType || androidSensitive;
+    }
+
     public static boolean imageFits(int bytes) {
         return bytes > 0 && bytes <= IMAGE_CAP;
     }

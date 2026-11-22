@@ -370,6 +370,10 @@ final class LinkModel: ObservableObject {
 
     func sendClipboard() {
         let board = NSPasteboard.general
+        if pasteMarked(board) {
+            note("Skipped a password-manager clipboard")
+            return
+        }
         let text = board.string(forType: .string) ?? ""
         if !text.isEmpty && Features.sensitiveText(text) {
             note("Skipped sensitive clipboard")
@@ -389,6 +393,13 @@ final class LinkModel: ObservableObject {
         rememberClip(text)
         send(type: "clipboard", payload: ["body": text], on: live)
         note("Sent clipboard")
+    }
+
+    func pasteMarked(_ board: NSPasteboard) -> Bool {
+        let types = board.types ?? []
+        let concealed = types.contains(NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
+        let transient = types.contains(NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+        return StageRules.skipPasswordClip(concealed, transient, false)
     }
 
     func ring() {
