@@ -234,6 +234,36 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(IncomingFile(id: "", name: "a.txt", size: 1))
     }
 
+    func testEveryFixtureMatchesAMessageType() throws {
+        let dir = fixtureDir()
+        let files = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "json" }
+        XCTAssertEqual(files.count, FeatureMessages.types.count)
+        var seen = Set<String>()
+        for file in files {
+            let env = try EnvelopeCodec.parse(Data(contentsOf: file))
+            let stem = file.deletingPathExtension().lastPathComponent
+            XCTAssertEqual(stem, env.type)
+            XCTAssertFalse(env.text("body").isEmpty)
+            seen.insert(stem)
+        }
+        for type in FeatureMessages.types {
+            XCTAssertTrue(seen.contains(type), "missing fixture \(type)")
+        }
+    }
+
+    private func fixtureDir() -> URL {
+        let start = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        var cursor = start
+        for _ in 0..<6 {
+            let candidate = cursor.appendingPathComponent("docs/fixtures")
+            if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+            cursor.deleteLastPathComponent()
+        }
+        XCTFail("Missing docs/fixtures")
+        return start
+    }
+
     func testStageThreeRules() {
         XCTAssertEqual(Transfers.maxBytes, 4 * 1024 * 1024 * 1024)
         XCTAssertEqual(StageRules.progressPercent(written: 5, size: 10), 50)
