@@ -62,3 +62,4 @@ V2. The relay room tests were not part of the checks. Fixed: they run with the o
 M10. Password-manager clipboard items could be copied and stored. Fixed: Android skips clips marked sensitive on Android 13 and newer. The Mac skips concealed and transient pasteboard types. Those clips are not sent and not stored. NOT TESTED on a device.
 X8. The phone could start the link for any broadcast the boot receiver saw. Fixed: it starts only after the phone boots or the app is updated. NOT TESTED on a device.
 L10. Signing the Mac app changed the default keychain even on a home computer. Fixed: the default keychain changes only when CI is true. NOT TESTED on a device.
+L12. A script in the repo could make a new Android signing key. Fixed: that script is deleted, and the docs no longer tell anyone to run it. Do not add it back.

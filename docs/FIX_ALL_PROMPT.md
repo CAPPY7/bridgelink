@@ -23,7 +23,7 @@ My rules (never ask me about these):
    docs/DECISIONS.md (one line).
 4. Never print, log, or commit any secret, password, or key. Not in chat, not in CI logs.
 5. NEVER create a new Android signing key. The existing keystore and the 4 GitHub secrets
-   stay. Do not run scripts/generate-android-keystore.sh.
+   stay. The key-making script was deleted. Do not add it back.
 6. Keep the link protocol, TLS, port 8787, and the Bonjour name _bridgelink._tcp.
    New message types are fine. Old ones must keep working.
 7. The Mac app stays FREE and SIDELOADED (a DMG you drag to Applications). No paid Apple
@@ -284,8 +284,7 @@ STEP 4 – LOW FIXES AND CODE CLEANUP
 4.9 (L9) Phone: links and files from the Mac show a notification with "Open" instead
     of opening by themselves (keep the "always open links" setting).
 4.10 (L10) sign.sh: never change the default keychain outside CI.
-4.11 (L12) Rename scripts/generate-android-keystore.sh to
-    scripts/DO-NOT-RUN-new-android-key.sh with a big warning at the top, or delete it.
+4.11 (L12) The Android key-making script is deleted. Do not add it back.
 4.12 (L15) Update the old libraries (Compose BOM, Room, activity-compose, core,
     document scanner stable). Fix the lint warnings. Keep lint at 0 errors.
 

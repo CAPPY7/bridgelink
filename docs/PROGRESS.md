@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Full fix pass. L10 is done. Next is L12: delete the Android key-making script.
+Full fix pass. L12 is done. Next is X9: ignore Android key files named .jks.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -73,6 +73,7 @@ Full fix pass. L10 is done. Next is L12: delete the Android key-making script.
 - M10. Password-manager clipboard items are not sent or stored.
 - X8. The phone reconnects after boot or an app update, and ignores other broadcasts.
 - L10. The Mac signing script changes the default keychain only on CI.
+- L12. The Android key-making script is deleted.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

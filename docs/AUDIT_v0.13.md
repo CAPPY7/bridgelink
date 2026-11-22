@@ -173,7 +173,7 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 
 **L11. Release notarization staples the `.app` after the DMG is built** (it should staple the DMG). `release.yml` mac step.
 
-**L12. `generate-android-keystore.sh` is in the repo.** Running it would make a new key, which goes against the owner's rule. Rename it with a big warning, or remove it.
+**L12. The Android key-making script was removed.** Do not add it back. A new key would not match the owner's existing signing secrets.
 
 **L13. The Android bottom bar scrolls sideways,** so Remote, Mirror and Settings are hidden off-screen. The status card shows "Not connected / Not connected". `BridgeTheme.kt:122`, `docs/screenshots/android-home.png`.
 
