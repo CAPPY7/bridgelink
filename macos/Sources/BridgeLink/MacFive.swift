@@ -457,14 +457,25 @@ extension LinkModel {
             return
         }
         guard case .paired = phase else { return }
-        let now = sharedBox.scan()
-        let seen = (try? String(contentsOf: sharedBox.root().appendingPathComponent(".seen"), encoding: .utf8)) ?? ""
-        for gone in StageFive.removed(StageFive.decodeIndex(seen), now) {
-            send(type: "folder_delete", payload: ["path": gone.path, "sha": gone.sha], on: live)
+        folderPartQueue.async { [weak self] in
+            guard let self else { return }
+            let now = self.sharedBox.scan()
+            let seenURL = self.sharedBox.root().appendingPathComponent(".seen")
+            let seen = (try? String(contentsOf: seenURL, encoding: .utf8)) ?? ""
+            let gone = StageFive.removed(StageFive.decodeIndex(seen), now)
+            try? StageFive.encodeIndex(now).write(to: seenURL, atomically: true, encoding: .utf8)
+            let body = StageFive.encodeIndex(now)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                guard self.folderOn, !self.folderPaused else { return }
+                guard case .paired = self.phase else { return }
+                for item in gone {
+                    self.send(type: "folder_delete", payload: ["path": item.path, "sha": item.sha], on: self.live)
+                }
+                self.send(type: "folder_index", payload: ["body": body, "paused": "0"], on: self.live)
+                self.note("Shared folder checked")
+            }
         }
-        try? StageFive.encodeIndex(now).write(to: sharedBox.root().appendingPathComponent(".seen"), atomically: true, encoding: .utf8)
-        send(type: "folder_index", payload: ["body": StageFive.encodeIndex(now), "paused": "0"], on: live)
-        note("Shared folder checked")
     }
 
     func addAutomation() {
