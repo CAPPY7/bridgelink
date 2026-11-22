@@ -16,6 +16,8 @@ The pair question stays on the phone screen. The emulator test reads that screen
 
 The away relay writes its idle clock at most once every 30 seconds, so a busy room does not rewrite storage on every frame. A room still closes after 10 minutes with no frames.
 
+The relay room tests run with the web checks. A wake-up is a new socket that only has the saved note. It must still forward a frame.
+
 A sleeping relay keeps the role on the socket and the room key in storage. Nothing important is only in memory. The free Cloudflare plan already supports that.
 
 A quiet away relay closes after 10 minutes without a frame, not because the connection is old. A drop shows "Away link down" and rejoins with the same wait used for Wi-Fi. A relay that never came up does not loop by itself.

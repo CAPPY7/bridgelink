@@ -16,16 +16,23 @@ function memoryState(sockets) {
   };
 }
 
-function socket() {
-  let attachment = null;
+function socket(preset) {
+  let attachment = preset === undefined ? null : preset;
   return {
     sent: [],
     closed: false,
+    why: "",
     serializeAttachment(value) { attachment = value; },
     deserializeAttachment() { return attachment; },
     send(message) { this.sent.push(message); },
-    close() { this.closed = true; },
+    close(_code, why) { this.closed = true; this.why = why || ""; },
   };
+}
+
+function wake(old) {
+  const saved = old.deserializeAttachment();
+  const copy = saved ? JSON.parse(JSON.stringify(saved)) : null;
+  return socket(copy);
 }
 
 async function hello(role, stamp, key) {
@@ -33,21 +40,29 @@ async function hello(role, stamp, key) {
   return `${role} ${stamp} ${mac} ${key}`;
 }
 
-test("a wake-up still knows the role and the room key", async () => {
+test("a wake-up still forwards a frame", async () => {
   const stamp = Math.floor(Date.now() / 1000);
   const key = "ab".repeat(32);
   const phone = socket();
-  const state = memoryState([phone]);
+  const mac = socket();
+  const state = memoryState([phone, mac]);
   const room = new Room(state);
   await room.webSocketMessage(phone, await hello("phone", stamp, key));
-  assert.equal(keptRole(readMeta(phone)), "phone");
+  await room.webSocketMessage(mac, await hello("mac", stamp, key));
   assert.equal(await state.storage.get("roomKey"), key);
 
-  const woken = new Room(memoryState(state.getWebSockets()));
+  const phone2 = wake(phone);
+  const mac2 = wake(mac);
+  assert.notEqual(phone2, phone);
+  const woken = new Room(memoryState([phone2, mac2]));
   woken.state.storage = state.storage;
-  const again = woken.state.getWebSockets()[0];
-  assert.equal(keptRole(readMeta(again)), "phone");
-  assert.equal(await woken.state.storage.get("roomKey"), key);
+  const frame = new Uint8Array([9, 8, 7]);
+  await woken.webSocketMessage(phone2, frame);
+  assert.equal(phone2.closed, false);
+  assert.notEqual(phone2.why, "hello");
+  assert.equal(mac2.sent.length, 1);
+  assert.deepEqual([...mac2.sent[0]], [9, 8, 7]);
+  assert.equal(keptRole(readMeta(phone2)), "phone");
 });
 
 test("silence closes the room, a recent frame does not, and a new join works", async () => {
