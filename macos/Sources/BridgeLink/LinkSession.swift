@@ -178,6 +178,12 @@ extension LinkModel {
             }
         case "file_begin":
             let fileId = envelope.text("id")
+            if envelope.text("dest") == "folder",
+               folderSink.begin(fileId, envelope.text("path"), Int(envelope.text("size")) ?? -1) {
+                send(type: "file_have", payload: ["id": fileId, "offset": "0"], on: live)
+                note("Receiving a shared file")
+                break
+            }
             let from = Int(envelope.text("from")) ?? 0
             files.begin(id: fileId, name: envelope.text("name"), size: Int(envelope.text("size")) ?? -1, from: from) { [weak self] line, have in
                 Task { @MainActor in
@@ -186,10 +192,20 @@ extension LinkModel {
                 }
             }
         case "file_chunk":
+            if folderSink.has(envelope.text("id")) {
+                if let line = folderSink.chunk(envelope.text("id"), Int(envelope.text("offset")) ?? -1, envelope.text("data")) {
+                    note(line)
+                }
+                break
+            }
             files.chunk(id: envelope.text("id"), offset: Int(envelope.text("offset")) ?? -1, base64: envelope.text("data")) { [weak self] line in
                 if let line { Task { @MainActor in self?.note(line) } }
             }
         case "file_end":
+            if folderSink.has(envelope.text("id")) {
+                note(folderSink.finish(envelope.text("id"), envelope.text("sha256"), sharedBox))
+                break
+            }
             files.finish(id: envelope.text("id"), sha256: envelope.text("sha256")) { [weak self] line, url, opened in
                 Task { @MainActor in
                     self?.note(line)
@@ -203,6 +219,7 @@ extension LinkModel {
                 }
             }
         case "file_cancel":
+            if folderSink.has(envelope.text("id")) { folderSink.drop(envelope.text("id")) }
             files.cancel(id: envelope.text("id"))
             note("File cancelled")
         case "file_have":

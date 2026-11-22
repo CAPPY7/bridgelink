@@ -26,6 +26,11 @@ public enum StageFive {
     4. If BridgeLink is missing, click + and choose the app in Applications.
     """
 
+    /// A shared file over 32 MB uses the normal file messages. Smaller files stay on folder_part.
+    public static func folderUsesChunks(_ size: Int64) -> Bool {
+        size > folderFileCap && size <= Int64(Transfers.maxBytes)
+    }
+
     /// When the shared folder should push after one quiet wait.
     public static func folderPushAt(_ nowMs: Int64) -> Int64 {
         nowMs + folderQuietMs

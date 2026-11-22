@@ -34,6 +34,33 @@ public final class FolderTree {
         return tree;
     }
 
+    public long sizeOf(String path) {
+        DocumentFile file = find(Features.safeRelative(path));
+        if (file == null || !file.isFile()) return -1;
+        return file.length();
+    }
+
+    /** Copy a finished chunked file into the chosen folder. The caller already checked the sha256. */
+    public String storeFile(String path, java.io.File tmp) {
+        String safe = Features.safeRelative(path);
+        if (safe == null || tmp == null || !tmp.isFile()) return "Refused a shared file.";
+        try {
+            DocumentFile dest = create(safe);
+            if (dest == null) return "Refused a shared file.";
+            try (InputStream in = new java.io.FileInputStream(tmp);
+                 OutputStream out = context.getContentResolver().openOutputStream(dest.getUri(), "wt")) {
+                if (out == null) return "Could not store the shared file.";
+                byte[] buf = new byte[StageFive.PART];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            }
+            tmp.delete();
+            return null;
+        } catch (Exception error) {
+            return "Could not store the shared file.";
+        }
+    }
+
     public List<StageFive.Entry> scan(Map<String, StageFive.Entry> prior) {
         ArrayList<StageFive.Entry> items = new ArrayList<>();
         DocumentFile root = DocumentFile.fromTreeUri(context, tree);
@@ -87,7 +114,6 @@ public final class FolderTree {
         String safe = Features.safeRelative(path);
         DocumentFile file = find(safe);
         if (safe == null || file == null || !file.isFile()) return "That shared file is gone.";
-        if (file.length() > StageFive.FOLDER_FILE_CAP) return "Skipped a shared file over 32 MB.";
         String sha = sha(file);
         long size = file.length();
         long mtime = file.lastModified();

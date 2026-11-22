@@ -247,3 +247,5 @@ The message-type check is only partly done. Every type is built and read back in
 The shared folder is watched with one 60 second wait on each side. A new change restarts that wait. The watch stops when the link drops, the folder is paused, or the app quits. Hidden files such as the folder list do not start another wait.
 
 The phone shared folder stays in the app's own Documents/BridgeLink Shared folder until you pick one. Android 10 and newer cannot list the public Documents folder without that pick, and BridgeLink does not ask for broad storage access. The picked folder is remembered and kept after a restart.
+
+A shared file over 32 MB uses the normal file messages and is saved in the shared folder. The same sha256 check used for other files decides if it is kept. Files of 32 MB or less still use the old shared-folder pieces, so an older app can still receive them.

@@ -37,7 +37,10 @@ public final class StageFive {
 
     private StageFive() {}
 
-    /** When the shared folder should push after one quiet wait. */
+    /** A shared file over 32 MB uses the normal file messages. Smaller files stay on folder_part. */
+    public static boolean folderUsesChunks(long size) {
+        return size > FOLDER_FILE_CAP && size <= Transfers.MAX_BYTES;
+    }
     public static long folderPushAt(long nowMs) {
         return nowMs + FOLDER_QUIET_MS;
     }

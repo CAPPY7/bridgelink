@@ -824,27 +824,46 @@ public class LinkService extends Service {
                 case "file_begin" -> {
                     String id = message.text("id");
                     long from = longText(message, "from");
+                    if ("folder".equals(message.text("dest")) && five != null
+                            && five.takeFolderFile(id, message.text("path"), longText(message, "size"))) {
+                        JsonObject reply = new JsonObject();
+                        reply.addProperty("id", id);
+                        reply.addProperty("offset", "0");
+                        writeEnvelope(Envelope.make("file_have", "android", reply));
+                        publish("Receiving a shared file", null);
+                    } else {
                     String status = files.begin(id, message.text("name"), longText(message, "size"), Math.max(0, from));
                     JsonObject reply = new JsonObject();
                     reply.addProperty("id", id);
                     reply.addProperty("offset", Long.toString(files.offered(id)));
                     writeEnvelope(Envelope.make("file_have", "android", reply));
                     if (status != null) publish(status, null);
+                    }
                 }
                 case "file_have" -> fileHave.put(message.text("id"), longText(message, "offset"));
                 case "file_chunk" -> {
+                    if (five != null && five.hasFolderFile(message.text("id"))) {
+                        String status = five.chunkFolderFile(message.text("id"), longText(message, "offset"), message.text("data"));
+                        if (status != null) publish(status, null);
+                    } else {
                     String status = files.chunk(message.text("id"), longText(message, "offset"), message.text("data"));
                     if (status != null) publish(status, null);
+                    }
                 }
                 case "file_end" -> {
+                    if (five != null && five.hasFolderFile(message.text("id"))) {
+                        publish(five.finishFolderFile(message.text("id"), message.text("sha256")), null);
+                    } else {
                     String saved = files.finish(message.text("id"), message.text("sha256"));
                     publish(saved, null);
                     if (saved != null && saved.startsWith("Saved")) {
                         askFile(files.lastName(), files.lastUri());
                         if (five != null) five.fire("file_in", saved);
                     }
+                    }
                 }
                 case "file_cancel" -> {
+                    if (five != null && five.hasFolderFile(message.text("id"))) five.dropFolderFile(message.text("id"));
                     files.cancel(message.text("id"));
                     publish("File cancelled", null);
                 }

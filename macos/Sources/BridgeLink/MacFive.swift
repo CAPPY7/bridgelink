@@ -226,6 +226,31 @@ final class SharedBox {
         return url
     }
 
+    func byteCount(_ path: String) -> Int64 {
+        guard let file = resolve(Features.safeRelative(path)),
+              FileManager.default.fileExists(atPath: file.path),
+              let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return -1 }
+        return Int64(size)
+    }
+
+    func fileURL(_ path: String) -> URL? {
+        guard let file = resolve(Features.safeRelative(path)),
+              FileManager.default.fileExists(atPath: file.path) else { return nil }
+        return file
+    }
+
+    func storeFile(path: String, from tmp: URL) -> String? {
+        guard let dest = resolve(Features.safeRelative(path)) else { return "Refused a shared file." }
+        try? FileManager.default.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: dest)
+        do {
+            try FileManager.default.moveItem(at: tmp, to: dest)
+            return nil
+        } catch {
+            return "Could not store the shared file."
+        }
+    }
+
     func scan() -> [StageFive.Entry] {
         let seen = (try? String(contentsOf: root().appendingPathComponent(".seen"), encoding: .utf8)) ?? ""
         var prior: [String: StageFive.Entry] = [:]
@@ -287,7 +312,6 @@ final class SharedBox {
         guard let safe = Features.safeRelative(path), let file = resolve(safe),
               FileManager.default.fileExists(atPath: file.path) else { return "That shared file is gone." }
         guard let data = try? Data(contentsOf: file) else { return "Could not read the shared file." }
-        if data.count > StageFive.folderFileCap { return "Skipped a shared file over 32 MB." }
         let sha = Transfers.sha256Hex(data)
         let size = Int64(data.count)
         let mtime = Int64((try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate?.timeIntervalSince1970) ?? 0) * 1000
@@ -375,6 +399,66 @@ final class SharedBox {
         var size: Int64
         var sha: String
         var written: Int64
+    }
+}
+
+/// A big shared file arrives as file_begin / file_chunk / file_end and is checked with the normal sha256.
+final class FolderSink {
+    private var incoming: [String: IncomingFile] = [:]
+    private var handles: [String: FileHandle] = [:]
+    private var paths: [String: String] = [:]
+    private var temps: [String: URL] = [:]
+
+    func begin(_ id: String, _ path: String, _ size: Int) -> Bool {
+        guard StageFive.folderUsesChunks(Int64(size)), let file = IncomingFile(id: id, name: path, size: size) else { return false }
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-folder-\(id)")
+        FileManager.default.createFile(atPath: tmp.path, contents: nil)
+        guard let handle = try? FileHandle(forWritingTo: tmp) else { return false }
+        incoming[id] = file
+        handles[id] = handle
+        paths[id] = path
+        temps[id] = tmp
+        return true
+    }
+
+    func has(_ id: String) -> Bool { incoming[id] != nil }
+
+    func chunk(_ id: String, _ offset: Int, _ base64: String) -> String? {
+        guard let file = incoming[id], let raw = file.accept(offset: offset, base64: base64), let handle = handles[id] else {
+            drop(id)
+            return "A file chunk was rejected."
+        }
+        do {
+            try handle.write(contentsOf: raw)
+            return nil
+        } catch {
+            drop(id)
+            return "Could not store the shared file."
+        }
+    }
+
+    func finish(_ id: String, _ sha: String, _ box: SharedBox) -> String {
+        guard let file = incoming[id], let path = paths[id], let tmp = temps[id] else { return "A shared file did not match." }
+        try? handles[id]?.close()
+        incoming[id] = nil
+        handles[id] = nil
+        paths[id] = nil
+        temps[id] = nil
+        if !file.matches(sha) {
+            try? FileManager.default.removeItem(at: tmp)
+            return "A shared file did not match."
+        }
+        if let problem = box.storeFile(path: path, from: tmp) { return problem }
+        return "Shared folder updated"
+    }
+
+    func drop(_ id: String) {
+        try? handles[id]?.close()
+        if let tmp = temps[id] { try? FileManager.default.removeItem(at: tmp) }
+        incoming[id] = nil
+        handles[id] = nil
+        paths[id] = nil
+        temps[id] = nil
     }
 }
 
@@ -666,6 +750,11 @@ extension LinkModel {
             folderPartQueue.async { [weak self] in
                 guard let self else { return }
                 guard self.folderFlags.allows() else { return }
+                let count = self.sharedBox.byteCount(wantPath)
+                if StageFive.folderUsesChunks(count), let file = self.sharedBox.fileURL(wantPath) {
+                    self.shipLarge(file, path: wantPath, size: count)
+                    return
+                }
                 let problem = self.sharedBox.send(path: wantPath) { offset, size, mtime, sha, data in
                     let payload = [
                         "path": wantPath,
@@ -846,6 +935,43 @@ extension LinkModel {
         folderDebounce = nil
         folderWatch?.cancel()
         folderWatch = nil
+    }
+
+    func shipLarge(_ file: URL, path: String, size: Int64) {
+        guard let safe = Features.safeRelative(path) else { return }
+        let name = (safe as NSString).lastPathComponent
+        let id = String(Transfers.sha256Hex(Data("\(safe)\n\(size)".utf8)).prefix(32))
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return }
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        var offset: Int64 = 0
+        let gate = DispatchSemaphore(value: 0)
+        DispatchQueue.main.async { [weak self] in
+            self?.send(type: "file_begin", payload: [
+                "id": id, "name": name, "path": safe, "dest": "folder", "size": String(size), "from": "0",
+            ], on: self?.live)
+            gate.signal()
+        }
+        gate.wait()
+        while true {
+            let data = (try? handle.read(upToCount: Transfers.chunk)) ?? Data()
+            if data.isEmpty { break }
+            hasher.update(data: data)
+            let payload = ["id": id, "offset": String(offset), "data": data.base64EncodedString()]
+            offset += Int64(data.count)
+            DispatchQueue.main.async { [weak self] in
+                self?.send(type: "file_chunk", payload: payload, on: self?.live)
+                gate.signal()
+            }
+            gate.wait()
+        }
+        if offset != size { return }
+        let sha = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.send(type: "file_end", payload: ["id": id, "sha256": sha], on: self.live)
+            self.note("Sent \(name)")
+        }
     }
 
     private func armFolderDebounce() {

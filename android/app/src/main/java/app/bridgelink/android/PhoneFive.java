@@ -24,8 +24,13 @@ import androidx.core.content.ContextCompat;
 import com.google.gson.JsonObject;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +41,7 @@ import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.FolderFiles;
 import app.bridgelink.android.protocol.StageFive;
 import app.bridgelink.android.protocol.StageRules;
+import app.bridgelink.android.protocol.Transfers;
 
 /** Texts, shared folder, automations, and trackpad messages. The socket stays in LinkService. */
 public final class PhoneFive {
@@ -53,6 +59,7 @@ public final class PhoneFive {
     private boolean linked;
     private boolean batteryFired;
     private List<StageFive.Rule> rules = new ArrayList<>();
+    private final Map<String, FolderIn> folderIn = new HashMap<>();
     private FileObserver folderWatch;
     private ContentObserver treeWatch;
     private long watchDue;
@@ -402,17 +409,168 @@ public final class PhoneFive {
 
     private void sendShared(String path) throws Exception {
         if (paused || !flag("folder")) return;
-        String problem = sendFolder(path, (offset, size, mtime, sha, data) -> {
+        long size = tree != null ? tree.sizeOf(path) : folder.sizeOf(path);
+        if (StageFive.folderUsesChunks(size)) {
+            sendFolderChunks(path, size);
+            return;
+        }
+        String problem = sendFolder(path, (offset, fileSize, mtime, sha, data) -> {
             JsonObject payload = new JsonObject();
             payload.addProperty("path", Features.safeRelative(path));
             payload.addProperty("offset", Long.toString(offset));
-            payload.addProperty("size", Long.toString(size));
+            payload.addProperty("size", Long.toString(fileSize));
             payload.addProperty("mtime", Long.toString(mtime));
             payload.addProperty("sha", sha);
             payload.addProperty("data", data);
             out.frame("folder_part", payload);
         });
         if (problem != null) out.status(problem);
+    }
+
+    private void sendFolderChunks(String path, long size) throws Exception {
+        String safe = Features.safeRelative(path);
+        if (safe == null) {
+            out.status("Refused a shared file.");
+            return;
+        }
+        String name = safe.contains("/") ? safe.substring(safe.lastIndexOf('/') + 1) : safe;
+        String id = Transfers.sha256Hex((safe + "\n" + size).getBytes(StandardCharsets.UTF_8));
+        if (id.length() > 32) id = id.substring(0, 32);
+        JsonObject begin = new JsonObject();
+        begin.addProperty("id", id);
+        begin.addProperty("name", name);
+        begin.addProperty("path", safe);
+        begin.addProperty("dest", "folder");
+        begin.addProperty("size", Long.toString(size));
+        begin.addProperty("from", "0");
+        out.frame("file_begin", begin);
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream in = openShared(safe)) {
+            if (in == null) {
+                out.status("That shared file is gone.");
+                return;
+            }
+            byte[] buf = new byte[Transfers.CHUNK];
+            long offset = 0;
+            int count;
+            while ((count = in.read(buf)) >= 0) {
+                if (count == 0) continue;
+                digest.update(buf, 0, count);
+                JsonObject chunk = new JsonObject();
+                chunk.addProperty("id", id);
+                chunk.addProperty("offset", Long.toString(offset));
+                chunk.addProperty("data", java.util.Base64.getEncoder().encodeToString(java.util.Arrays.copyOf(buf, count)));
+                out.frame("file_chunk", chunk);
+                offset += count;
+            }
+            if (offset != size) {
+                out.status("The file changed while it was sending.");
+                return;
+            }
+        }
+        JsonObject end = new JsonObject();
+        end.addProperty("id", id);
+        end.addProperty("sha256", hex(digest.digest()));
+        out.frame("file_end", end);
+        out.status("Sent " + name);
+    }
+
+    private InputStream openShared(String safe) throws Exception {
+        if (tree != null) {
+            androidx.documentfile.provider.DocumentFile file = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, tree.tree());
+            if (file == null) return null;
+            for (String part : safe.split("/")) {
+                file = file.findFile(part);
+                if (file == null) return null;
+            }
+            return context.getContentResolver().openInputStream(file.getUri());
+        }
+        File file = new File(folder.root(), safe);
+        if (!file.isFile()) return null;
+        return new FileInputStream(file);
+    }
+
+    public boolean takeFolderFile(String id, String path, long size) {
+        if (id == null || id.isEmpty() || !StageFive.folderUsesChunks(size)) return false;
+        Transfers.Incoming incoming = Transfers.Incoming.begin(id, path, size);
+        if (incoming == null) return false;
+        try {
+            File dir = new File(context.getCacheDir(), "folder-in");
+            if (!dir.isDirectory() && !dir.mkdirs()) return false;
+            File tmp = new File(dir, id);
+            if (tmp.exists() && !tmp.delete()) return false;
+            folderIn.put(id, new FolderIn(incoming, path, tmp, new FileOutputStream(tmp)));
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    public boolean hasFolderFile(String id) {
+        return id != null && folderIn.containsKey(id);
+    }
+
+    public String chunkFolderFile(String id, long offset, String data) {
+        FolderIn slot = folderIn.get(id);
+        if (slot == null) return null;
+        byte[] raw = slot.incoming.accept(offset, data);
+        if (raw == null) {
+            dropFolderFile(id);
+            return "A file chunk was rejected.";
+        }
+        try {
+            slot.out.write(raw);
+            return null;
+        } catch (Exception error) {
+            dropFolderFile(id);
+            return "Could not store the shared file.";
+        }
+    }
+
+    public String finishFolderFile(String id, String sha) {
+        FolderIn slot = folderIn.remove(id);
+        if (slot == null) return null;
+        try {
+            slot.out.close();
+        } catch (Exception ignored) {
+        }
+        if (!slot.incoming.matches(sha)) {
+            slot.tmp.delete();
+            return "A shared file did not match.";
+        }
+        String problem = tree != null ? tree.storeFile(slot.path, slot.tmp) : folder.storeFile(slot.path, slot.tmp);
+        if (problem != null) return problem;
+        return "Shared folder updated";
+    }
+
+    public void dropFolderFile(String id) {
+        FolderIn slot = folderIn.remove(id);
+        if (slot == null) return;
+        try {
+            slot.out.close();
+        } catch (Exception ignored) {
+        }
+        slot.tmp.delete();
+    }
+
+    private static String hex(byte[] raw) {
+        StringBuilder out = new StringBuilder(raw.length * 2);
+        for (byte value : raw) out.append(String.format(java.util.Locale.US, "%02x", value & 0xff));
+        return out.toString();
+    }
+
+    private static final class FolderIn {
+        final Transfers.Incoming incoming;
+        final String path;
+        final File tmp;
+        final OutputStream out;
+
+        FolderIn(Transfers.Incoming incoming, String path, File tmp, OutputStream out) {
+            this.incoming = incoming;
+            this.path = path;
+            this.tmp = tmp;
+            this.out = out;
+        }
     }
 
     public void setPaused(boolean on, boolean fromPeer) {

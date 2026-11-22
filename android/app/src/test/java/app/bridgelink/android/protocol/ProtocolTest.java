@@ -950,6 +950,9 @@ public class ProtocolTest {
         assertFalse(StageFive.folderWatchDue(false, true, false, due, 61_000L));
         assertFalse(StageFive.folderWatchDue(true, false, false, due, 61_000L));
         assertFalse(StageFive.folderWatchDue(true, true, true, due, 61_000L));
+        assertFalse(StageFive.folderUsesChunks(32L * 1024 * 1024));
+        assertTrue(StageFive.folderUsesChunks(32L * 1024 * 1024 + 1));
+        assertFalse(StageFive.folderUsesChunks(Transfers.MAX_BYTES + 1));
     }
 
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */

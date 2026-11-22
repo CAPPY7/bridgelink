@@ -33,6 +33,32 @@ public final class FolderFiles {
         return root;
     }
 
+    public long sizeOf(String path) {
+        File file = resolve(Features.safeRelative(path));
+        if (file == null || !file.isFile()) return -1;
+        return file.length();
+    }
+
+    /** Move a finished chunked file into the shared folder. The caller already checked the sha256. */
+    public String storeFile(String path, File tmp) {
+        String safe = Features.safeRelative(path);
+        if (safe == null || tmp == null || !tmp.isFile()) return "Refused a shared file.";
+        try {
+            File dest = place(safe, "");
+            if (dest == null) return "Refused a shared file.";
+            File parent = dest.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) return "Could not store the shared file.";
+            if (dest.exists() && !dest.delete()) return "Could not store the shared file.";
+            if (!tmp.renameTo(dest)) {
+                Files.copy(tmp.toPath(), dest.toPath());
+                tmp.delete();
+            }
+            return null;
+        } catch (Exception error) {
+            return "Could not store the shared file.";
+        }
+    }
+
     public List<StageFive.Entry> scan() {
         return scan(java.util.Collections.emptyMap());
     }
@@ -112,7 +138,6 @@ public final class FolderFiles {
         String safe = Features.safeRelative(path);
         File file = resolve(safe);
         if (safe == null || file == null || !file.isFile()) return "That shared file is gone.";
-        if (file.length() > StageFive.FOLDER_FILE_CAP) return "Skipped a shared file over 32 MB.";
         String sha = sha(file);
         long size = file.length();
         long mtime = file.lastModified();

@@ -108,6 +108,7 @@ final class LinkModel: ObservableObject {
     var pointerExplained = false
     var batteryAuto = false
     let sharedBox = SharedBox()
+    let folderSink = FolderSink()
     var beacon: LeaveBeacon?
     var linkGoneAt: Date?
     var leaveTimer: Timer?

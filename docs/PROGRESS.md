@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. M13 is partly done. Next is M15: send a shared file over 32 MB as a normal file into the shared folder.
+Final fix pass. M15 is done. Next is H16: Check for update downloads the Mac disk image and checks its hash.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -23,7 +23,7 @@ Final fix pass. M13 is partly done. Next is M15: send a shared file over 32 MB a
 - The document scanner needs Google Play services. If it is missing, the phone asks you to pick a photo instead.
 - Leave-lock needs Bluetooth on the phone and Accessibility on the Mac so the lock shortcut works. The Mac is never unlocked by the phone.
 - The trackpad also needs Accessibility on the Mac. BridgeLink shows the steps.
-- Shared folder files over 32 MB are skipped on purpose.
+- Shared folder files over 32 MB are sent as a normal file into the shared folder. Smaller files still use the old shared-folder pieces.
 - Screen mirror needs the phone to allow screen share each time Android asks. Control needs the accessibility service, including Allow restricted settings on Android 13 and newer.
 - The phone camera inside BridgeLink is the free webcam. A system camera for Zoom needs a paid Apple Developer ID. That extension is in the repo and stays off.
 - Away from home returns to Wi-Fi and each phone has its own secret. The relay worker still has to be deployed by the owner. The relay cannot read the frames.
