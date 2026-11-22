@@ -17,6 +17,7 @@ Each permission stays off until a feature needs it. BridgeLink does not change a
 | Notification access | Mirror alerts, reply, and phone media controls | When you turn notification mirroring on |
 | Accessibility | Clicks in the Mac mirror window | When you turn phone control on. Android 13+ may need Allow restricted settings |
 | Screen share | The Mac mirror window | Every time you start a mirror. Android asks each time |
+| Full screen intent | Show the screen-share or camera question over the lock screen | Android 14 and newer can turn this off. The notification still waits if it is off |
 | Camera and microphone | The camera inside BridgeLink, and a scan | When you open the camera or scan |
 | Files you pick | Send a file or use the shared folder | When you pick them. The shared folder uses the app's own folder |
 

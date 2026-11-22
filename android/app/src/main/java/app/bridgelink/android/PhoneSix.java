@@ -32,7 +32,6 @@ public final class PhoneSix {
     private final Context context;
     private final Out out;
     private final RelayDoor relay = new RelayDoor();
-    public static volatile String want = "";
 
     public PhoneSix(Context context, Out out) {
         this.context = context.getApplicationContext();
@@ -45,14 +44,12 @@ public final class PhoneSix {
 
     public void command(String kind, String body) {
         if ("mirror_stop".equals(kind)) {
-            want = "stop";
             context.stopService(new android.content.Intent(context, MirrorService.class));
             reply("mirror_stop", "");
             out.status("Stopped sharing the screen.");
             return;
         }
         if ("cam_stop".equals(kind)) {
-            want = "stop-cam";
             context.stopService(new android.content.Intent(context, CamService.class));
             reply("cam_stop", "");
             out.status("Camera is off.");
@@ -69,7 +66,6 @@ public final class PhoneSix {
                 return true;
             }
             case "mirror_stop" -> {
-                want = "stop";
                 context.stopService(new android.content.Intent(context, MirrorService.class));
                 out.status("The Mac closed the mirror.");
                 return true;
@@ -86,7 +82,6 @@ public final class PhoneSix {
                 return true;
             }
             case "cam_stop" -> {
-                want = "stop-cam";
                 context.stopService(new android.content.Intent(context, CamService.class));
                 out.status("The Mac closed the camera.");
                 return true;
@@ -147,15 +142,18 @@ public final class PhoneSix {
             NotificationChannel channel = new NotificationChannel("bridgelink.ask", "BridgeLink asks", NotificationManager.IMPORTANCE_HIGH);
             manager.createNotificationChannel(channel);
         }
-        Notification note = new Notification.Builder(context, "bridgelink.ask")
+        boolean fullScreen = true;
+        if (Build.VERSION.SDK_INT >= 34 && manager != null && !manager.canUseFullScreenIntent()) {
+            fullScreen = false;
+        }
+        Notification.Builder builder = new Notification.Builder(context, "bridgelink.ask")
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle("mirror".equals(kind) ? "Mac wants to see your screen" : "Mac wants the camera")
                 .setContentText("Tap to allow")
                 .setContentIntent(pending)
-                .setFullScreenIntent(pending, true)
-                .setAutoCancel(true)
-                .build();
-        if (manager != null) manager.notify(40 + kind.hashCode(), note);
+                .setAutoCancel(true);
+        if (fullScreen) builder.setFullScreenIntent(pending, true);
+        if (manager != null) manager.notify(40 + kind.hashCode(), builder.build());
         try {
             context.startActivity(open);
         } catch (Exception ignored) {
