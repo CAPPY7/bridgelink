@@ -29,18 +29,19 @@ enum MacInput {
         case "move":
             return move(point.x, point.y, drag: false)
         case "drag":
-            noteDrag()
+            _ = hold(kind)
+            armIdle()
             return move(point.x, point.y, drag: true)
         case "drag_end":
-            releaseHeld()
+            _ = hold(kind)
             return "Drag ended"
         case "tap":
-            releaseHeld()
+            _ = hold(kind)
             guard let spot = cursor() else { return "Could not read the pointer" }
             click(spot, right: false)
             return "Clicked"
         case "right":
-            releaseHeld()
+            _ = hold(kind)
             guard let spot = cursor() else { return "Could not read the pointer" }
             click(spot, right: true)
             return "Right-clicked"
@@ -65,24 +66,38 @@ enum MacInput {
     }
 
     private static var dragging = false
+    private static var holding = false
     private static var dragWatch: DispatchWorkItem?
 
     static func releaseHeld() {
+        _ = hold("drop")
+    }
+
+    private static func hold(_ kind: String, quiet: Int = 0) -> Bool {
+        if kind != "idle" {
+            dragWatch?.cancel()
+            dragWatch = nil
+        }
+        let next = DragHold.step(holding: holding, kind: kind, quietSeconds: quiet)
+        holding = next.holding
+        if next.release { mouseUp() }
+        return next.release
+    }
+
+    private static func armIdle() {
         dragWatch?.cancel()
-        dragWatch = nil
+        let work = DispatchWorkItem { _ = hold("idle", quiet: 3) }
+        dragWatch = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+    }
+
+    private static func mouseUp() {
         guard dragging, let spot = cursor() else {
             dragging = false
             return
         }
         post(.leftMouseUp, spot, .left)
         dragging = false
-    }
-
-    private static func noteDrag() {
-        dragWatch?.cancel()
-        let work = DispatchWorkItem { releaseHeld() }
-        dragWatch = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
     }
 
     private static func move(_ dx: Int, _ dy: Int, drag: Bool) -> String {
@@ -95,10 +110,6 @@ enum MacInput {
             }
             post(.leftMouseDragged, next, .left)
         } else {
-            if dragging {
-                post(.leftMouseUp, next, .left)
-                dragging = false
-            }
             post(.mouseMoved, next, .left)
         }
         return "Moved the pointer"

@@ -137,3 +137,4 @@ X4. History could wipe itself on an upgrade. Fixed: that wipe is gone, the schem
 V3. The emulator test pressed Pair by calling a hidden method. Fixed: it taps the real Pair button. The hidden method is gone. NOT TESTED on a device.
 M12. The shared folder scanned every file again for each name, and the Mac read each whole file to hash it. Fixed: each side scans once, and a file is hashed again only when its size or time changed. NOT TESTED on a device.
 Q5. The shared-folder queue read the window's folder switches from a background queue. Fixed: the queue reads a locked copy, and the window updates that copy whenever the switches change. NOT TESTED on a device.
+Q1. The drag test checked a helper the app did not use. Fixed: the Mac mouse button uses that helper for drag, drag end, tap, right-click, a dropped link, and the 3 second wait. NOT TESTED on a device.

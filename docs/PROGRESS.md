@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. Q5 is done. Next is Q1: the drag test must drive the real mouse-button code.
+Final fix pass. Q1 is done. Next is M16: restart the mirror when the phone turns.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -67,6 +67,7 @@ Final fix pass. Q5 is done. Next is Q1: the drag test must drive the real mouse-
 - NB6. A picture frame keeps the key flag from its first piece. The screen, camera, and mic take turns.
 - NB10. The shared-folder check hashes on the folder queue. Scan, send, write, and delete stay on that queue. The window updates on the main thread.
 - Q5. The folder queue reads a locked copy of the folder switches, not the window's own fields.
+- Q1. The Mac mouse button uses the same drag helper as the test.
 - NB11. The phone no longer reads or sends the Wi-Fi name. An old wifi message is still ignored on the Mac.
 - NB13. Mac signing cleans up before the temporary keychain is created, so a failed import still deletes the certificate file and that keychain.
 - NB12. The stale update file in the repo root is deleted. A release still writes a fresh one.
