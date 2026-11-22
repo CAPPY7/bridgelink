@@ -34,6 +34,9 @@ Clipboard history is off until the user turns it on. Clear history deletes it. C
 
 Home Wi-Fi automations are removed. Android 10 and newer do not tell an app the Wi-Fi name unless it asks for location, and this app does not use location for that. Old Home Wi-Fi rules are ignored.
 
+Precise location stays only through Android 11. Leave-lock Bluetooth on those phones needs it. Android 12 and newer use the Bluetooth scan permission and do not get location.
+
+
 
 
 Open and Show in Downloads start the real view screen. They are not broadcasts. Android 12 and newer blocks a broadcast that then opens a screen.

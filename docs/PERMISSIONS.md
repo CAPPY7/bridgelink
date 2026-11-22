@@ -12,6 +12,7 @@ Each permission stays off until a feature needs it. BridgeLink does not change a
 | Receive boot completed | Reconnect after a reboot if a token is saved | Install time |
 | Ignore battery optimizations | Stop the vendor from killing the service | When you tap Keep me connected |
 | Nearby Bluetooth | Leave-lock watches the Mac signal | When you turn leave-lock on |
+| Precise location | Only Android 11 and older. Bluetooth scan on those phones needs it. Android 12 and newer do not get this permission | When you turn leave-lock on, on an old phone |
 | SMS and phone state | Read and send texts, and tell two SIMs apart | When you turn texts on |
 | Notification access | Mirror alerts, reply, and phone media controls | When you turn notification mirroring on |
 | Accessibility | Clicks in the Mac mirror window | When you turn phone control on. Android 13+ may need Allow restricted settings |
