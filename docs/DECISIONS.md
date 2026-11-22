@@ -64,6 +64,8 @@ A shared-folder name that starts with a dot is refused. That keeps .seen and oth
 
 Android 10 and newer share the clipboard only with the app that is on screen. Send clipboard, the Quick Settings tile, and the notification button each open a short screen, read the clipboard there, and send that text. They do not read it from the background.
 
+A drag holds the mouse button down until a move that is not a drag. It does not click on every tiny move.
+
 
 
 

@@ -57,12 +57,24 @@ enum MacInput {
         CGEvent(source: nil)?.location
     }
 
+    private static var dragging = false
+
     private static func move(_ dx: Int, _ dy: Int, drag: Bool) -> String {
         guard let current = cursor() else { return "Could not read the pointer" }
         let next = CGPoint(x: current.x + CGFloat(dx), y: current.y + CGFloat(dy))
-        if drag { post(.leftMouseDown, next, .left) }
-        post(drag ? .leftMouseDragged : .mouseMoved, next, .left)
-        if drag { post(.leftMouseUp, next, .left) }
+        if drag {
+            if !dragging {
+                post(.leftMouseDown, next, .left)
+                dragging = true
+            }
+            post(.leftMouseDragged, next, .left)
+        } else {
+            if dragging {
+                post(.leftMouseUp, next, .left)
+                dragging = false
+            }
+            post(.mouseMoved, next, .left)
+        }
         return "Moved the pointer"
     }
 
