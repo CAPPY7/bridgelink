@@ -22,7 +22,7 @@ Password-manager clips are never synced or stored. On Android 13 and newer that 
 
 The phone starts the link after a boot or an app update only. Other broadcasts are ignored.
 
-The Mac signing script changes the default keychain only when CI is true. A home computer keeps its own default keychain.
+The Mac signing script changes the default keychain only when CI is true. A home computer keeps its own default keychain. codesign is pointed at the BridgeLink keychain with --keychain, that keychain is added to the search list for the sign, and the old search list is put back after.
 
 The Android key-making script is deleted. A new key would not match the existing signing secrets. Do not add the script back.
 

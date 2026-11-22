@@ -23,13 +23,28 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
     echo "The Mac signing certificate did not import."
     exit 1
   fi
+  OLD_FILE="$WORK/old-keychains.txt"
+  security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//' > "$OLD_FILE"
+  OLD_ARGS=()
+  while IFS= read -r line; do
+    [ -n "$line" ] && OLD_ARGS+=("$line")
+  done < "$OLD_FILE"
+  security list-keychains -d user -s "$KC" "${OLD_ARGS[@]}"
+  restore_keychains() {
+    if [ "${#OLD_ARGS[@]}" -gt 0 ]; then
+      security list-keychains -d user -s "${OLD_ARGS[@]}"
+    fi
+  }
+  trap restore_keychains EXIT
   if [ -d "$APP/Contents/PlugIns" ]; then
     find "$APP/Contents/PlugIns" -name '*.appex' -print0 | while IFS= read -r -d '' plugin; do
-      codesign --force --sign "$IDENTITY" --options runtime --timestamp=none "$plugin"
+      codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime --timestamp=none "$plugin"
     done
   fi
-  codesign --force --sign "$IDENTITY" --options runtime --timestamp=none --entitlements entitlements.plist "$APP"
+  codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime --timestamp=none --entitlements entitlements.plist "$APP"
   codesign --verify --verbose=2 "$APP"
+  restore_keychains
+  trap - EXIT
   rm -f "$WORK/sign.p12"
   echo "Signed with the stable BridgeLink certificate."
 else

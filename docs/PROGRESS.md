@@ -12,7 +12,7 @@ v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not eve
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Last fix pass. W3 is done. Next is W4: point the Mac signing tool at the BridgeLink keychain, and put that keychain back when finished.
+Last fix pass. W4 is done. Next is L10: confirm the home Mac default keychain stays alone. That is already how sign.sh works after W4. Write it down, then W5.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -83,6 +83,7 @@ Last fix pass. W3 is done. Next is W4: point the Mac signing tool at the BridgeL
 - W6. Install files (.apk, .apks, .xapk, .aab, and the Android package type) have no Open button.
 - W7. Each file from the Mac gets its own notice, so a second file does not hide the first.
 - W3. The away relay drops the room key when the last socket is closed, even without a closed flag.
+- W4. Mac signing points codesign at the BridgeLink keychain and restores the old search list.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
