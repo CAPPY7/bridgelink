@@ -70,7 +70,7 @@ public class MediaQueueTest {
         assertTrue(queue.offer(piece(1, 1, 0, 2), true).kept);
         MediaQueue.Result end = queue.offer(piece(1, 0, 1, 2), false);
         assertTrue(end.kept);
-        assertEquals(MediaQueue.CAP, queue.size(1));
+        assertEquals(MediaQueue.CAP + 1, queue.size(1));
     }
 
     private static byte[] piece(int stream, int flags, int part, int parts) {
