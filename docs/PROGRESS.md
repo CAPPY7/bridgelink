@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. S0-1, S0-2, S0-3, S0-4, S0-5, S0-7, S0-8, S0-9, S0-10, S0-11, and S0-12 are done. S0-8 is partly the newest libraries this Gradle plugin can use. S0-6, the real split of LinkCore, waits until the away relay is removed. Next is the step 0 self-audit, then Part B.
+Final fix pass. S0-1 through S0-5, S0-7 through S0-12 are committed. S0-6 waits until the away relay is removed. Step 0 self-audit pass 1 found nothing new. Next is a green CI run, then Part B.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

@@ -165,3 +165,4 @@ R4. Already kept.
 R5. The demo does not need a database. The shell still uses the auth provider. See S0-9.
 R6. Already kept.
 D1. Docs still said self-tested before this pass. Fixed earlier: the status words say NOT TESTED on a device. NOT TESTED on a device.
+Step 0 self-audit pass 1: 0 found, 0 fixed. NOT TESTED on a device.
