@@ -85,6 +85,8 @@ H15. A release could ship an Android app signed by a different key. Fixed: the r
 X10. A release rebuilt and published without waiting for the checks. Fixed: the release waits until the checks for that same commit are green. NOT TESTED on a device.
 X11. A hand-started release could build the wrong commit, and the release page was not tied to that commit. Fixed: it checks out the typed tag, and the release points at that commit. NOT TESTED on a device.
 X12. GitHub Actions were named by a moving tag. Fixed: each one is pinned to the commit that tag pointed at, and the tag name is written beside it. NOT TESTED on a device.
+X13. Every release job could write to the repository. Fixed: only the publish job can write. The others can only read. NOT TESTED on a device.
+
 
 
 
