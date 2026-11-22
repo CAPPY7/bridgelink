@@ -1,6 +1,6 @@
 # Progress
 
-v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not every audit item is done. Nothing in 1.0.1 has been tried on a real phone or Mac.
+v1.0.1 is the published fix build. There is no v1.0.0 release. The previous release was v0.12.0. Not every audit item is done. Nothing in 1.0.1 has been tried on a real phone or Mac.
 
 ## Done in code
 - Stage 1 bug fixes are in v0.8.0.
@@ -9,10 +9,10 @@ v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not eve
 - Stage 4 easy features are in v0.11.0. Media control works both ways. The Mac can lock when the phone leaves, and it never unlocks. The Mac has one inbox. Clipboard history keeps 100 items and skips secrets. A phone scan is saved on the Mac and opened.
 - Stage 5 medium features are in v0.12.0. Texts, a shared folder, automations, and the phone trackpad, keyboard, and slides.
 - Stage 6 hard features are in v0.13.0. Screen mirror, control while mirroring, the phone camera inside BridgeLink, and an away relay that only forwards locked frames.
-- Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
+- Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. W5 is done. Next is W8: the progress note must not say v1.0.0 was released. There is no v1.0.0 release.
+Last fix pass. W8 is done. Next is X7: clipboard history only when it is turned on, with Clear and a 24 hour drop, sealed with the keystore.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -86,6 +86,7 @@ Last fix pass. W5 is done. Next is W8: the progress note must not say v1.0.0 was
 - W4. Mac signing points codesign at the BridgeLink keychain and restores the old search list.
 - L10. The home Mac default keychain stays alone. Signing points at the BridgeLink keychain instead.
 - W5. The phone uses the away-relay send rule. It is not only a test.
+- W8. The progress note no longer says v1.0.0 was released. The releases are v0.12.0 and v1.0.1.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
