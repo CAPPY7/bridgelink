@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing or new tag to publish, for example v1.0.0"
+        description: "Existing tag to publish, for example v1.0.2"
         required: true
         type: string
 
@@ -19,6 +19,16 @@ jobs:
   ci-green:
     runs-on: ubuntu-latest
     steps:
+      - name: The tag must already exist
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null; then
+            echo "That tag does not exist. Type an existing tag, for example v1.0.2."
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}

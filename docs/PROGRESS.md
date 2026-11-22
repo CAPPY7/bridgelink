@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. NB8 is done. Next is NB9: a hand-started release must wait for the checks of the typed tag.
+Last fix pass. NB9 is done. Next is NB7: the Mac send window should say a folder is sent as a zip.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -59,6 +59,7 @@ Last fix pass. NB8 is done. Next is NB9: a hand-started release must wait for th
 - NB1. The clipboard tile waits until the short screen is in front, then reads once.
 - NB2. Send clipboard uses the same sensitive-clipboard check as that short screen.
 - NB8. A drag sends drag_end when the finger lifts. The Mac lets the button up. Silence for 3 seconds does the same.
+- NB9. A hand-started release waits for the checks of the typed tag, and stops if that tag does not exist.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

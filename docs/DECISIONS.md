@@ -82,6 +82,9 @@ The clipboard tile and the notification button read the clipboard only after the
 
 A drag holds the Mac mouse button until the phone says the finger lifted. A tap, a right-click, or a dropped link lets it up first. If an older phone never says the drag ended, the button is let up after 3 seconds. drag_end is a pointer message, not a tap on the phone screen, so it is not a mirror-control kind.
 
+A hand-started release uses the commit of the typed tag. It waits up to 60 minutes for the checks of that commit. If the tag does not exist, it stops before building.
+
+
 
 
 

@@ -82,7 +82,7 @@ N11b. Precise location was declared for every Android version. Fixed: it is only
 L7. The accessibility service asked for click and focus events it never reads. Fixed: it only keeps gesture and window content, which the mirror taps use. NOT TESTED on a device.
 L8. The Mac started its Bluetooth beacon even when leave-lock was off. Fixed: the beacon starts only while leave-lock is on, and it stops when leave-lock is off. NOT TESTED on a device.
 H15. A release could ship an Android app signed by a different key. Fixed: the release compares the APK signer with the public fingerprint saved in the repo and stops if they differ. NOT TESTED on a device.
-X10. A release rebuilt and published without waiting for the checks. Fixed: the release waits until the checks for that same commit are green. NOT TESTED on a device.
+X10. A hand-started release used the branch head, not the typed tag, and it gave up before a long emulator check. Fixed: it waits for the checks of the commit that was checked out, up to 60 minutes, and it stops if that tag does not exist. NOT TESTED on a device.
 X11. A hand-started release could build the wrong commit, and the release page was not tied to that commit. Fixed: it checks out the typed tag, and the release points at that commit. NOT TESTED on a device.
 X12. GitHub Actions were named by a moving tag. Fixed: each one is pinned to the commit that tag pointed at, and the tag name is written beside it. NOT TESTED on a device.
 X13. Every release job could write to the repository. Fixed: only the publish job can write. The others can only read. NOT TESTED on a device.
