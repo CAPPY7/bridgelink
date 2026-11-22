@@ -47,7 +47,7 @@ public enum ReleaseCheck {
             if line.isEmpty || line.hasPrefix("#") { continue }
             let parts = line.split(whereSeparator: \.isWhitespace).map(String.init)
             guard parts.count >= 2 else { continue }
-            let file = parts[1].hasPrefix("*") ? String(parts[1].dropFirst()) : parts[1]
+            let file = baseName(parts[1])
             if file == name {
                 found = parts[0]
                 break
@@ -56,6 +56,12 @@ public enum ReleaseCheck {
         guard let found else { return .missing }
         if found.lowercased() == digest.lowercased() { return .match }
         return .mismatch
+    }
+
+    /// The sums file may store a path. Only the last part is the file name.
+    static func baseName(_ raw: String) -> String {
+        let trimmed = raw.hasPrefix("*") ? String(raw.dropFirst()) : raw
+        return (trimmed as NSString).lastPathComponent
     }
 
     public static func fetchShortVersion() async -> String {

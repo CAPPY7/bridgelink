@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. S0-2 is done: turning the phone resizes the one virtual display. Next is S0-3: the update checksum must accept a path in front of the file name.
+Final fix pass. S0-3 is done: the update checksum uses the file name, and the disk image is saved as BridgeLink-version.dmg. Next is S0-4: a transfer id must be hex only.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

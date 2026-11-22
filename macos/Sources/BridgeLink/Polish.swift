@@ -32,16 +32,14 @@ extension LinkModel {
             }
             let digest = SHA256.hash(data: dmg).map { String(format: "%02x", $0) }.joined()
             let verdict = ReleaseCheck.checkSum(text, "BridgeLink.dmg", digest)
-            let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-                ?? URL(fileURLWithPath: NSTemporaryDirectory())
-            let dest = folder.appendingPathComponent("BridgeLink.dmg")
             if verdict != .match {
-                try? FileManager.default.removeItem(at: dest)
                 await MainActor.run { self.note("The update did not match its checksum. It was not kept.") }
                 return
             }
+            let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+                ?? URL(fileURLWithPath: NSTemporaryDirectory())
+            let dest = folder.appendingPathComponent("BridgeLink-\(remote).dmg")
             do {
-                try? FileManager.default.removeItem(at: dest)
                 try dmg.write(to: dest, options: .atomic)
             } catch {
                 await MainActor.run { self.note("Could not save the update in Downloads.") }
