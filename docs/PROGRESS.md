@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. M22, X2, and X3 are done. Next is X4: history must not wipe itself on an upgrade.
+Last fix pass. M16 is done. Next is M18: turn the phone camera picture upright.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -75,6 +75,7 @@ Last fix pass. M22, X2, and X3 are done. Next is X4: history must not wipe itsel
 - M22. Incoming files are written straight into Downloads. They are not copied out of cache first.
 - X2. Android 8 and 9 add " (1)" instead of replacing a file that already has that name.
 - X3. A pending download is deleted if the save fails.
+- M16. Screen mirror uses the phone's real shape inside the quality box. Key frames include the decoder header.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

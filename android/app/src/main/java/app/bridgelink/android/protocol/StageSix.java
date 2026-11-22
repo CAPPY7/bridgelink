@@ -41,6 +41,23 @@ public final class StageSix {
         };
     }
 
+    /** Fit the phone's real screen inside the quality box. Both sides stay even. */
+    public static Picture fit(Picture box, int screenWidth, int screenHeight) {
+        if (box == null) return new Picture(2, 2, 800_000, 15);
+        if (screenWidth < 2 || screenHeight < 2) return box;
+        double scale = Math.min(box.width / (double) screenWidth, box.height / (double) screenHeight);
+        int width = even((int) Math.round(screenWidth * scale));
+        int height = even((int) Math.round(screenHeight * scale));
+        width = Math.max(2, Math.min(width, even(box.width)));
+        height = Math.max(2, Math.min(height, even(box.height)));
+        return new Picture(width, height, box.bitrate, box.fps);
+    }
+
+    private static int even(int value) {
+        int n = Math.max(2, value);
+        return n - (n % 2);
+    }
+
     public static String qualityName(String raw) {
         if ("low".equals(raw) || "high".equals(raw)) return raw;
         return "medium";

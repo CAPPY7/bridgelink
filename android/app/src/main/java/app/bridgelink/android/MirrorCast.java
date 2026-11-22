@@ -1,14 +1,18 @@
 package app.bridgelink.android;
 
 import android.content.Context;
+import android.graphics.Rect;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
+import android.view.Display;
 import android.view.Surface;
+import android.view.WindowManager;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -38,11 +42,16 @@ public final class MirrorCast {
             }
         }, new Handler(Looper.getMainLooper()));
         try {
-            MediaFormat format = MediaFormat.createVideoFormat("video/avc", picture.width, picture.height);
+            int[] screen = screen(context);
+            StageSix.Picture shaped = StageSix.fit(picture, screen[0], screen[1]);
+            MediaFormat format = MediaFormat.createVideoFormat("video/avc", shaped.width, shaped.height);
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, picture.bitrate);
-            format.setInteger(MediaFormat.KEY_FRAME_RATE, picture.fps);
+            format.setInteger(MediaFormat.KEY_BIT_RATE, shaped.bitrate);
+            format.setInteger(MediaFormat.KEY_FRAME_RATE, shaped.fps);
             format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+            if (Build.VERSION.SDK_INT >= 29) {
+                format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
+            }
             codec = MediaCodec.createEncoderByType("video/avc");
             codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             surface = codec.createInputSurface();
@@ -50,8 +59,8 @@ public final class MirrorCast {
             DisplayMetrics metrics = context.getResources().getDisplayMetrics();
             display = projection.createVirtualDisplay(
                     "BridgeLink",
-                    picture.width,
-                    picture.height,
+                    shaped.width,
+                    shaped.height,
                     metrics.densityDpi,
                     android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                     surface,
@@ -66,6 +75,25 @@ public final class MirrorCast {
             LinkService.postStatus("This phone could not start the screen encoder.");
             stop();
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static int[] screen(Context context) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            WindowManager manager = context.getSystemService(WindowManager.class);
+            if (manager != null) {
+                Rect bounds = manager.getMaximumWindowMetrics().getBounds();
+                return new int[]{bounds.width(), bounds.height()};
+            }
+        }
+        WindowManager manager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        if (manager != null) {
+            Display display = manager.getDefaultDisplay();
+            DisplayMetrics metrics = new DisplayMetrics();
+            display.getRealMetrics(metrics);
+            return new int[]{metrics.widthPixels, metrics.heightPixels};
+        }
+        return new int[]{0, 0};
     }
 
     public void stop() {
