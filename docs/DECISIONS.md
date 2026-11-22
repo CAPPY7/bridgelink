@@ -38,6 +38,9 @@ Precise location stays only through Android 11. Leave-lock Bluetooth on those ph
 
 The Mac Bluetooth beacon runs only while leave-lock is on. Turning leave-lock off stops the beacon.
 
+The Android release signer is checked against the public fingerprint in android/release-cert.sha256. That line is not a secret. A different signer stops the release.
+
+
 
 
 

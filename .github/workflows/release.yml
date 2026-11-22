@@ -55,7 +55,16 @@ jobs:
           rm -f "$GITHUB_WORKSPACE/release.keystore"
           APKSIGNER="$(find "$SDK/build-tools" -name apksigner | sort | tail -1)"
           if [ -z "$APKSIGNER" ]; then echo "apksigner is missing"; exit 1; fi
-          "$APKSIGNER" verify --print-certs "$GITHUB_WORKSPACE/BridgeLink-android.apk"
+          "$APKSIGNER" verify --print-certs "$GITHUB_WORKSPACE/BridgeLink-android.apk" > "$RUNNER_TEMP/apk-certs.txt"
+          GOT=$(awk -F': ' '/SHA-256 digest/{print tolower($2); exit}' "$RUNNER_TEMP/apk-certs.txt" | tr -d '[:space:]')
+          WANT=$(tr 'A-F' 'a-f' < "$GITHUB_WORKSPACE/android/release-cert.sha256" | tr -d '[:space:]')
+          if [ -z "$GOT" ] || [ "$GOT" != "$WANT" ]; then
+            echo "The APK signer does not match the saved public fingerprint."
+            echo "got $GOT"
+            echo "want $WANT"
+            exit 1
+          fi
+          echo "APK signer matches the saved public fingerprint."
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
