@@ -193,8 +193,16 @@ extension LinkModel {
             }
         case "file_chunk":
             if folderSink.has(envelope.text("id")) {
-                if let line = folderSink.chunk(envelope.text("id"), Int(envelope.text("offset")) ?? -1, envelope.text("data")) {
+                let fileId = envelope.text("id")
+                let offset = Int(envelope.text("offset")) ?? -1
+                let raw = envelope.text("data")
+                if let line = folderSink.chunk(fileId, offset, raw) {
                     note(line)
+                } else {
+                    let added = Data(base64Encoded: raw)?.count ?? 0
+                    if offset >= 0 {
+                        send(type: "file_have", payload: ["id": fileId, "offset": String(offset + added)], on: live)
+                    }
                 }
                 break
             }

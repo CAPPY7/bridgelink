@@ -404,46 +404,79 @@ final class SharedBox {
 
 /// A big shared file arrives as file_begin / file_chunk / file_end and is checked with the normal sha256.
 final class FolderSink {
+    private let lock = NSLock()
     private var incoming: [String: IncomingFile] = [:]
     private var handles: [String: FileHandle] = [:]
     private var paths: [String: String] = [:]
     private var temps: [String: URL] = [:]
 
     func begin(_ id: String, _ path: String, _ size: Int) -> Bool {
+        onFolderQueue { self.beginNow(id, path, size) }
+    }
+
+    func has(_ id: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return incoming[id] != nil
+    }
+
+    func chunk(_ id: String, _ offset: Int, _ base64: String) -> String? {
+        onFolderQueue { self.chunkNow(id, offset, base64) }
+    }
+
+    func finish(_ id: String, _ sha: String, _ box: SharedBox) -> String {
+        onFolderQueue { self.finishNow(id, sha, box) }
+    }
+
+    func drop(_ id: String) {
+        onFolderQueue { self.dropNow(id) }
+    }
+
+    private func beginNow(_ id: String, _ path: String, _ size: Int) -> Bool {
         guard StageFive.folderUsesChunks(Int64(size)), let file = IncomingFile(id: id, name: path, size: size) else { return false }
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-folder-\(id)")
         FileManager.default.createFile(atPath: tmp.path, contents: nil)
         guard let handle = try? FileHandle(forWritingTo: tmp) else { return false }
+        lock.lock()
         incoming[id] = file
         handles[id] = handle
         paths[id] = path
         temps[id] = tmp
+        lock.unlock()
         return true
     }
 
-    func has(_ id: String) -> Bool { incoming[id] != nil }
-
-    func chunk(_ id: String, _ offset: Int, _ base64: String) -> String? {
-        guard let file = incoming[id], let raw = file.accept(offset: offset, base64: base64), let handle = handles[id] else {
-            drop(id)
+    private func chunkNow(_ id: String, _ offset: Int, _ base64: String) -> String? {
+        lock.lock()
+        let file = incoming[id]
+        let handle = handles[id]
+        lock.unlock()
+        guard let file, let raw = file.accept(offset: offset, base64: base64), let handle else {
+            dropNow(id)
             return "A file chunk was rejected."
         }
         do {
             try handle.write(contentsOf: raw)
             return nil
         } catch {
-            drop(id)
+            dropNow(id)
             return "Could not store the shared file."
         }
     }
 
-    func finish(_ id: String, _ sha: String, _ box: SharedBox) -> String {
-        guard let file = incoming[id], let path = paths[id], let tmp = temps[id] else { return "A shared file did not match." }
-        try? handles[id]?.close()
+    private func finishNow(_ id: String, _ sha: String, _ box: SharedBox) -> String {
+        lock.lock()
+        let file = incoming[id]
+        let path = paths[id]
+        let tmp = temps[id]
+        let handle = handles[id]
         incoming[id] = nil
         handles[id] = nil
         paths[id] = nil
         temps[id] = nil
+        lock.unlock()
+        try? handle?.close()
+        guard let file, let path, let tmp else { return "A shared file did not match." }
         if !file.matches(sha) {
             try? FileManager.default.removeItem(at: tmp)
             return "A shared file did not match."
@@ -452,17 +485,31 @@ final class FolderSink {
         return "Shared folder updated"
     }
 
-    func drop(_ id: String) {
-        try? handles[id]?.close()
-        if let tmp = temps[id] { try? FileManager.default.removeItem(at: tmp) }
+    private func dropNow(_ id: String) {
+        lock.lock()
+        let handle = handles[id]
+        let tmp = temps[id]
         incoming[id] = nil
         handles[id] = nil
         paths[id] = nil
         temps[id] = nil
+        lock.unlock()
+        try? handle?.close()
+        if let tmp { try? FileManager.default.removeItem(at: tmp) }
     }
 }
 
-private let folderPartQueue = DispatchQueue(label: "app.bridgelink.mac.folder-part", qos: .utility)
+private let folderPartKey = DispatchSpecificKey<UInt8>()
+private let folderPartQueue: DispatchQueue = {
+    let queue = DispatchQueue(label: "app.bridgelink.mac.folder-part", qos: .utility)
+    queue.setSpecific(key: folderPartKey, value: 1)
+    return queue
+}()
+
+private func onFolderQueue<T>(_ body: () -> T) -> T {
+    if DispatchQueue.getSpecific(key: folderPartKey) != nil { return body() }
+    return folderPartQueue.sync(execute: body)
+}
 
 /// A copy of the folder switches that the folder queue can read without touching the window.
 final class FolderFlags: @unchecked Sendable {
@@ -938,40 +985,126 @@ extension LinkModel {
     }
 
     func shipLarge(_ file: URL, path: String, size: Int64) {
+        let queue = folderSendQueue
+        queue.async { [weak self] in
+            self?.shipLargeNow(file, path: path, size: size)
+        }
+    }
+
+    private func shipLargeNow(_ file: URL, path: String, size: Int64) {
         guard let safe = Features.safeRelative(path) else { return }
         let name = (safe as NSString).lastPathComponent
         let id = String(Transfers.sha256Hex(Data("\(safe)\n\(size)".utf8)).prefix(32))
+        guard linkOpen() else { return }
         guard let handle = try? FileHandle(forReadingFrom: file) else { return }
         defer { try? handle.close() }
-        var hasher = SHA256()
-        var offset: Int64 = 0
-        let gate = DispatchSemaphore(value: 0)
-        DispatchQueue.main.async { [weak self] in
-            self?.send(type: "file_begin", payload: [
-                "id": id, "name": name, "path": safe, "dest": "folder", "size": String(size), "from": "0",
-            ], on: self?.live)
-            gate.signal()
+        let began = sendAndWait(type: "file_begin", payload: [
+            "id": id, "name": name, "path": safe, "dest": "folder", "size": String(size), "from": "0",
+        ])
+        if !began || !linkOpen() {
+            _ = sendAndWait(type: "file_cancel", payload: ["id": id])
+            return
         }
-        gate.wait()
+        let remote = awaitHave(id)
+        let start = remote >= 0 && remote <= Int(size) ? remote : 0
+        var hasher = SHA256()
+        var offset = 0
+        while offset < start {
+            if !linkOpen() {
+                _ = sendAndWait(type: "file_cancel", payload: ["id": id])
+                return
+            }
+            let want = min(Transfers.chunk, start - offset)
+            let chunk = (try? handle.read(upToCount: want)) ?? Data()
+            if chunk.isEmpty {
+                _ = sendAndWait(type: "file_cancel", payload: ["id": id])
+                return
+            }
+            hasher.update(data: chunk)
+            offset += chunk.count
+        }
         while true {
+            if !linkOpen() {
+                _ = sendAndWait(type: "file_cancel", payload: ["id": id])
+                return
+            }
             let data = (try? handle.read(upToCount: Transfers.chunk)) ?? Data()
             if data.isEmpty { break }
             hasher.update(data: data)
+            largeWindow.acquire()
             let payload = ["id": id, "offset": String(offset), "data": data.base64EncodedString()]
-            offset += Int64(data.count)
-            DispatchQueue.main.async { [weak self] in
-                self?.send(type: "file_chunk", payload: payload, on: self?.live)
+            offset += data.count
+            let sent = sendTracked(type: "file_chunk", payload: payload)
+            if !sent {
+                largeWindow.release()
+                _ = sendAndWait(type: "file_cancel", payload: ["id": id])
+                return
+            }
+        }
+        if offset != Int(size) || !linkOpen() {
+            _ = sendAndWait(type: "file_cancel", payload: ["id": id])
+            return
+        }
+        let sha = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        _ = sendAndWait(type: "file_end", payload: ["id": id, "sha256": sha])
+        DispatchQueue.main.async { [weak self] in
+            self?.note("Sent \(name)")
+        }
+    }
+
+    private func linkOpen() -> Bool {
+        if Thread.isMainThread { return live != nil }
+        return DispatchQueue.main.sync { self.live != nil }
+    }
+
+    private func awaitHave(_ id: String) -> Int {
+        let gate = DispatchSemaphore(value: 0)
+        var value = 0
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                gate.signal()
+                return
+            }
+            self.waitHave(id: id, fallback: 0) { got in
+                value = got
                 gate.signal()
             }
-            gate.wait()
         }
-        if offset != size { return }
-        let sha = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        gate.wait()
+        return value
+    }
+
+    private func sendAndWait(type: String, payload: [String: String]) -> Bool {
+        let gate = DispatchSemaphore(value: 0)
+        var open = false
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.send(type: "file_end", payload: ["id": id, "sha256": sha], on: self.live)
-            self.note("Sent \(name)")
+            guard let self, self.live != nil else {
+                gate.signal()
+                return
+            }
+            open = true
+            self.send(type: type, payload: payload, on: self.live) { gate.signal() }
         }
+        gate.wait()
+        return open
+    }
+
+    private func sendTracked(type: String, payload: [String: String]) -> Bool {
+        let gate = DispatchSemaphore(value: 0)
+        var open = false
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.live != nil else {
+                gate.signal()
+                return
+            }
+            open = true
+            self.send(type: type, payload: payload, on: self.live) { [weak self] in
+                self?.largeWindow.release()
+            }
+            gate.signal()
+        }
+        gate.wait()
+        return open
     }
 
     private func armFolderDebounce() {

@@ -94,6 +94,8 @@ final class LinkModel: ObservableObject {
     }
     let folderFlags = FolderFlags()
     var folderWatch: DispatchSourceFileSystemObject?
+    let folderSendQueue = DispatchQueue(label: "app.bridgelink.mac.folder-send", qos: .utility)
+    let largeWindow = SendWindow()
     var folderDebounce: DispatchWorkItem?
     @Published var folderPath = ""
     @Published var rules: [StageFive.Rule] = []

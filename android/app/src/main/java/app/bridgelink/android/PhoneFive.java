@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import app.bridgelink.android.protocol.Envelope;
 import app.bridgelink.android.protocol.Features;
@@ -49,6 +51,15 @@ public final class PhoneFive {
         void frame(String type, JsonObject payload) throws Exception;
 
         void status(String line);
+
+        /** Bytes the Mac already has for this file, or -1 if it has not said. */
+        default long have(String id) {
+            return -1;
+        }
+
+        default boolean linkedNow() {
+            return true;
+        }
     }
 
     private final Context context;
@@ -64,6 +75,11 @@ public final class PhoneFive {
     private ContentObserver treeWatch;
     private long watchDue;
     private final Handler watchHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService folderSend = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "bridgelink-folder-send");
+        thread.setDaemon(true);
+        return thread;
+    });
     private final Runnable watchTick = () -> {
         if (!StageFive.folderWatchDue(linked, flag("folder"), paused, watchDue, System.currentTimeMillis())) return;
         watchDue = 0;
@@ -411,7 +427,13 @@ public final class PhoneFive {
         if (paused || !flag("folder")) return;
         long size = tree != null ? tree.sizeOf(path) : folder.sizeOf(path);
         if (StageFive.folderUsesChunks(size)) {
-            sendFolderChunks(path, size);
+            folderSend.execute(() -> {
+                try {
+                    sendFolderChunks(path, size);
+                } catch (Exception error) {
+                    out.status("Could not send the shared file.");
+                }
+            });
             return;
         }
         String problem = sendFolder(path, (offset, fileSize, mtime, sha, data) -> {
@@ -444,17 +466,45 @@ public final class PhoneFive {
         begin.addProperty("size", Long.toString(size));
         begin.addProperty("from", "0");
         out.frame("file_begin", begin);
+        long skip = waitHave(id);
+        if (skip < 0 || skip > size) skip = 0;
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (InputStream in = openShared(safe)) {
             if (in == null) {
+                cancelSend(id);
                 out.status("That shared file is gone.");
                 return;
             }
             byte[] buf = new byte[Transfers.CHUNK];
             long offset = 0;
+            while (offset < skip) {
+                if (!out.linkedNow()) {
+                    cancelSend(id);
+                    return;
+                }
+                int want = (int) Math.min(buf.length, skip - offset);
+                int count = in.read(buf, 0, want);
+                if (count < 0) {
+                    cancelSend(id);
+                    out.status("The file changed while it was sending.");
+                    return;
+                }
+                if (count == 0) continue;
+                digest.update(buf, 0, count);
+                offset += count;
+            }
             int count;
             while ((count = in.read(buf)) >= 0) {
+                if (!out.linkedNow()) {
+                    cancelSend(id);
+                    return;
+                }
                 if (count == 0) continue;
+                waitWindow(id, offset);
+                if (!out.linkedNow()) {
+                    cancelSend(id);
+                    return;
+                }
                 digest.update(buf, 0, count);
                 JsonObject chunk = new JsonObject();
                 chunk.addProperty("id", id);
@@ -464,6 +514,7 @@ public final class PhoneFive {
                 offset += count;
             }
             if (offset != size) {
+                cancelSend(id);
                 out.status("The file changed while it was sending.");
                 return;
             }
@@ -473,6 +524,49 @@ public final class PhoneFive {
         end.addProperty("sha256", hex(digest.digest()));
         out.frame("file_end", end);
         out.status("Sent " + name);
+    }
+
+    private long waitHave(String id) {
+        long end = System.currentTimeMillis() + 800;
+        while (System.currentTimeMillis() < end) {
+            if (!out.linkedNow()) return 0;
+            long value = out.have(id);
+            if (value >= 0) return value;
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                return 0;
+            }
+        }
+        long value = out.have(id);
+        return value < 0 ? 0 : value;
+    }
+
+    /** Keep at most 6 chunks ahead of the Mac, the same limit as a normal file send. */
+    private void waitWindow(String id, long sent) {
+        long cap = 6L * Transfers.CHUNK;
+        long end = System.currentTimeMillis() + 30_000L;
+        while (out.linkedNow() && System.currentTimeMillis() < end) {
+            long ack = out.have(id);
+            if (ack < 0) ack = 0;
+            if (sent - ack < cap) return;
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    private void cancelSend(String id) {
+        try {
+            JsonObject cancel = new JsonObject();
+            cancel.addProperty("id", id);
+            out.frame("file_cancel", cancel);
+        } catch (Exception ignored) {
+        }
     }
 
     private InputStream openShared(String safe) throws Exception {

@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. S0-4 is done: a transfer id that is not hex is refused on the phone and the Mac. Next is S0-5: a big shared file must use the send window.
+Final fix pass. S0-5 is done: a big shared file uses the 6-chunk window and leaves the message thread. Next is S0-7: the Mac tests must read every sample message. S0-6 waits until the removed features are gone.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

@@ -236,6 +236,17 @@ class LinkCore extends Service {
             public void status(String line) {
                 publish(line, null);
             }
+
+            @Override
+            public long have(String id) {
+                Long value = fileHave.get(id);
+                return value == null ? -1 : value;
+            }
+
+            @Override
+            public boolean linkedNow() {
+                return paired;
+            }
         });
         six = new PhoneSix(this, new PhoneSix.Out() {
             @Override
