@@ -88,6 +88,9 @@ The Mac sends a folder as a zip. Its window says so. The phone does not send a f
 
 The one-minute code check and the away sign-in flags take one lock, so two threads cannot send the same code or restart a stopped sign-in.
 
+Alert notices use 100 to 189. File notices start at 200. The two never share a number.
+
+
 
 
 

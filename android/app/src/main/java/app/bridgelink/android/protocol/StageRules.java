@@ -59,6 +59,12 @@ public final class StageRules {
         return 200 + (n % 40_000);
     }
 
+    /** Alert notices stay in 100–189 so they never reuse a file notice number. */
+    public static int alertId(int serial) {
+        int n = serial < 1 ? 1 : serial;
+        return 100 + (n % 90);
+    }
+
     public static String fileTitle(String name) {
         String shown = name == null || name.isBlank() ? "file" : name.trim();
         return "File from the Mac: " + shown;

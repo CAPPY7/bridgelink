@@ -106,7 +106,7 @@ public class LinkService extends Service {
     private final AtomicBoolean mediaPumping = new AtomicBoolean();
     private static volatile Runnable needKey;
     private final AtomicInteger generation = new AtomicInteger();
-    private final AtomicInteger alertIds = new AtomicInteger(100);
+    private final AtomicInteger alertIds = new AtomicInteger();
     private final AtomicInteger fileNoteIds = new AtomicInteger();
     private final Dedup seen = new Dedup(500);
     private final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
@@ -1711,7 +1711,7 @@ public class LinkService extends Service {
                         .build())
                 .setAutoCancel(true)
                 .build();
-        manager().notify(alertIds.incrementAndGet(), note);
+        manager().notify(StageRules.alertId(alertIds.incrementAndGet()), note);
     }
 
     private void publish(String status, String line) {

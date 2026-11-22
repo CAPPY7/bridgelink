@@ -111,6 +111,7 @@ M20. The phone send page said a folder could be sent. The phone still sends file
 NB3. The code check and the away sign-in flags were used from more than one thread. Fixed: the code check takes a lock, and the away flags use that same lock. NOT TESTED on a device.
 L4. A code could be sent twice, once from the text and once from the notification. Fixed: the same code is sent once per minute. NOT TESTED on a device.
 M17. Mirror taps used the wrong screen size, so they landed in the wrong place. Fixed: the tap uses the real screen, including the system bars. NOT TESTED on a device.
+NB4. Alert notices could grow into the file notice numbers. Fixed: alerts stay between 100 and 189. NOT TESTED on a device.
 
 
 

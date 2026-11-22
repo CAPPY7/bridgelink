@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. NB3 is done. Next is NB4: alert notices must not reuse file notice numbers.
+Last fix pass. NB4 is done. Next is NB5: mirror taps must measure the screen from the accessibility service.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -62,6 +62,7 @@ Last fix pass. NB3 is done. Next is NB4: alert notices must not reuse file notic
 - NB9. A hand-started release waits for the checks of the typed tag, and stops if that tag does not exist.
 - NB7. The Mac window says a folder is sent as a zip. The phone still sends files only.
 - NB3. The code check and the away sign-in flags take one lock.
+- NB4. Alert notices stay in 100 to 189, so they never reuse a file notice number.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.
