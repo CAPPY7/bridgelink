@@ -120,3 +120,4 @@ NB13. The Mac signing script could crash on an empty keychain list, and a failed
 NB12. A stale update file with size 0 was stored in the repo. Fixed: that file is gone. The release still writes a fresh one. Nothing in the apps reads the repo copy. NOT TESTED on a device.
 V4. Letting a file chunk go could wake a sender that was not waiting. Fixed: the Mac signals only when a sender is waiting. NOT TESTED on a device.
 L13. The phone bottom bar scrolled sideways to fit every page. Fixed: five pages stay on the bar, and Remote, Mirror, and Settings are under More. NOT TESTED on a device.
+X5. An update deleted the old pairing token instead of sealing it. Fixed: the token is sealed into the new store, and it is removed from the old store only after that works. NOT TESTED on a device.

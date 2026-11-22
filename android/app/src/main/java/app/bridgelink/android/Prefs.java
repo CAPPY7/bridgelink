@@ -41,13 +41,13 @@ public final class Prefs {
         if (cached != null) return cached;
         Context app = context.getApplicationContext();
         SharedPreferences raw = app.getSharedPreferences("bridgelink_box", Context.MODE_PRIVATE);
-        migrateLegacy(app, raw);
         SecretKey key = null;
         try {
             key = keystoreKey();
         } catch (Exception error) {
             keystoreFailed = true;
         }
+        migrateLegacy(app, raw, key);
         cached = new SealedPrefs(raw, key);
         heldKey = key;
         return cached;
@@ -66,16 +66,30 @@ public final class Prefs {
         return SecretBox.open(heldKey, sealed);
     }
 
-    private static void migrateLegacy(Context app, SharedPreferences raw) {
+    private static void migrateLegacy(Context app, SharedPreferences raw, SecretKey key) {
         if (raw.getBoolean("migrated", false)) return;
         SharedPreferences legacy = app.getSharedPreferences("bridgelink", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = raw.edit();
-        for (String key : new String[]{"host", "port", "fp", "pendingFp", "deviceId", "macs"}) {
-            String value = legacy.getString(key, null);
-            if (value != null) editor.putString(key, value);
+        for (String name : new String[]{"host", "port", "fp", "pendingFp", "deviceId", "macs"}) {
+            String value = legacy.getString(name, null);
+            if (value != null) editor.putString(name, value);
+        }
+        String token = legacy.getString(TOKEN, null);
+        boolean sealed = false;
+        if (token != null && !token.isEmpty() && key != null) {
+            try {
+                editor.putString(TOKEN, SecretBox.seal(key, token));
+                sealed = true;
+            } catch (Exception error) {
+                sealed = false;
+            }
+        }
+        if (token != null && !token.isEmpty() && !sealed) {
+            editor.apply();
+            return;
         }
         editor.putBoolean("migrated", true).apply();
-        legacy.edit().remove(TOKEN).apply();
+        if (sealed) legacy.edit().remove(TOKEN).apply();
     }
 
     private static SecretKey keystoreKey() throws Exception {

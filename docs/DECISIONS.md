@@ -207,3 +207,5 @@ The update file in the repo root was a leftover with size 0. Check for update re
 A Mac file send wakes the next chunk only when a sender is already waiting. An empty wake is skipped, so a signal cannot pile up.
 
 The phone bar shows five pages plus More. More holds Remote, Mirror, and Settings, so the bar does not scroll sideways.
+
+An old pairing token is sealed with the Android keystore key before it is removed. If the seal fails, the old token stays where it was so the upgrade can try again.
