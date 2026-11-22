@@ -89,7 +89,7 @@ X13. Every release job could write to the repository. Fixed: only the publish jo
 L11. When a paid Apple account exists, the release stapled the app instead of the disk image. Fixed: it staples the disk image. It still skips that step when there is no paid account. NOT TESTED on a device.
 N15. The update file was a static page with size 0. Fixed: the release writes it with the real disk-image size and the date. It still has no signature, because Sparkle is not linked. NOT TESTED on a device.
 X14. The Gradle download was not checked. Fixed: the wrapper uses the official Gradle 8.11.1 checksum.
-C6. The feature check only looked for a word in some test. Fixed: every message type has to be in the test that builds the message and reads it back. The emulator still only pairs and sends one note.
+C6. The feature check only looked for a word in some test. Partly: every message type has to be in the test that builds the message and reads it back. The emulator still only pairs and sends one note.
 N8. Switching Macs rewrote the token during the handshake, then treated that as a changed key and deleted it. Forget also left the Mac in the token book. Fixed: a saved Mac is chosen before hello, the handshake does not rewrite the token, a mismatch does not delete a saved token, and forget removes that Mac. NOT TESTED on a device.
 N9. The picture queue dropped 24 KB pieces, so a frame arrived broken. Fixed: a full queue drops a whole frame. The screen, the camera, and the mic do not share one queue. NOT TESTED on a device.
 N10. A search for the Mac stayed running in the app, so the next search never started, and the multicast lock could stay held. Fixed: the search is cleared when it stops, and the lock is released. NOT TESTED on a device.
@@ -138,6 +138,7 @@ L14. A desktop Mac showed "Mac: No battery". Fixed: that line is hidden when the
 M27. Every Mac update can ask for the keychain again while the app is ad-hoc signed. Fixed: the first-run window says that, and it points at the free certificate script. The prompt itself still comes from macOS. NOT TESTED on a device.
 X4. History could wipe itself on an upgrade. Fixed: that wipe is gone, the schema is saved, and a test checks that a saved line stays. NOT TESTED on a device.
 V3. The emulator test pressed Pair by calling a hidden method. Fixed: it taps the real Pair button. The hidden method is gone. NOT TESTED on a device.
+Q6. The bug list said the message-type check was fully fixed. Partly: that check still matches the code, and the emulator still only pairs and sends one note. The folder check and the signing cleanup stay fixed because the code matches those lines. NOT TESTED on a device.
 M12. The shared folder scanned every file again for each name, and the Mac read each whole file to hash it. Fixed: each side scans once, and a file is hashed again only when its size or time changed. NOT TESTED on a device.
 Q5. The shared-folder queue read the window's folder switches from a background queue. Fixed: the queue reads a locked copy, and the window updates that copy whenever the switches change. NOT TESTED on a device.
 Q1. The drag test checked a helper the app did not use. Fixed: the Mac mouse button uses that helper for drag, drag end, tap, right-click, a dropped link, and the 3 second wait. NOT TESTED on a device.
