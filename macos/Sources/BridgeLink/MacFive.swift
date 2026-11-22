@@ -654,6 +654,19 @@ extension LinkModel {
             note(folderOn ? "Shared folder is on" : "Shared folder is off")
             if folderOn && !folderPaused { pushFolder() }
             return true
+        case "open_app":
+            if let name = StageFive.appName(envelope.text("name")) {
+                let url = URL(fileURLWithPath: "/Applications/\(name).app")
+                if FileManager.default.fileExists(atPath: url.path) {
+                    NSWorkspace.shared.open(url)
+                    note("Opened \(name)")
+                } else {
+                    note("Could not find \(name) in Applications")
+                }
+            } else {
+                note("That app name was not allowed")
+            }
+            return true
         case "auto_rules":
             let next = StageFive.decodeRules(envelope.text("body"))
             if StageFive.encodeRules(next) != StageFive.encodeRules(rules) {

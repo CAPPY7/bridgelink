@@ -163,7 +163,20 @@ public final class PhoneFive {
             case "pause_sync" -> setPaused(true, false);
             case "copy_code" -> copyCode(item.detail.isEmpty() ? item.extra : item.detail);
             case "alert", "note" -> showAuto(item.extra.isEmpty() ? item.detail : item.extra, item.thenAction);
-            case "open_app" -> out.status("Open app runs on the Mac");
+            case "open_app" -> {
+                String name = StageFive.appName(item.extra);
+                if (name == null) {
+                    out.status("That app name was not allowed");
+                } else {
+                    try {
+                        JsonObject payload = new JsonObject();
+                        payload.addProperty("name", name);
+                        out.frame("open_app", payload);
+                    } catch (Exception error) {
+                        out.status("Could not ask the Mac to open the app");
+                    }
+                }
+            }
             case "ring" -> ringMac();
             default -> {
             }

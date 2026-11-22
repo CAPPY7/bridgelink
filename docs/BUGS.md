@@ -127,3 +127,4 @@ X3. A failed save could leave a pending Downloads item behind. Fixed: that item 
 M16. The screen mirror was always 1280 by 720, so a tall phone looked squashed. Fixed: the picture keeps the phone's shape, and a key frame carries its header. NOT TESTED on a device.
 M18. The phone camera picture was sideways. Fixed: it is turned by the camera's sensor direction, and the front camera is mirrored. NOT TESTED on a device.
 N16. Locking the Mac could freeze the window for a few seconds. Fixed: the lock command runs off the main thread, then the status line comes back. NOT TESTED on a device.
+H14. Open an app only showed a status line on the phone. Fixed: the phone asks the Mac, and the Mac opens that app from the Applications folder. NOT TESTED on a device.

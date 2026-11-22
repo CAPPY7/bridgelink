@@ -217,3 +217,5 @@ Screen mirror keeps the phone's shape. A tall phone is not forced into 1280 by 7
 The phone camera is turned using the sensor direction. A front camera is also mirrored, so it looks like a normal selfie.
 
 The Mac lock command runs on a background task. The window updates after it finishes. The media buttons were already off the main thread.
+
+Open an app sends the name to the Mac. The Mac opens it only from the Applications folder, and only if the name has no slash or dots that climb out. An old Mac that does not know this message shows it as unsupported.
