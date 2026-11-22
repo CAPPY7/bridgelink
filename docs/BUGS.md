@@ -56,3 +56,4 @@ N6. The phone sent the away sign-in once, so a late Mac never accepted it. Fixed
 N7. A late Mac reply on the away relay was thrown away. Fixed: while Wi-Fi is down, replies still go out on the away relay. NOT TESTED on a device.
 N12. The apps said paired as soon as the away relay connected, before the Mac checked the phone. Fixed: paired shows only after the Mac accepts the sign-in, and a drop clears it. NOT TESTED on a device.
 N17. The away relay counted both directions together and never forgot old counts. Fixed: each direction has its own count, and counts older than a few seconds are dropped. NOT TESTED on a device. A local relay test covers it. The worker is not deployed.
+X6. A file from the Mac opened by itself. Fixed: the phone shows "File from the Mac: name" with Open and Show in Downloads. An apk has no Open button. A link is not opened while the screen is off. It gets an Open button instead. NOT TESTED on a device.

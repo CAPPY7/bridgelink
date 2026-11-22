@@ -46,6 +46,7 @@ public final class FileBridge {
     private final Context context;
     private final Map<String, Slot> incoming = new HashMap<>();
     private Uri lastUri;
+    private String lastName = "";
 
     public FileBridge(Context context) {
         this.context = context.getApplicationContext();
@@ -299,6 +300,7 @@ public final class FileBridge {
             values.put(MediaStore.Downloads.IS_PENDING, 0);
             context.getContentResolver().update(uri, values, null, null);
             lastUri = uri;
+            lastName = name;
             return "Saved " + name + " in Downloads/BridgeLink";
         }
         File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
@@ -311,7 +313,16 @@ public final class FileBridge {
                 if (count > 0) out.write(buffer, 0, count);
             }
         }
+        lastName = name;
         return "Saved " + name;
+    }
+
+    public String lastName() {
+        return lastName == null ? "" : lastName;
+    }
+
+    public Uri lastUri() {
+        return lastUri;
     }
 
     public void openLast() {

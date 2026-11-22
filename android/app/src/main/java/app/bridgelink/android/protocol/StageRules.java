@@ -35,6 +35,17 @@ public final class StageRules {
         return alwaysAllow || screenOn;
     }
 
+    /** A received file is never opened by itself. An apk has no Open button. */
+    public static boolean canOfferOpen(String name) {
+        if (name == null) return false;
+        return !name.toLowerCase(Locale.US).endsWith(".apk");
+    }
+
+    public static String fileTitle(String name) {
+        String shown = name == null || name.isBlank() ? "file" : name.trim();
+        return "File from the Mac: " + shown;
+    }
+
     /** text, image, skip, or empty. Sensitive text is never sent. */
     public static String clipKind(boolean hasText, boolean hasImage, boolean sensitive) {
         if (hasText && sensitive) return "skip";

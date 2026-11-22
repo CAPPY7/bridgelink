@@ -12,7 +12,7 @@ v1.0.0 is the Stage 7 release.
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Full fix pass. Step 2 is done (N3, N4, N5, N6, N7, N12, N17). Next is Step 3, starting with X6: a file from the Mac is not opened by itself.
+Full fix pass. X6 is done. Next is M10: skip password-manager clipboard items.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -67,6 +67,7 @@ Full fix pass. Step 2 is done (N3, N4, N5, N6, N7, N12, N17). Next is Step 3, st
 - N7. A late reply still goes out on the away relay when Wi-Fi is down.
 - N12. Away from home says paired only after the Mac accepts the phone, and a drop clears it.
 - N17. Each away-relay direction has its own rate limit, and old counts are dropped.
+- X6. A file from the Mac is not opened by itself. An apk has no Open button. A link waits when the screen is off.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

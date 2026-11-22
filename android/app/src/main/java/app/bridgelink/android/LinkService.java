@@ -794,7 +794,7 @@ public class LinkService extends Service {
                     String saved = files.finish(message.text("id"), message.text("sha256"));
                     publish(saved, null);
                     if (saved != null && saved.startsWith("Saved")) {
-                        main.post(() -> files.openLast());
+                        askFile(files.lastName(), files.lastUri());
                         if (five != null) five.fire("file_in", saved);
                     }
                 }
@@ -1124,8 +1124,7 @@ public class LinkService extends Service {
         PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
         boolean screenOn = power != null && power.isInteractive();
         if (!StageRules.openLinkNow(screenOn, always)) {
-            publish("Link from the Mac is waiting", null);
-            alert("Link from the Mac", "The screen was off, so the link was not opened.");
+            askLink(url);
             return;
         }
         try {
@@ -1517,6 +1516,42 @@ public class LinkService extends Service {
         } catch (Exception ignored) {
             torchOn = false;
         }
+    }
+
+    private void askFile(String name, android.net.Uri uri) {
+        String title = StageRules.fileTitle(name);
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle(title)
+                .setContentText("Saved in Downloads. It was not opened.")
+                .setAutoCancel(true);
+        Intent show = new Intent(this, FileActions.class).setAction(FileActions.SHOW_DOWNLOADS);
+        builder.addAction(new Notification.Action.Builder(null, "Show in Downloads",
+                android.app.PendingIntent.getBroadcast(this, 41, show, android.app.PendingIntent.FLAG_IMMUTABLE)).build());
+        if (uri != null && StageRules.canOfferOpen(name)) {
+            Intent open = new Intent(this, FileActions.class).setAction(FileActions.OPEN_FILE);
+            open.putExtra("name", name);
+            open.putExtra("uri", uri.toString());
+            builder.addAction(new Notification.Action.Builder(null, "Open",
+                    android.app.PendingIntent.getBroadcast(this, 42, open, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build());
+        }
+        manager().notify(41, builder.build());
+        publish(title, null);
+    }
+
+    private void askLink(String url) {
+        publish("Link from the Mac is waiting", null);
+        Intent open = new Intent(this, FileActions.class).setAction(FileActions.OPEN_LINK);
+        open.putExtra("url", url);
+        Notification note = new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat)
+                .setContentTitle("Link from the Mac")
+                .setContentText("The screen was off, so the link was not opened.")
+                .setAutoCancel(true)
+                .addAction(new Notification.Action.Builder(null, "Open",
+                        android.app.PendingIntent.getBroadcast(this, 43, open, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build())
+                .build();
+        manager().notify(43, note);
     }
 
     private void alert(String title, String body) {
