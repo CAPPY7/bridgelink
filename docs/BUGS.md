@@ -63,3 +63,4 @@ M10. Password-manager clipboard items could be copied and stored. Fixed: Android
 X8. The phone could start the link for any broadcast the boot receiver saw. Fixed: it starts only after the phone boots or the app is updated. NOT TESTED on a device.
 L10. Signing the Mac app changed the default keychain even on a home computer. Fixed: the default keychain changes only when CI is true. NOT TESTED on a device.
 L12. A script in the repo could make a new Android signing key. Fixed: that script is deleted, and the docs no longer tell anyone to run it. Do not add it back.
+X9. A Java key file could be committed by accident. Fixed: .jks files are ignored, the same way .keystore files already were.

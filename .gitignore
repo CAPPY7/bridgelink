@@ -21,6 +21,7 @@ macos/BridgeLink.app
 macos/*.zip
 *.apk
 *.keystore
+*.jks
 *.p12
 *.pem
 owner-backup/

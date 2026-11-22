@@ -26,6 +26,8 @@ The Mac signing script changes the default keychain only when CI is true. A home
 
 The Android key-making script is deleted. A new key would not match the existing signing secrets. Do not add the script back.
 
+Java key files ending in .jks are ignored, the same as .keystore files. Do not commit a signing key.
+
 A sleeping relay keeps the role on the socket and the room key in storage. Nothing important is only in memory. The free Cloudflare plan already supports that.
 
 A quiet away relay closes after 10 minutes without a frame, not because the connection is old. A drop shows "Away link down" and rejoins with the same wait used for Wi-Fi. A relay that never came up does not loop by itself.
