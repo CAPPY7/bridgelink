@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Last fix pass. NB10 is done. Next is NB11: stop reading and sending the Wi-Fi name.
+Last fix pass. NB11 is done. Next is NB13: the Mac signing script must clean up after a failure.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -66,6 +66,7 @@ Last fix pass. NB10 is done. Next is NB11: stop reading and sending the Wi-Fi na
 - NB5. Mirror taps measure the screen from the accessibility service.
 - NB6. A picture frame keeps the key flag from its first piece. The screen, camera, and mic take turns.
 - NB10. Shared-folder scan, send, write, and delete stay on one Mac queue, and they check pause inside that queue.
+- NB11. The phone no longer reads or sends the Wi-Fi name. An old wifi message is still ignored on the Mac.
 - C7. The Mac can ask to see the screen or the camera even when the phone app is in the background.
 - H1. Stopping the screen mirror waits for the drain thread before it releases the encoder.
 - H2. Picture frames stay in a queue of 3. Extra non-key frames are dropped.

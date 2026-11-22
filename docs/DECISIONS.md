@@ -197,3 +197,5 @@ Mirror taps measure the screen from the accessibility service. On Android 11 and
 Picture lanes remember the key-frame flag from the first piece only. Later pieces cannot turn a normal frame into a key frame. The screen, camera, and mic each get a turn, so the mic is not stuck behind the screen.
 
 Shared-folder scan, send, write, and delete on the Mac all use one queue. A paused or off folder is checked on that queue, so a late piece cannot bring a file back. Status text still updates on the main thread.
+
+The phone does not read or send the Wi-Fi name. Home Wi-Fi automations cannot see that name on current Android. The Mac still accepts an old wifi message and does nothing, so an old phone does not break.

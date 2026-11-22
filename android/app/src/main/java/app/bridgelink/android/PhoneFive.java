@@ -9,8 +9,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.provider.Telephony;
 import android.telephony.SmsManager;
@@ -46,7 +44,6 @@ public final class PhoneFive {
     private final FolderFiles folder;
     private boolean paused;
     private boolean batteryFired;
-    private String lastSsid = "";
     private List<StageFive.Rule> rules = new ArrayList<>();
 
     public PhoneFive(Context context, Out out) {
@@ -61,7 +58,6 @@ public final class PhoneFive {
 
     public void onPaired() {
         pushSms();
-        pushWifi();
         pushRules(false);
         pushIndex();
         fire("connect", "");
@@ -102,7 +98,6 @@ public final class PhoneFive {
                 }
                 case "folder_pause" -> setPaused("1".equals(body), false);
                 case "auto" -> edit(body);
-                case "wifi" -> pushWifi();
                 case "input_on" -> {
                     setFlag("input", !"0".equals(body));
                     JsonObject payload = new JsonObject();
@@ -463,30 +458,6 @@ public final class PhoneFive {
             out.status("Asked the Mac to ring");
         } catch (Exception error) {
             out.status("Could not ask the Mac to ring");
-        }
-    }
-
-    private void pushWifi() {
-        String ssid = ssid();
-        if (ssid.equals(lastSsid) && !ssid.isEmpty()) return;
-        lastSsid = ssid;
-        try {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("ssid", ssid);
-            out.frame("wifi", payload);
-        } catch (Exception ignored) {
-        }
-    }
-
-    private String ssid() {
-        try {
-            WifiManager wifi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            if (wifi == null) return "";
-            WifiInfo info = wifi.getConnectionInfo();
-            if (info == null || info.getSSID() == null) return "";
-            return info.getSSID();
-        } catch (SecurityException error) {
-            return "";
         }
     }
 
