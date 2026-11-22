@@ -41,8 +41,7 @@ extension LinkModel {
     func loadEasy() {
         clips = ClipFile.load()
         inbox = InboxFile.load()
-        beacon = LeaveBeacon()
-        beacon?.start()
+        refreshBeacon()
         loadFive()
     }
 
@@ -147,6 +146,7 @@ extension LinkModel {
 
     func setLock(on: Bool) {
         lockOn = on
+        refreshBeacon()
         pushLock()
     }
 
@@ -226,10 +226,20 @@ extension LinkModel {
             UserDefaults.standard.set(atDesk, forKey: "atDesk")
             UserDefaults.standard.set(lockFar, forKey: "lockFar")
             UserDefaults.standard.set(lockDelay, forKey: "lockDelay")
+            refreshBeacon()
             note(lockOn ? "Lock when you leave is on" : "Lock when you leave is off")
             return true
         default:
             return false
+        }
+    }
+
+    func refreshBeacon() {
+        if lockOn {
+            if beacon == nil { beacon = LeaveBeacon() }
+            beacon?.start()
+        } else {
+            beacon?.stop()
         }
     }
 

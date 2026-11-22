@@ -36,6 +36,9 @@ Home Wi-Fi automations are removed. Android 10 and newer do not tell an app the 
 
 Precise location stays only through Android 11. Leave-lock Bluetooth on those phones needs it. Android 12 and newer use the Bluetooth scan permission and do not get location.
 
+The Mac Bluetooth beacon runs only while leave-lock is on. Turning leave-lock off stops the beacon.
+
+
 
 
 

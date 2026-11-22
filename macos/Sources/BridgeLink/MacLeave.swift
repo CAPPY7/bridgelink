@@ -16,6 +16,12 @@ final class LeaveBeacon: NSObject, CBPeripheralManagerDelegate {
         }
     }
 
+    func stop() {
+        started = false
+        manager?.stopAdvertising()
+        manager?.removeAllServices()
+    }
+
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         addService()
     }
