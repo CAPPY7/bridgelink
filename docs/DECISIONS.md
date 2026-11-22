@@ -46,6 +46,8 @@ The screen, the camera, and the mic each keep at most 3 whole frames. A full lan
 
 Looking for the Mac on Wi-Fi releases the multicast lock when the search stops or fails. The next search can start. The saved Mac is not forgotten.
 
+A shared-folder piece is decoded, written, and checked off the Mac main thread, one piece at a time. The status line is still shown on the main thread.
+
 
 
 

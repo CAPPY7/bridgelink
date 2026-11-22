@@ -302,6 +302,8 @@ final class SharedBox {
     }
 }
 
+private let folderPartQueue = DispatchQueue(label: "app.bridgelink.mac.folder-part", qos: .utility)
+
 extension LinkModel {
     func loadFive() {
         let raw = UserDefaults.standard.string(forKey: "autoRules") ?? ""
@@ -536,20 +538,30 @@ extension LinkModel {
             return true
         case "folder_part":
             guard folderOn, !folderPaused else { return true }
-            if let problem = sharedBox.part(
-                path: envelope.text("path"),
-                offset: Int64(envelope.text("offset")) ?? -1,
-                size: Int64(envelope.text("size")) ?? -1,
-                mtime: Int64(envelope.text("mtime")) ?? 0,
-                sha: envelope.text("sha"),
-                data: envelope.text("data")
-            ) {
-                note(problem)
-            } else {
-                let offset = Int64(envelope.text("offset")) ?? 0
-                let size = Int64(envelope.text("size")) ?? 0
-                let length = Int64(Data(base64Encoded: envelope.text("data"))?.count ?? 0)
-                if offset + length >= size { note("Shared folder updated") }
+            let path = envelope.text("path")
+            let offset = Int64(envelope.text("offset")) ?? -1
+            let size = Int64(envelope.text("size")) ?? -1
+            let mtime = Int64(envelope.text("mtime")) ?? 0
+            let sha = envelope.text("sha")
+            let data = envelope.text("data")
+            folderPartQueue.async { [weak self] in
+                guard let self else { return }
+                let problem = self.sharedBox.part(
+                    path: path,
+                    offset: offset,
+                    size: size,
+                    mtime: mtime,
+                    sha: sha,
+                    data: data
+                )
+                let length = Int64(Data(base64Encoded: data)?.count ?? 0)
+                DispatchQueue.main.async {
+                    if let problem {
+                        self.note(problem)
+                    } else if offset + length >= size {
+                        self.note("Shared folder updated")
+                    }
+                }
             }
             return true
         case "folder_delete":
