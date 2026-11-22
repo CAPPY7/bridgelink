@@ -221,6 +221,116 @@ public final class StageSix {
         };
     }
 
+    /** Front camera adds the display turn, then the caller mirrors. Back camera subtracts it. */
+    public static int cameraAngle(int sensor, int displayDegrees, boolean front) {
+        int sensorDeg = mod360(sensor);
+        int turn = mod360(displayDegrees);
+        if (front) return mod360(sensorDeg + turn);
+        return mod360(sensorDeg - turn);
+    }
+
+    /**
+     * Rotate NV21 and optionally mirror it. 90 and 270 swap the sides.
+     * The result is a new buffer. A bad size is returned unchanged.
+     */
+    public static byte[] rotateNv21(byte[] src, int width, int height, int degrees, boolean mirror) {
+        int ySize = width * height;
+        if (src == null || width < 2 || height < 2 || (width % 2) != 0 || (height % 2) != 0) return src;
+        if (src.length < ySize + ySize / 2) return src;
+        int angle = mod360(degrees);
+        if (angle != 0 && angle != 90 && angle != 180 && angle != 270) return src;
+        byte[] current = src;
+        int w = width;
+        int h = height;
+        if (angle != 0) {
+            current = turnNv21(current, w, h, angle);
+            if (angle == 90 || angle == 270) {
+                int swap = w;
+                w = h;
+                h = swap;
+            }
+        }
+        if (mirror) current = mirrorNv21(current, w, h);
+        return current;
+    }
+
+    private static int mod360(int degrees) {
+        int n = degrees % 360;
+        return n < 0 ? n + 360 : n;
+    }
+
+    private static byte[] turnNv21(byte[] src, int width, int height, int angle) {
+        int ySize = width * height;
+        int outW = (angle == 90 || angle == 270) ? height : width;
+        int outH = (angle == 90 || angle == 270) ? width : height;
+        byte[] dst = new byte[ySize + ySize / 2];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int nx;
+                int ny;
+                if (angle == 90) {
+                    nx = height - 1 - y;
+                    ny = x;
+                } else if (angle == 180) {
+                    nx = width - 1 - x;
+                    ny = height - 1 - y;
+                } else {
+                    nx = y;
+                    ny = width - 1 - x;
+                }
+                dst[ny * outW + nx] = src[y * width + x];
+            }
+        }
+        int cW = width / 2;
+        int cH = height / 2;
+        for (int y = 0; y < cH; y++) {
+            for (int x = 0; x < cW; x++) {
+                int nx;
+                int ny;
+                int row;
+                if (angle == 90) {
+                    nx = cH - 1 - y;
+                    ny = x;
+                    row = cH;
+                } else if (angle == 180) {
+                    nx = cW - 1 - x;
+                    ny = cH - 1 - y;
+                    row = cW;
+                } else {
+                    nx = y;
+                    ny = cW - 1 - x;
+                    row = cH;
+                }
+                int from = ySize + (y * cW + x) * 2;
+                int to = outW * outH + (ny * row + nx) * 2;
+                dst[to] = src[from];
+                dst[to + 1] = src[from + 1];
+            }
+        }
+        return dst;
+    }
+
+    private static byte[] mirrorNv21(byte[] src, int width, int height) {
+        int ySize = width * height;
+        byte[] dst = new byte[src.length];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                dst[y * width + (width - 1 - x)] = src[y * width + x];
+            }
+        }
+        int cW = width / 2;
+        int cH = height / 2;
+        for (int y = 0; y < cH; y++) {
+            for (int x = 0; x < cW; x++) {
+                int from = ySize + (y * cW + x) * 2;
+                int to = ySize + (y * cW + (cW - 1 - x)) * 2;
+                dst[to] = src[from];
+                dst[to + 1] = src[from + 1];
+            }
+        }
+        return dst;
+    }
+
     public static boolean relayUrl(String url) {
         return relayParts(url) != null;
     }

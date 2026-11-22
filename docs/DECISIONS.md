@@ -200,6 +200,8 @@ Shared-folder scan, send, write, and delete on the Mac all use one queue. A paus
 
 The phone does not read or send the Wi-Fi name. Home Wi-Fi automations cannot see that name on current Android. The Mac still accepts an old wifi message and does nothing, so an old phone does not break.
 
+The phone camera turns the picture once, in the raw pixels, before making a JPEG. The angle uses the camera sensor and how the phone is held. The front camera is mirrored.
+
 Turning the phone restarts the screen encoder at the new size and asks for a key frame. The screen share permission stays. The listener is removed when sharing stops.
 
 The Mac mouse button goes up only when the drag helper says so. That covers a lifted finger, a tap, a right-click, a dropped link, and 3 seconds of silence.

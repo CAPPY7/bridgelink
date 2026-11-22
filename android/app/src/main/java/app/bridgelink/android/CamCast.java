@@ -33,11 +33,13 @@ public final class CamCast {
     private HandlerThread thread;
     private volatile boolean running;
     private long lastFrame;
-    private int jpegRotation;
-    private boolean jpegMirror;
+    private int sensorDegrees;
+    private boolean frontCamera;
+    private Context app;
 
     public void start(Context context, String facing, int zoom, boolean flash, boolean withMic) {
         stop();
+        app = context.getApplicationContext();
         CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         if (manager == null) {
             LinkService.postStatus("This phone has no camera.");
@@ -52,10 +54,8 @@ public final class CamCast {
             CameraCharacteristics info = manager.getCameraCharacteristics(id);
             Integer sensor = info.get(CameraCharacteristics.SENSOR_ORIENTATION);
             Integer lens = info.get(CameraCharacteristics.LENS_FACING);
-            jpegMirror = lens != null && lens == CameraCharacteristics.LENS_FACING_FRONT;
-            int degrees = sensor == null ? 0 : sensor;
-            if (jpegMirror) degrees = (360 - degrees) % 360;
-            jpegRotation = degrees;
+            frontCamera = lens != null && lens == CameraCharacteristics.LENS_FACING_FRONT;
+            sensorDegrees = sensor == null ? 0 : sensor;
             thread = new HandlerThread("bridgelink-cam");
             thread.start();
             Handler handler = new Handler(thread.getLooper());
@@ -158,10 +158,19 @@ public final class CamCast {
             lastFrame = now;
             byte[] nv21 = nv21(image);
             if (nv21 == null) return;
-            YuvImage yuv = new YuvImage(nv21, ImageFormat.NV21, image.getWidth(), image.getHeight(), null);
+            int angle = StageSix.cameraAngle(sensorDegrees, displayTurn(), frontCamera);
+            byte[] turned = StageSix.rotateNv21(nv21, image.getWidth(), image.getHeight(), angle, frontCamera);
+            int width = image.getWidth();
+            int height = image.getHeight();
+            if (angle == 90 || angle == 270) {
+                int swap = width;
+                width = height;
+                height = swap;
+            }
+            YuvImage yuv = new YuvImage(turned, ImageFormat.NV21, width, height, null);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            yuv.compressToJpeg(new Rect(0, 0, image.getWidth(), image.getHeight()), quality, out);
-            byte[] jpeg = upright(out.toByteArray(), jpegRotation, jpegMirror, quality);
+            yuv.compressToJpeg(new Rect(0, 0, width, height), quality, out);
+            byte[] jpeg = out.toByteArray();
             if (jpeg.length > 400_000) return;
             List<byte[]> parts = StageSix.chunks(jpeg);
             for (int i = 0; i < parts.size(); i++) {
@@ -207,6 +216,14 @@ public final class CamCast {
         return fallback;
     }
 
+    @SuppressWarnings("deprecation")
+    private int displayTurn() {
+        if (app == null) return 0;
+        android.view.WindowManager manager = (android.view.WindowManager) app.getSystemService(Context.WINDOW_SERVICE);
+        if (manager == null) return 0;
+        return manager.getDefaultDisplay().getRotation() * 90;
+    }
+
     private static Rect crop(CameraCharacteristics info, int zoom) {
         Rect full = info.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
         if (full == null || zoom <= 1) return full;
@@ -215,23 +232,6 @@ public final class CamCast {
         int x = full.centerX() - width / 2;
         int y = full.centerY() - height / 2;
         return new Rect(x, y, x + width, y + height);
-    }
-
-    private static byte[] upright(byte[] jpeg, int degrees, boolean mirror, int quality) {
-        if (jpeg == null) return null;
-        if ((degrees % 360) == 0 && !mirror) return jpeg;
-        android.graphics.Bitmap src = android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
-        if (src == null) return jpeg;
-        android.graphics.Matrix matrix = new android.graphics.Matrix();
-        if (mirror) matrix.postScale(-1, 1);
-        if ((degrees % 360) != 0) matrix.postRotate(degrees);
-        android.graphics.Bitmap turned = android.graphics.Bitmap.createBitmap(
-                src, 0, 0, src.getWidth(), src.getHeight(), matrix, true);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        turned.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out);
-        if (turned != src) turned.recycle();
-        src.recycle();
-        return out.toByteArray();
     }
 
     private static byte[] nv21(Image image) {
