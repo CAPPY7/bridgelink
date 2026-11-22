@@ -71,6 +71,8 @@ X6. A file from the Mac is not opened by itself. Tapping the notice or Open star
 L9. A link from the Mac opened itself whenever the screen was on. Fixed: it waits for Open unless Always open links is on. NOT TESTED on a device.
 W6. Open was offered for some Android install files, not only .apk. Fixed: .apks, .xapk, .aab, and the Android package type have no Open button. NOT TESTED on a device.
 W7. Every file notice used the same number, so a second file hid the first. Fixed: each file gets its own notice number. NOT TESTED on a device.
+W3. The away relay looked for a closed flag that Cloudflare sockets do not have, so it kept the room key after the last socket closed. Fixed: a socket just closed, or one whose ready state is closed, is not counted. NOT TESTED on a device. The worker is not deployed.
+
 
 
 

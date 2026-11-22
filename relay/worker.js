@@ -37,6 +37,16 @@ export function writeMeta(ws, meta) {
   ws.serializeAttachment(meta);
 }
 
+/** Cloudflare sockets have no `closed` field. 1 means still open. */
+export function socketStillOpen(peer) {
+  if (!peer) return false;
+  const state = peer.readyState;
+  if (state === 1 || state === "open" || state === "OPEN") return true;
+  if (state === 0 || state === 2 || state === 3) return false;
+  if (state === "connecting" || state === "closing" || state === "closed") return false;
+  return peer.closed !== true;
+}
+
 /** A wake-up must still know the role. The room key lives in storage, not memory. */
 export function keptRole(meta) {
   return meta && meta.role ? meta.role : "";
@@ -150,12 +160,20 @@ export class Room {
 
   async sweep(now = Date.now()) {
     const sockets = this.state.getWebSockets();
+    const justClosed = new Set();
     for (const peer of sockets) {
       const meta = readMeta(peer);
       if (!meta.ready || !meta.lastFrame) continue;
-      if (now - meta.lastFrame > IDLE_MS) peer.close(1000, "idle");
+      if (now - meta.lastFrame > IDLE_MS) {
+        justClosed.add(peer);
+        try {
+          peer.close(1000, "idle");
+        } catch (error) {
+          /* already gone */
+        }
+      }
     }
-    const alive = this.state.getWebSockets().filter((peer) => !peer.closed);
+    const alive = sockets.filter((peer) => !justClosed.has(peer) && socketStillOpen(peer));
     if (alive.length === 0) await this.state.storage.delete("roomKey");
   }
 }

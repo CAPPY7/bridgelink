@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Room, keptRole, nextIdleStamp, noteRate, readMeta, sha256hex, writeMeta } from "./worker.js";
+import { Room, keptRole, nextIdleStamp, noteRate, readMeta, sha256hex, socketStillOpen, writeMeta } from "./worker.js";
 
 function memoryState(sockets) {
   const saved = new Map();
@@ -96,6 +96,30 @@ test("the idle clock is written at most once every 30 seconds", () => {
   assert.equal(nextIdleStamp(start, start + 29_999), start);
   assert.equal(nextIdleStamp(start, start + 30_000), start + 30_000);
   assert.equal(nextIdleStamp(0, start), start);
+});
+
+test("a closed socket with no closed field still drops the room key", async () => {
+  const stamp = Math.floor(Date.now() / 1000);
+  const key = "ef".repeat(32);
+  let attachment = null;
+  const phone = {
+    sent: [],
+    readyState: 1,
+    why: "",
+    serializeAttachment(value) { attachment = value; },
+    deserializeAttachment() { return attachment; },
+    send(message) { this.sent.push(message); },
+    close(_code, why) { this.readyState = 3; this.why = why || ""; },
+  };
+  assert.equal(Object.hasOwn(phone, "closed"), false);
+  const state = memoryState([phone]);
+  const room = new Room(state);
+  await room.webSocketMessage(phone, await hello("phone", stamp, key));
+  writeMeta(phone, { ...readMeta(phone), lastFrame: Date.now() - 11 * 60 * 1000 });
+  await room.sweep(Date.now());
+  assert.equal(phone.readyState, 3);
+  assert.equal(socketStillOpen(phone), false);
+  assert.equal(await state.storage.get("roomKey"), "");
 });
 
 test("each direction has its own rate limit and old counts are dropped", () => {
