@@ -61,7 +61,7 @@ V1. The away relay rewrote its idle clock on every frame. Fixed: the clock moves
 V2. The relay room tests were not part of the checks. Fixed: they run with the other web tests, and a wake-up uses a new socket that only has the saved note, then a frame is forwarded. NOT TESTED on a device.
 M10. Password-manager clipboard items could be copied and stored. Fixed: Android skips clips marked sensitive on Android 13 and newer. The Mac skips concealed and transient pasteboard types. Those clips are not sent and not stored. NOT TESTED on a device.
 X8. The phone could start the link for any broadcast the boot receiver saw. Fixed: it starts only after the phone boots or the app is updated. NOT TESTED on a device.
-L10. Signing the Mac app changed the default keychain even on a home computer. Fixed: the default keychain changes only when CI is true. NOT TESTED on a device.
+L10. Signing the Mac app changed the default keychain even on a home computer. Partly fixed earlier: the default changes only on CI. The certificate was still invisible on a home Mac until W4. See the later L10 line.
 L12. A script in the repo could make a new Android signing key. Fixed: that script is deleted, and the docs no longer tell anyone to run it. Do not add it back.
 X9. A Java key file could be committed by accident. Fixed: .jks files are ignored, the same way .keystore files already were.
 W2. The away sign-in retry ran on the phone's main thread, so the send was dropped, and cancelling it never found the old wait. Fixed: one saved retry posts the sign-in, and the actual write runs on the send thread. NOT TESTED on a device.
@@ -73,6 +73,8 @@ W6. Open was offered for some Android install files, not only .apk. Fixed: .apks
 W7. Every file notice used the same number, so a second file hid the first. Fixed: each file gets its own notice number. NOT TESTED on a device.
 W3. The away relay looked for a closed flag that Cloudflare sockets do not have, so it kept the room key after the last socket closed. Fixed: a socket just closed, or one whose ready state is closed, is not counted. NOT TESTED on a device. The worker is not deployed.
 W4. On a home Mac, signing could not see the BridgeLink certificate because the tool was not pointed at that keychain. Fixed: codesign gets --keychain, the keychain is on the search list only while signing, and the old list is restored. The default keychain still changes only on CI. NOT TESTED on a device.
+L10. The Mac signing script used to change the home default keychain. Fixed: it changes that default only on CI, and codesign is pointed at the BridgeLink keychain instead. NOT TESTED on a device.
+
 
 
 
