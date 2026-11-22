@@ -15,7 +15,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 Final fix pass. H16 is done. Next is L1: split the phone link service so the file is shorter.
 
 ## Open problems
-- The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
+- The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.
 - LinkService.java is still longer than 400 lines.
 - Mac permissions can still reset after an update until MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD exist.
 - Check for update reads the version, downloads BridgeLink.dmg and SHA256SUMS when a newer version is listed, checks the hash, and opens the disk image. The Sparkle framework is not linked, because that needs an EdDSA secret that is not in this environment. It does not install the update by itself.

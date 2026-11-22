@@ -54,9 +54,9 @@ PART 2 – HOW YOU WORK
   BridgeLink-android.apk (release-signed, NOT the debug one) + BridgeLink.dmg.
 - Keep docs/PROGRESS.md updated after every step: what's finished, what's next, open problems.
   If you stop or run out of memory, you must be able to continue from PROGRESS.md alone.
-- Statuses in README and FEATURE_MATRIX: "Not started", "Building", "Built – self-tested",
+- Statuses in README and FEATURE_MATRIX: "Not started", "Building", "Built – NOT TESTED on a device",
   "Final – owner tested". Only I can make "Final". Change check-matrix.py to these statuses.
-- "Built – self-tested" means: real code in both apps, unit tests, an integration or emulator
+- "Built – NOT TESTED on a device" means: real code in both apps, unit tests, an integration or emulator
   test where possible, CI green, and you ran it yourself. Never say built if it's half done.
 - Only stop and message me if you are truly blocked (for example a GitHub secret is missing).
   Then send ONE line: what you need and why. Otherwise keep working.

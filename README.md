@@ -48,35 +48,37 @@ See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_GUIDE.md](docs/USER_GUIDE.
 
 ## Status of the 25 features
 
-Honest status of the **installable apps**. The demo is not counted. Status words are Not started, Building, Built – self-tested, or Final – owner tested. See [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
+Honest status of the **installable apps**. The demo is not counted. Status words are Not started, Building, Built – NOT TESTED on a device, or Final – owner tested. See [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
+
+What was tested: CI unit tests and the emulator pairing test. Nothing in this build was tried on a real phone or Mac.
 
 | # | Feature | Status |
 |---|---|---|
-| 1 | Send files, links, and text | Built – self-tested. Files, folders as zip, up to 4 GB, progress, cancel, and resume |
-| 2 | Share sheet and drag-drop | Built – self-tested. Android share sends many files. Mac drop, drop zone, Finder Services, and Share |
-| 3 | Notification mirroring | Built – self-tested. Banners, reply when the app allows it, dismiss both ways, per-app block, Do Not Disturb option |
-| 4 | Media control | Built – self-tested |
-| 5 | Battery status | Built – self-tested. Both ways, plus low and full alerts |
-| 6 | Find phone | Built – self-tested. Rings on the alarm stream so silent mode does not hide it. Either side can stop it |
-| 7 | OTP auto-copy | Built – self-tested. Codes from notifications and SMS, cleared on the Mac after 60 seconds |
-| 8 | Open a link on the other device | Built – self-tested. Both ways, with an always-open option |
-| 9 | Trackpad, keyboard, slides | Built – self-tested. Drag, click, two-finger scroll, right-click, typing, slides, and a laser dot. The Mac needs Accessibility |
-| 10 | Clipboard sync | Built – self-tested. On or off, skips sensitive text, sends small pictures |
-| 11 | SMS | Built – self-tested. Read, send, banners, and a SIM choice. Allow SMS on the phone |
-| 12 | Screen mirror | Built – self-tested. Phone screen in a Mac window. Closing the window stops it. Quality is low, medium, or high |
-| 13 | Control the phone while mirroring | Built – self-tested. Click, drag, scroll, and type through the phone accessibility service. Back, Home, and Recents. The Mac never unlocks the phone |
-| 14 | Phone as webcam | Built – self-tested. Live camera inside BridgeLink, with front or back, zoom, flash, and mic. A Zoom or FaceTime camera needs a paid Apple Developer ID, so that extension stays off |
-| 15 | Shared folder | Built – self-tested. Both ways, conflict copies, pause. Files over 32 MB are skipped |
-| 16 | Lock the Mac when you leave | Built – self-tested |
-| 17 | Away from home | Built – self-tested. A free relay forwards locked frames only. Pair once on Wi-Fi first |
-| 18 | Unified inbox | Built – self-tested |
-| 19 | Clipboard history | Built – self-tested |
-| 20 | Scan to Mac | Built – self-tested |
-| 21 | Automations | Built – self-tested. Up to eight when-this-then-that rules |
-| 22 | Quick drop | Built – self-tested. Quick Settings tile, menu-bar drop, and a floating drop zone |
-| 23 | Pairing | Built – self-tested. QR, several phones and Macs, rename, and forget |
-| 24 | End-to-end encryption | Built – self-tested. TLS on the local link. The away relay only forwards frames that are already locked |
-| 25 | Key pin | Built – self-tested. If the Mac key changed, forget it and scan again |
+| 1 | Send files, links, and text | Built – NOT TESTED on a device. Files, folders as zip, up to 4 GB, progress, cancel, and resume |
+| 2 | Share sheet and drag-drop | Built – NOT TESTED on a device. Android share sends many files. Mac drop, drop zone, Finder Services, and Share |
+| 3 | Notification mirroring | Built – NOT TESTED on a device. Banners, reply when the app allows it, dismiss both ways, per-app block, Do Not Disturb option |
+| 4 | Media control | Built – NOT TESTED on a device |
+| 5 | Battery status | Built – NOT TESTED on a device. Both ways, plus low and full alerts |
+| 6 | Find phone | Built – NOT TESTED on a device. Rings on the alarm stream so silent mode does not hide it. Either side can stop it |
+| 7 | OTP auto-copy | Built – NOT TESTED on a device. Codes from notifications and SMS, cleared on the Mac after 60 seconds |
+| 8 | Open a link on the other device | Built – NOT TESTED on a device. Both ways, with an always-open option |
+| 9 | Trackpad, keyboard, slides | Built – NOT TESTED on a device. Drag, click, two-finger scroll, right-click, typing, slides, and a laser dot. The Mac needs Accessibility |
+| 10 | Clipboard sync | Built – NOT TESTED on a device. On or off, skips sensitive text, sends small pictures |
+| 11 | SMS | Built – NOT TESTED on a device. Read, send, banners, and a SIM choice. Allow SMS on the phone |
+| 12 | Screen mirror | Built – NOT TESTED on a device. Phone screen in a Mac window. Closing the window stops it. Quality is low, medium, or high |
+| 13 | Control the phone while mirroring | Built – NOT TESTED on a device. Click, drag, scroll, and type through the phone accessibility service. Back, Home, and Recents. The Mac never unlocks the phone |
+| 14 | Phone as webcam | Built – NOT TESTED on a device. Live camera inside BridgeLink, with front or back, zoom, flash, and mic. A Zoom or FaceTime camera needs a paid Apple Developer ID, so that extension stays off |
+| 15 | Shared folder | Built – NOT TESTED on a device. Both ways, conflict copies, pause. You can choose the phone folder. Files over 32 MB use the normal file send and land in the shared folder |
+| 16 | Lock the Mac when you leave | Built – NOT TESTED on a device |
+| 17 | Away from home | Built – NOT TESTED on a device. A free relay forwards locked frames only. Pair once on Wi-Fi first |
+| 18 | Unified inbox | Built – NOT TESTED on a device |
+| 19 | Clipboard history | Built – NOT TESTED on a device |
+| 20 | Scan to Mac | Built – NOT TESTED on a device |
+| 21 | Automations | Built – NOT TESTED on a device. Up to eight when-this-then-that rules |
+| 22 | Quick drop | Built – NOT TESTED on a device. Quick Settings tile, menu-bar drop, and a floating drop zone |
+| 23 | Pairing | Built – NOT TESTED on a device. QR, several phones and Macs, rename, and forget |
+| 24 | End-to-end encryption | Built – NOT TESTED on a device. TLS on the local link. The away relay only forwards frames that are already locked |
+| 25 | Key pin | Built – NOT TESTED on a device. If the Mac key changed, forget it and scan again |
 
 ## Build
 

@@ -1,6 +1,6 @@
 # Decisions
 
-The current rules are docs/BUILD_PROMPT.md (master prompt v2). If an older paragraph below disagrees with that file, the prompt wins.
+The current rules are the developer notes. If an older paragraph below disagrees with those notes, the notes win.
 
 The Mac app is sideloaded. There is no paid Apple Developer account. A self-signed certificate keeps the same signature across updates when the Mac signing secrets are set. Permissions can still be forgotten if a build is ad-hoc signed. The menu window explains the first open.
 

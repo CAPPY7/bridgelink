@@ -34,7 +34,7 @@ My rules (never ask me about these):
 10. After EVERY fix, update docs/BUGS.md (one line: the problem and "Fixed: the idea of
     the change") and docs/PROGRESS.md (done, next, open problems). If you stop or run out
     of memory, you must be able to continue from PROGRESS.md alone.
-11. A feature can only be "Built – self-tested" if a test really sends that feature's
+11. A feature can only be "Built – NOT TESTED on a device" if a test really sends that feature's
     messages between a phone and a Mac (see Step 2). Otherwise it is "Building".
     Only I can set "Final – owner tested".
 12. Things that only I can do (adding Mac signing secrets, deploying the relay) are made
@@ -140,7 +140,7 @@ STEP 1 – CRITICAL FIXES (do these first, in this order)
     - Mac: add Swift tests that feed real phone JSON fixtures (docs/fixtures/*.json, one per
       message type) into LinkModel.handle and check the result. Use the same fixtures in the
       Android tests.
-    - Change scripts/check-matrix.py: a feature is only "Built – self-tested" if a test
+    - Change scripts/check-matrix.py: a feature is only "Built – NOT TESTED on a device" if a test
       named in its row actually contains that feature's message type.
     - Delete or rewrite StageThree/Four/Five/SixDeviceTest so they test behavior, not
       text constants.

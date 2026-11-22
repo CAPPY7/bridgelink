@@ -889,6 +889,28 @@ public class ProtocolTest {
             assertEquals(type, back.type);
             assertEquals(type, back.text("body"));
         }
+        try (java.util.stream.Stream<Path> stream = java.nio.file.Files.list(fixtureDir())) {
+            java.util.List<Path> files = stream.filter(path -> path.getFileName().toString().endsWith(".json")).toList();
+            assertEquals(FeatureMessages.TYPES.length, files.size());
+            for (Path file : files) {
+                Envelope env = Envelope.parse(java.nio.file.Files.readString(file));
+                String stem = file.getFileName().toString().replace(".json", "");
+                assertEquals(stem, env.type);
+                assertFalse(env.text("body").isEmpty());
+            }
+        }
+    }
+
+    private static Path fixtureDir() {
+        Path[] paths = new Path[]{
+                Path.of("docs", "fixtures"),
+                Path.of("..", "docs", "fixtures"),
+                Path.of("..", "..", "docs", "fixtures")
+        };
+        for (Path path : paths) {
+            if (java.nio.file.Files.isDirectory(path)) return path;
+        }
+        throw new IllegalStateException("Missing docs/fixtures");
     }
 
     @Test
