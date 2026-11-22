@@ -118,3 +118,4 @@ NB10. A shared-folder delete or scan could run while a file piece was still writ
 NB11. The phone still read the Wi-Fi name and sent it after that automation was removed. Fixed: it no longer reads or sends the name. The Mac still ignores an old wifi message. NOT TESTED on a device.
 NB13. The Mac signing script could crash on an empty keychain list, and a failed sign could leave the certificate file and the temporary keychain. Fixed: an empty list is skipped, and leaving the script deletes both. NOT TESTED on a device.
 NB12. A stale update file with size 0 was stored in the repo. Fixed: that file is gone. The release still writes a fresh one. Nothing in the apps reads the repo copy. NOT TESTED on a device.
+V4. Letting a file chunk go could wake a sender that was not waiting. Fixed: the Mac signals only when a sender is waiting. NOT TESTED on a device.

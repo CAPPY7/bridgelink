@@ -6,6 +6,7 @@ public final class SendWindow {
     public static let maxInFlight = 6
     private let lock = NSLock()
     private var held = 0
+    private var waiters = 0
     private let wake = DispatchSemaphore(value: 0)
 
     public init() {}
@@ -13,9 +14,11 @@ public final class SendWindow {
     public func acquire() {
         lock.lock()
         while held >= SendWindow.maxInFlight {
+            waiters += 1
             lock.unlock()
             wake.wait()
             lock.lock()
+            waiters -= 1
         }
         held += 1
         lock.unlock()
@@ -32,8 +35,9 @@ public final class SendWindow {
     public func release() {
         lock.lock()
         if held > 0 { held -= 1 }
+        let wakeOne = waiters > 0
         lock.unlock()
-        wake.signal()
+        if wakeOne { wake.signal() }
     }
 
     public func inFlight() -> Int {

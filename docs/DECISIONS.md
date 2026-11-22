@@ -203,3 +203,5 @@ The phone does not read or send the Wi-Fi name. Home Wi-Fi automations cannot se
 Mac signing never prints the certificate password. If the saved keychain list is empty, the script does not expand that list. When signing finishes or fails, it deletes the certificate file and the temporary keychain.
 
 The update file in the repo root was a leftover with size 0. Check for update reads the copy on the GitHub release, and the release script writes a new one. The leftover file is deleted. The bug list does not keep blank lines at the end.
+
+A Mac file send wakes the next chunk only when a sender is already waiting. An empty wake is skipped, so a signal cannot pile up.
