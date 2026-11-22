@@ -12,7 +12,7 @@ v1.0.1 is the fix build being published. v1.0.0 was the Stage 7 release. Not eve
 - Stage 7 polish is in v1.0.0. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15.
 
 ## Next exact step
-Last fix pass. L10 is done. Next is W5: the phone must use the same away-relay send rule the tests already check.
+Last fix pass. W5 is done. Next is W8: the progress note must not say v1.0.0 was released. There is no v1.0.0 release.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
@@ -85,6 +85,7 @@ Last fix pass. L10 is done. Next is W5: the phone must use the same away-relay s
 - W3. The away relay drops the room key when the last socket is closed, even without a closed flag.
 - W4. Mac signing points codesign at the BridgeLink keychain and restores the old search list.
 - L10. The home Mac default keychain stays alone. Signing points at the BridgeLink keychain instead.
+- W5. The phone uses the away-relay send rule. It is not only a test.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.

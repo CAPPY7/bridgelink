@@ -74,6 +74,8 @@ W7. Every file notice used the same number, so a second file hid the first. Fixe
 W3. The away relay looked for a closed flag that Cloudflare sockets do not have, so it kept the room key after the last socket closed. Fixed: a socket just closed, or one whose ready state is closed, is not counted. NOT TESTED on a device. The worker is not deployed.
 W4. On a home Mac, signing could not see the BridgeLink certificate because the tool was not pointed at that keychain. Fixed: codesign gets --keychain, the keychain is on the search list only while signing, and the old list is restored. The default keychain still changes only on CI. NOT TESTED on a device.
 L10. The Mac signing script used to change the home default keychain. Fixed: it changes that default only on CI, and codesign is pointed at the BridgeLink keychain instead. NOT TESTED on a device.
+W5. The away-relay send rule lived only in a test. Fixed: the phone uses that same rule, so a late reply still goes out on the away relay when it should. NOT TESTED on a device.
+
 
 
 

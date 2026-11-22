@@ -42,7 +42,7 @@ A Wi-Fi retry leaves a working away relay alone. Starting the relay again while 
 
 The phone repeats the away sign-in every 2 seconds until the Mac answers relay_ok. A ping from the Mac means it just joined, so the phone signs in again. Forgotten stops the away link and does not delete the Wi-Fi key.
 
-A late reply uses the away relay when Wi-Fi is down, or when that reply belongs to a relay message. It is not sent to a fake local socket.
+A late reply uses the away relay when Wi-Fi is down, or when that reply belongs to a relay message. The phone uses the same rule as the Mac. It is not sent to a fake local socket.
 
 Away from home says paired only after the Mac checks the phone. Until then the phone says it is still connecting. A drop clears that.
 

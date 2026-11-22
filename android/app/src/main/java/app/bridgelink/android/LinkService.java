@@ -152,6 +152,7 @@ public class LinkService extends Service {
     private MacBrowser browser;
     private volatile boolean onRelay;
     private volatile boolean relayAuthed;
+    private volatile boolean replyOnRelay;
     private final Runnable rejoinTick = new Runnable() {
         @Override
         public void run() {
@@ -253,6 +254,7 @@ public class LinkService extends Service {
                 relayAuthed = false;
                 main.removeCallbacks(rejoinTick);
                 onRelay = true;
+                replyOnRelay = true;
                 paired = false;
                 publish("Connecting through the away relay…", null);
                 awayAuth.start();
@@ -261,6 +263,7 @@ public class LinkService extends Service {
             @Override
             public void relayDown(String reason) {
                 boolean wasRelay = onRelay;
+                replyOnRelay = false;
                 if (app.bridgelink.android.protocol.RelayRetry.rejoin(reason)) {
                     relayAuthed = false;
                     awayAuth.stop();
@@ -281,6 +284,7 @@ public class LinkService extends Service {
 
             @Override
             public void relayFrames(java.util.List<Frame> frames) {
+                replyOnRelay = true;
                 for (Frame frame : frames) {
                     if (frame.type == Frame.JSON) onLine(new String(frame.payload, StandardCharsets.UTF_8));
                 }
@@ -642,6 +646,7 @@ public class LinkService extends Service {
                 case "paired" -> {
                     paired = true;
                     onRelay = false;
+                    replyOnRelay = false;
                     relayAuthed = false;
                     relayAttempt = 0;
                     main.removeCallbacks(rejoinTick);
@@ -746,6 +751,7 @@ public class LinkService extends Service {
                         relayAuthed = false;
                         awayAuth.forgot();
                         onRelay = false;
+                        replyOnRelay = false;
                         paired = false;
                         if (six != null) six.stopRelay();
                         publish("This phone is not paired with that Mac.", null);
@@ -1181,11 +1187,16 @@ public class LinkService extends Service {
 
     void writeRaw(byte[] framed) throws Exception {
         Attempt current = attempt;
-        if (current != null && current.channel != null && !current.closed) {
+        boolean wifiUp = current != null && current.channel != null && !current.closed;
+        boolean relayUp = six != null && six.relayLive();
+        if (app.bridgelink.android.protocol.StageSix.useRelay(replyOnRelay, wifiUp, relayUp)) {
+            if (six.relaySend(framed)) return;
+            throw new IOException("not connected");
+        }
+        if (wifiUp) {
             current.channel.write(framed);
             return;
         }
-        if (six != null && six.relaySend(framed)) return;
         throw new IOException("not connected");
     }
 
