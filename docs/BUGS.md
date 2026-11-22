@@ -90,6 +90,7 @@ L11. When a paid Apple account exists, the release stapled the app instead of th
 N15. The update file was a static page with size 0. Fixed: the release writes it with the real disk-image size and the date. It still has no signature, because Sparkle is not linked. NOT TESTED on a device.
 X14. The Gradle download was not checked. Fixed: the wrapper uses the official Gradle 8.11.1 checksum.
 C6. The feature check only looked for a word in some test. Fixed: every message type has to be in the test that builds the message and reads it back. The emulator still only pairs and sends one note.
+N8. Switching Macs rewrote the token during the handshake, then treated that as a changed key and deleted it. Forget also left the Mac in the token book. Fixed: a saved Mac is chosen before hello, the handshake does not rewrite the token, a mismatch does not delete a saved token, and forget removes that Mac. NOT TESTED on a device.
 
 
 

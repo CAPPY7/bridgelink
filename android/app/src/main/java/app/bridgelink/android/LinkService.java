@@ -508,6 +508,14 @@ public class LinkService extends Service {
             sessionFp = seen;
             matchCode = "";
             macCommit = "";
+            String book = prefs.getString("macTokens", "");
+            app.bridgelink.android.protocol.MacSwitch choice =
+                    app.bridgelink.android.protocol.MacSwitch.choose(pinned, savedToken, book, seen);
+            if (choice.switched) {
+                pinned = choice.fingerprint;
+                savedToken = choice.token;
+                prefs.edit().putString("fp", pinned).putString("token", savedToken).commit();
+            }
             byte[] nonceRaw = new byte[16];
             new SecureRandom().nextBytes(nonceRaw);
             StringBuilder nonce = new StringBuilder(nonceRaw.length * 2);
@@ -517,7 +525,6 @@ public class LinkService extends Service {
             if (plan.kind != null) {
                 next.close();
                 linkState.failFatal(plan.fatal);
-                if (plan.kind == LinkFailure.Kind.KEY_CHANGED) prefs.edit().remove("token").apply();
                 publish(plan.fatal, null);
                 return;
             }
@@ -554,7 +561,7 @@ public class LinkService extends Service {
                     String message = LinkFailure.message(kind);
                     if (kind.fatal) {
                         linkState.failFatal(message);
-                        if (kind == LinkFailure.Kind.KEY_CHANGED || kind == LinkFailure.Kind.TOKEN_REJECTED) {
+                        if (kind == LinkFailure.Kind.TOKEN_REJECTED) {
                             Prefs.open(this).edit().remove("token").apply();
                         }
                         publish(message, null);
@@ -737,8 +744,12 @@ public class LinkService extends Service {
                 }
                 case "forget" -> {
                     SharedPreferences prefs = Prefs.open(this);
+                    String fp = prefs.getString("fp", "");
+                    if (fp == null || fp.isEmpty()) fp = sessionFp == null ? "" : sessionFp;
+                    String tokens = app.bridgelink.android.protocol.MacSwitch.forget(prefs.getString("macTokens", ""), fp);
                     String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
                     prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId")
+                            .putString("macTokens", tokens)
                             .putString("macs", macs).apply();
                     linkState.failFatal("The Mac forgot this phone");
                     publish("The Mac forgot this phone", null);
@@ -765,7 +776,7 @@ public class LinkService extends Service {
                     String shown = fatal ? LinkFailure.message(kind) : "The Mac rejected that message.";
                     if (fatal) {
                         linkState.failFatal(shown);
-                        if (kind == LinkFailure.Kind.TOKEN_REJECTED || kind == LinkFailure.Kind.WRONG_CODE || kind == LinkFailure.Kind.KEY_CHANGED) {
+                        if (kind == LinkFailure.Kind.TOKEN_REJECTED || kind == LinkFailure.Kind.WRONG_CODE) {
                             Prefs.open(this).edit().remove("token").apply();
                         }
                         generation.incrementAndGet();
@@ -878,11 +889,15 @@ public class LinkService extends Service {
         } catch (Exception ignored) {
         }
         SharedPreferences prefs = Prefs.open(this);
+        String fp = prefs.getString("fp", "");
+        if (fp == null || fp.isEmpty()) fp = sessionFp == null ? "" : sessionFp;
         String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
         String device = prefs.getString("deviceId", "");
         String book = app.bridgelink.android.protocol.RelaySecrets.drop(prefs.getString("relayBook", ""), device);
+        String tokens = app.bridgelink.android.protocol.MacSwitch.forget(prefs.getString("macTokens", ""), fp);
         prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").remove("pin")
                 .remove("relaySecret").putString("relayBook", book)
+                .putString("macTokens", tokens)
                 .putString("macs", macs).commit();
         linkState.stop();
         generation.incrementAndGet();
@@ -1734,10 +1749,6 @@ public class LinkService extends Service {
             android.content.SharedPreferences prefs = Prefs.open(context);
             String pinned = prefs.getString("fp", "");
             if (MacBook.known(prefs.getString("macTokens", ""), fp)) {
-                if (pinned == null || !pinned.equalsIgnoreCase(fp)) {
-                    String token = MacTokens.tokenFor(prefs.getString("macTokens", ""), fp);
-                    prefs.edit().putString("fp", fp).putString("token", token).apply();
-                }
                 return;
             }
             if (pinned == null || pinned.isEmpty()) {

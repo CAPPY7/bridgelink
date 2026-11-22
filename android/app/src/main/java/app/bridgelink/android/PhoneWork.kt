@@ -290,7 +290,7 @@ class PhoneWork(private val activity: MainActivity) {
             .putString("fp", saved.fp)
             .putString("token", token)
             .putString("deviceId", saved.deviceId)
-            .apply()
+            .commit()
         model.host = saved.host
         model.port = saved.port.toString()
         model.status = "Switching to ${saved.name}"

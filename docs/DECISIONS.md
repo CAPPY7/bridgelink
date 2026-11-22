@@ -40,6 +40,8 @@ The Mac Bluetooth beacon runs only while leave-lock is on. Turning leave-lock of
 
 The Android release signer is checked against the public fingerprint in android/release-cert.sha256. That line is not a secret. A different signer stops the release.
 
+Switching to a saved Mac uses that Mac's own token. The handshake does not change the token while it is running. A certificate that is not a saved Mac does not erase the saved token. Forget removes that one Mac from the token book and leaves the others.
+
 
 
 
