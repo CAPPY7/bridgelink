@@ -38,6 +38,9 @@ extension LinkModel {
                         guard let self else { return }
                         self.relayAttempt = 0
                         self.relayJoin?.cancel()
+                        self.replyOnRelay = true
+                        self.send(type: "ping", payload: [:], on: nil)
+                        self.replyOnRelay = false
                         if case .paired = self.phase {} else {
                             let name = self.pairedSummary.isEmpty ? "Phone" : self.pairedSummary
                             self.phase = .paired(name)

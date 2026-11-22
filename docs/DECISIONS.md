@@ -20,6 +20,8 @@ A quiet away relay closes after 10 minutes without a frame, not because the conn
 
 A Wi-Fi retry leaves a working away relay alone. Starting the relay again while it is up does nothing.
 
+The phone repeats the away sign-in every 2 seconds until the Mac answers relay_ok. A ping from the Mac means it just joined, so the phone signs in again. Forgotten stops the away link and does not delete the Wi-Fi key.
+
 ## v0.7.0 link threads and signing
 
 Socket work no longer shares one thread with the read loop, and close does not hold the write lock. A 20 second write deadline closes a socket the other side stopped reading. Background callers that are not allowed to start a foreground service queue the message and show "Open BridgeLink to reconnect".

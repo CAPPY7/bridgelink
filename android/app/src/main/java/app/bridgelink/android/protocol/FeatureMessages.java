@@ -11,7 +11,7 @@ public final class FeatureMessages {
             "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
             "dnd", "sms", "folder", "pointer", "mirror_start", "mirror_stop",
             "cam_start", "cam_stop", "control", "relay_key", "relay_set",
-            "relay_use", "relay_auth", "forget", "hello", "paired", "error"
+            "relay_use", "relay_auth", "relay_ok", "forget", "hello", "paired", "error"
     };
 
     public static boolean known(String type) {

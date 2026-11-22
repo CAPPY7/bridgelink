@@ -93,6 +93,10 @@ public class ProtocolTest {
         assertEquals(30_000L, RelayRetry.delayMs(20));
         assertTrue(RelayRetry.leaveIt(true));
         assertFalse(RelayRetry.leaveIt(false));
+        assertTrue(RelayAuth.keepSending(false, ""));
+        assertFalse(RelayAuth.keepSending(true, ""));
+        assertFalse(RelayAuth.keepSending(false, "forgotten"));
+        assertTrue(RelayAuth.forgotten("forgotten"));
     }
 
     @Test
@@ -841,7 +845,7 @@ public class ProtocolTest {
                 "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
                 "dnd", "sms", "folder", "pointer", "mirror_start", "mirror_stop",
                 "cam_start", "cam_stop", "control", "relay_key", "relay_set",
-                "relay_use", "relay_auth", "forget", "hello", "paired", "error"
+                "relay_use", "relay_auth", "relay_ok", "forget", "hello", "paired", "error"
         };
         assertEquals(FeatureMessages.TYPES.length, types.length);
         for (String type : types) {

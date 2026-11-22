@@ -149,6 +149,21 @@ public class LinkService extends Service {
     private PhoneSix six;
     private MacBrowser browser;
     private volatile boolean onRelay;
+    private volatile boolean relayAuthed;
+
+    private void sendRelayAuth() {
+        main.removeCallbacks(this::sendRelayAuth);
+        if (!onRelay || six == null || !six.relayLive()) return;
+        if (!app.bridgelink.android.protocol.RelayAuth.keepSending(relayAuthed, "")) return;
+        try {
+            JsonObject auth = new JsonObject();
+            String token = Prefs.open(this).getString("token", "");
+            auth.addProperty("token", token == null ? "" : token);
+            writeEnvelope(Envelope.make(app.bridgelink.android.protocol.RelayAuth.AUTH, "android", auth));
+        } catch (Exception ignored) {
+        }
+        main.postDelayed(this::sendRelayAuth, 2_000);
+    }
     private final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
@@ -214,25 +229,22 @@ public class LinkService extends Service {
             @Override
             public void relayUp() {
                 relayAttempt = 0;
+                relayAuthed = false;
                 main.removeCallbacks(LinkService.this::rejoinRelay);
                 paired = true;
                 onRelay = true;
                 publish("Away (relay). The relay cannot read the link.", null);
                 main.removeCallbacks(heartbeat);
                 main.postDelayed(heartbeat, 1_000);
-                try {
-                    JsonObject auth = new JsonObject();
-                    String token = Prefs.open(LinkService.this).getString("token", "");
-                    auth.addProperty("token", token == null ? "" : token);
-                    writeEnvelope(Envelope.make("relay_auth", "android", auth));
-                } catch (Exception ignored) {
-                }
+                sendRelayAuth();
             }
 
             @Override
             public void relayDown(String reason) {
                 boolean wasRelay = onRelay;
                 if (app.bridgelink.android.protocol.RelayRetry.rejoin(reason)) {
+                    relayAuthed = false;
+                    main.removeCallbacks(LinkService.this::sendRelayAuth);
                     if (wasRelay) {
                         paired = false;
                         onRelay = false;
@@ -610,7 +622,9 @@ public class LinkService extends Service {
                 case "paired" -> {
                     paired = true;
                     onRelay = false;
+                    relayAuthed = false;
                     relayAttempt = 0;
+                    main.removeCallbacks(LinkService.this::sendRelayAuth);
                     main.removeCallbacks(LinkService.this::rejoinRelay);
                     if (six != null) six.stopRelay();
                     linkState.paired();
@@ -671,6 +685,21 @@ public class LinkService extends Service {
                     }
                 }
                 case "pong" -> lastRx = System.currentTimeMillis();
+                case "ping" -> {
+                    if (onRelay) {
+                        relayAuthed = false;
+                        sendRelayAuth();
+                    }
+                    try {
+                        writeEnvelope(Envelope.make("pong", "android", new JsonObject()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                case "relay_ok" -> {
+                    relayAuthed = true;
+                    main.removeCallbacks(this::sendRelayAuth);
+                    if (onRelay) publish("Away (relay). The relay cannot read the link.", null);
+                }
                 case "battery" -> {
                     if ("mac".equals(message.text("label"))) {
                         noteMacBattery(message.text("level"), "1".equals(message.text("charging")));
@@ -688,7 +717,14 @@ public class LinkService extends Service {
                 }
                 case "error" -> {
                     String code = message.code();
-                    if ("busy".equals(code)) {
+                    if (onRelay && app.bridgelink.android.protocol.RelayAuth.forgotten(code)) {
+                        relayAuthed = false;
+                        main.removeCallbacks(this::sendRelayAuth);
+                        onRelay = false;
+                        paired = false;
+                        if (six != null) six.stopRelay();
+                        publish("This phone is not paired with that Mac.", null);
+                    } else if ("busy".equals(code)) {
                         linkState.holdUntil = SecondPhone.until(System.currentTimeMillis());
                         publish("Another phone is connected. This phone will wait 5 minutes.", null);
                         closeSocket();
