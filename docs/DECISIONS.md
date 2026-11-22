@@ -78,7 +78,8 @@ The same code is sent once. A different code is sent right away. The same code c
 
 Mirror taps use the real screen size, including the system bars. Android 11 and newer use the current window. Older phones use the real display size.
 
-The clipboard tile and the notification button read the clipboard only after the short screen is in front. The read happens once. An empty clipboard shows a short note and does not send.
+The clipboard tile and the notification button read the clipboard only after the short screen is in front. The read happens once. An empty clipboard shows a short note and does not send. Send clipboard on the phone uses that same read, so a sensitive clipboard is skipped there too.
+
 
 
 

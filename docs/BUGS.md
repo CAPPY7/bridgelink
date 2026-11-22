@@ -101,7 +101,8 @@ M5. Only the newest phone notification could be answered or dismissed on the Mac
 M6. Every notification update was sent, including progress bars. Fixed: the same key with the same title and text is skipped, and later progress-bar updates are skipped. NOT TESTED on a device.
 M8. Mac Focus was read with no permission, so it could not work. Fixed: the app asks, and the screen says a free sideload cannot send Mac Focus to the phone. Phone Do Not Disturb still quiets Mac banners. NOT TESTED on a device.
 M14. A shared path could name a hidden file such as .seen. Fixed: any path part that starts with a dot is refused. NOT TESTED on a device.
-M9. The phone could send the clipboard only while the app was on screen. The tile and the notification button now wait until the short screen is in front, then read the clipboard once. An empty clipboard says so. NOT TESTED on a device.
+M9. The phone could send the clipboard only while the app was on screen. Fixed: the tile and the notification button wait until the short screen is in front, then read the clipboard once. An empty clipboard says so. NOT TESTED on a device.
+NB2. Send clipboard on the phone skipped the sensitive-clipboard check. Fixed: it uses the same check as the short screen. A sensitive clipboard is not sent. NOT TESTED on a device.
 M19. A drag clicked down and up on every move. Fixed: the button stays down until the drag ends. NOT TESTED on a device.
 M26. The disk image was hidden while it was built, so the icon layout could not be applied. Fixed: it is mounted where that layout step can see it. NOT TESTED on a device.
 N14. Switching to a saved Mac replaced the address list with one address. Fixed: the saved address is added to the list. NOT TESTED on a device.

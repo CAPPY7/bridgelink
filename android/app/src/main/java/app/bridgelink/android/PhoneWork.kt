@@ -1,8 +1,6 @@
 package app.bridgelink.android
 
 import android.app.AppOpsManager
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.Manifest
@@ -206,18 +204,15 @@ class PhoneWork(private val activity: MainActivity) {
     }
 
     fun sendClipboard() {
-        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        var text = ""
-        if (clipboard != null && clipboard.hasPrimaryClip()) {
-            val clip: ClipData? = clipboard.primaryClip
-            if (clip != null && clip.itemCount > 0 && clip.getItemAt(0).text != null) {
-                text = clip.getItemAt(0).text.toString()
-            }
+        val clip = ClipRead.read(activity)
+        if (clip.sensitive) {
+            model.status = "Skipped a sensitive clipboard"
+            return
         }
         val intent = Intent(activity, LinkService::class.java)
         intent.action = LinkService.ACTION_SEND
         intent.putExtra(LinkService.EXTRA_KIND, "clipboard")
-        intent.putExtra(LinkService.EXTRA_BODY, text)
+        intent.putExtra(LinkService.EXTRA_BODY, clip.text)
         ContextCompat.startForegroundService(activity, intent)
     }
 
