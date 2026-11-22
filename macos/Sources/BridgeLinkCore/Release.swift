@@ -30,19 +30,49 @@ public enum ReleaseCheck {
         !versionName.isEmpty && tag == "v" + versionName
     }
 
-    /// Sparkle.framework is not linked. Check for update opens the release page.
+    /// Sparkle.framework is not linked. There is no Sparkle signature.
     public static func installsWithSparkle() -> Bool { false }
 
+    public enum SumVerdict: Equatable {
+        case match
+        case mismatch
+        case missing
+    }
+
+    /// Find the hex line for a file in SHA256SUMS. Accepts "hash  name" and "hash *name".
+    public static func checkSum(_ sums: String, _ name: String, _ digest: String) -> SumVerdict {
+        var found: String?
+        for raw in sums.split(whereSeparator: \.isNewline) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty || line.hasPrefix("#") { continue }
+            let parts = line.split(whereSeparator: \.isWhitespace).map(String.init)
+            guard parts.count >= 2 else { continue }
+            let file = parts[1].hasPrefix("*") ? String(parts[1].dropFirst()) : parts[1]
+            if file == name {
+                found = parts[0]
+                break
+            }
+        }
+        guard let found else { return .missing }
+        if found.lowercased() == digest.lowercased() { return .match }
+        return .mismatch
+    }
+
     public static func fetchShortVersion() async -> String {
-        guard let url = URL(string: feed) else { return "" }
+        guard let data = await fetchBytes(feed) else { return "" }
+        return shortVersion(String(decoding: data, as: UTF8.self))
+    }
+
+    public static func fetchBytes(_ address: String) async -> Data? {
+        guard let url = URL(string: address) else { return nil }
         var request = URLRequest(url: url)
-        request.timeoutInterval = 12
+        request.timeoutInterval = 60
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, http.statusCode >= 400 { return "" }
-            return shortVersion(String(decoding: data, as: UTF8.self))
+            if let http = response as? HTTPURLResponse, http.statusCode >= 400 { return nil }
+            return data
         } catch {
-            return ""
+            return nil
         }
     }
 

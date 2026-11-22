@@ -1,5 +1,6 @@
 import AppKit
 import BridgeLinkCore
+import CryptoKit
 import Foundation
 import Network
 import ServiceManagement
@@ -7,23 +8,48 @@ import SwiftUI
 
 extension LinkModel {
     func checkForUpdate() {
-        note("Checking for an update.")
+        note("Checking for an update. There is no Sparkle signature.")
         let local = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        Task {
+        Task.detached {
             let remote = await ReleaseCheck.fetchShortVersion()
+            if remote.isEmpty {
+                await MainActor.run { self.note("Could not reach the update list. Open the BridgeLink releases page.") }
+                return
+            }
+            if ReleaseCheck.compare(local, remote) <= 0 {
+                await MainActor.run { self.note("BridgeLink \(local) is the latest.") }
+                return
+            }
+            let dmgAddress = "https://github.com/CAPPY7/bridgelink/releases/latest/download/BridgeLink.dmg"
+            let sumsAddress = "https://github.com/CAPPY7/bridgelink/releases/latest/download/SHA256SUMS"
+            async let dmgData = ReleaseCheck.fetchBytes(dmgAddress)
+            async let sumsData = ReleaseCheck.fetchBytes(sumsAddress)
+            let dmg = await dmgData
+            let sums = await sumsData
+            guard let dmg, let sums, let text = String(data: sums, encoding: .utf8) else {
+                await MainActor.run { self.note("Could not download the update.") }
+                return
+            }
+            let digest = SHA256.hash(data: dmg).map { String(format: "%02x", $0) }.joined()
+            let verdict = ReleaseCheck.checkSum(text, "BridgeLink.dmg", digest)
+            let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+                ?? URL(fileURLWithPath: NSTemporaryDirectory())
+            let dest = folder.appendingPathComponent("BridgeLink.dmg")
+            if verdict != .match {
+                try? FileManager.default.removeItem(at: dest)
+                await MainActor.run { self.note("The update did not match its checksum. It was not kept.") }
+                return
+            }
+            do {
+                try? FileManager.default.removeItem(at: dest)
+                try dmg.write(to: dest, options: .atomic)
+            } catch {
+                await MainActor.run { self.note("Could not save the update in Downloads.") }
+                return
+            }
             await MainActor.run {
-                if remote.isEmpty {
-                    self.note("Could not reach the update list. Open the BridgeLink releases page.")
-                    return
-                }
-                if ReleaseCheck.compare(local, remote) > 0 {
-                    self.note("BridgeLink \(remote) is ready. Opening the releases page.")
-                    if let url = URL(string: ReleaseCheck.releases) {
-                        NSWorkspace.shared.open(url)
-                    }
-                } else {
-                    self.note("BridgeLink \(local) is the latest.")
-                }
+                self.note("BridgeLink \(remote) matched its checksum. Opening the disk image. There is no Sparkle signature.")
+                NSWorkspace.shared.open(dest)
             }
         }
     }

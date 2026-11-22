@@ -418,6 +418,11 @@ final class CoreTests: XCTestCase {
         XCTAssertFalse(StageFive.folderUsesChunks(32 * 1024 * 1024))
         XCTAssertTrue(StageFive.folderUsesChunks(32 * 1024 * 1024 + 1))
         XCTAssertFalse(StageFive.folderUsesChunks(Int64(Transfers.maxBytes) + 1))
+        let sums = "abc123  BridgeLink.dmg\nabc123  other.txt\n"
+        XCTAssertEqual(ReleaseCheck.checkSum(sums, "BridgeLink.dmg", "abc123"), .match)
+        XCTAssertEqual(ReleaseCheck.checkSum(sums, "BridgeLink.dmg", "nope"), .mismatch)
+        XCTAssertEqual(ReleaseCheck.checkSum(sums, "missing.dmg", "abc123"), .missing)
+        XCTAssertEqual(ReleaseCheck.checkSum("abc123 *BridgeLink.dmg\n", "BridgeLink.dmg", "ABC123"), .match)
         let rules = StageFive.addRule([], "connect", "alert", "Hi")
         XCTAssertEqual(StageFive.fire(rules, "connect", "").first?.thenAction, "alert")
         XCTAssertTrue(StageFive.fire(StageFive.toggle(rules, rules[0].id, false), "connect", "").isEmpty)

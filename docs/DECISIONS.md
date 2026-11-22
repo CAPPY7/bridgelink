@@ -249,3 +249,5 @@ The shared folder is watched with one 60 second wait on each side. A new change 
 The phone shared folder stays in the app's own Documents/BridgeLink Shared folder until you pick one. Android 10 and newer cannot list the public Documents folder without that pick, and BridgeLink does not ask for broad storage access. The picked folder is remembered and kept after a restart.
 
 A shared file over 32 MB uses the normal file messages and is saved in the shared folder. The same sha256 check used for other files decides if it is kept. Files of 32 MB or less still use the old shared-folder pieces, so an older app can still receive them.
+
+Check for update downloads the Mac disk image and the checksum file into Downloads, off the main thread. It opens the disk image only when the hash matches. There is no Sparkle signature and no paid update service.

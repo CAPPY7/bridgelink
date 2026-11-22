@@ -12,13 +12,13 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. M15 is done. Next is H16: Check for update downloads the Mac disk image and checks its hash.
+Final fix pass. H16 is done. Next is L1: split the phone link service so the file is shorter.
 
 ## Open problems
 - The v0.13 audit is in docs/AUDIT_v0.13.md. Items not listed under Done below are still open.
 - LinkService.java is still longer than 400 lines.
 - Mac permissions can still reset after an update until MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD exist.
-- Check for update reads the Sparkle appcast and opens the release page. The Sparkle framework is not linked, because that needs an EdDSA secret that is not in this environment. It does not install the update by itself.
+- Check for update reads the version, downloads BridgeLink.dmg and SHA256SUMS when a newer version is listed, checks the hash, and opens the disk image. The Sparkle framework is not linked, because that needs an EdDSA secret that is not in this environment. It does not install the update by itself.
 - A free share extension can stay hidden until the app is opened once. Finder Services, Send to phone, is the backup.
 - The document scanner needs Google Play services. If it is missing, the phone asks you to pick a photo instead.
 - Leave-lock needs Bluetooth on the phone and Accessibility on the Mac so the lock shortcut works. The Mac is never unlocked by the phone.
