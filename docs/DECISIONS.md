@@ -66,6 +66,8 @@ Android 10 and newer share the clipboard only with the app that is on screen. Se
 
 A drag holds the mouse button down until a move that is not a drag. It does not click on every tiny move.
 
+The disk image is mounted in view while it is built, so the icon layout can be applied. It is still a free sideload.
+
 
 
 

@@ -12,7 +12,7 @@ if [ -f dmg-background.png ]; then
 fi
 hdiutil create -size 120m -fs HFS+ -volname BridgeLink build/rw.dmg >/dev/null
 mkdir -p build/mnt
-hdiutil attach build/rw.dmg -mountpoint build/mnt -nobrowse >/dev/null
+hdiutil attach build/rw.dmg -mountpoint build/mnt >/dev/null
 cp -R "$STAGE/." build/mnt/
 sync
 python3 - << 'PY' || echo "Finder layout skipped. The disk image still has the app and Applications."
