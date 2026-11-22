@@ -2,6 +2,7 @@ package app.bridgelink.android;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -61,35 +62,64 @@ public final class FileBridge {
         Transfers.Incoming transfer = Transfers.Incoming.begin(id, name, size);
         if (transfer == null) return "That file is too big.";
         closeSlot(id);
+        Slot slot = new Slot();
         try {
-            File dir = new File(context.getCacheDir(), "incoming");
-            if (!dir.isDirectory() && !dir.mkdirs()) return "Could not store the file.";
-            File partial = new File(dir, id);
-            Slot slot = new Slot();
             slot.transfer = transfer;
-            slot.file = partial;
-            long have = partial.isFile() ? partial.length() : 0;
-            if (from > size) from = 0;
-            if (have > size) have = 0;
-            if (have > 0) {
-                try (InputStream prior = new FileInputStream(partial)) {
-                    byte[] buf = new byte[Transfers.CHUNK];
-                    long left = have;
-                    while (left > 0) {
-                        int n = prior.read(buf, 0, (int) Math.min(buf.length, left));
-                        if (n <= 0) break;
-                        transfer.seed(java.util.Arrays.copyOf(buf, n));
-                        left -= n;
-                    }
+            slot.display = transfer.name;
+            if (Build.VERSION.SDK_INT >= 29) {
+                slot.uri = reopenDownload(id);
+                boolean created = false;
+                if (slot.uri == null) {
+                    slot.uri = insertPending(transfer.name);
+                    created = slot.uri != null;
                 }
-                slot.out = new FileOutputStream(partial, true);
+                if (slot.uri == null) return "Could not store the file.";
+                long have = downloadSize(slot.uri);
+                if (from > size) from = 0;
+                if (have > size || have < 0) have = 0;
+                if (have > 0) {
+                    try (InputStream prior = context.getContentResolver().openInputStream(slot.uri)) {
+                        if (prior == null) throw new IllegalStateException("empty");
+                        seed(transfer, prior, have);
+                    }
+                    slot.out = context.getContentResolver().openOutputStream(slot.uri, "wa");
+                } else {
+                    slot.out = context.getContentResolver().openOutputStream(slot.uri, "w");
+                }
+                if (slot.out == null) {
+                    if (created) deleteUri(slot.uri);
+                    return "Could not store the file.";
+                }
+                rememberIncoming(id, slot.uri.toString());
             } else {
-                if (partial.exists() && !partial.delete()) return "Could not store the file.";
-                slot.out = new FileOutputStream(partial);
+                File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (dir == null || (!dir.isDirectory() && !dir.mkdirs())) return "Could not store the file.";
+                String saved = incomingBook().getString(id, "");
+                File dest = saved.isEmpty() ? null : new File(saved);
+                if (dest == null || !dest.getCanonicalPath().startsWith(dir.getCanonicalPath())) {
+                    dest = uniqueFile(dir, transfer.name);
+                }
+                slot.file = dest;
+                slot.display = dest.getName();
+                long have = dest.isFile() ? dest.length() : 0;
+                if (from > size) from = 0;
+                if (have > size) have = 0;
+                if (have > 0) {
+                    try (InputStream prior = new FileInputStream(dest)) {
+                        seed(transfer, prior, have);
+                    }
+                    slot.out = new FileOutputStream(dest, true);
+                } else {
+                    if (dest.exists() && !dest.delete()) return "Could not store the file.";
+                    slot.out = new FileOutputStream(dest);
+                }
+                rememberIncoming(id, dest.getAbsolutePath());
             }
             incoming.put(id, slot);
-            return "Receiving " + transfer.name;
+            return "Receiving " + slot.display;
         } catch (Exception error) {
+            deleteDest(slot);
+            forgetIncoming(id);
             return "Could not store the file.";
         }
     }
@@ -125,15 +155,17 @@ public final class FileBridge {
         } catch (Exception ignored) {
         }
         if (!slot.transfer.matches(sha256)) {
-            slot.file.delete();
+            deleteDest(slot);
+            forgetIncoming(id);
             return "The file hash did not match. It was not saved.";
         }
         try {
-            String saved = publish(slot.file, slot.transfer.name);
-            slot.file.delete();
+            String saved = finalizeDest(slot);
+            forgetIncoming(id);
             return saved;
         } catch (Exception error) {
-            slot.file.delete();
+            deleteDest(slot);
+            forgetIncoming(id);
             return "Could not save the file.";
         }
     }
@@ -145,7 +177,8 @@ public final class FileBridge {
             slot.out.close();
         } catch (Exception ignored) {
         }
-        slot.file.delete();
+        deleteDest(slot);
+        forgetIncoming(id);
     }
 
     public void sendMany(String joined, Out out) throws Exception {
@@ -280,41 +313,102 @@ public final class FileBridge {
         return out;
     }
 
-    private String publish(File partial, String name) throws Exception {
-        if (Build.VERSION.SDK_INT >= 29) {
+    private String finalizeDest(Slot slot) throws Exception {
+        if (slot.uri != null) {
             ContentValues values = new ContentValues();
-            values.put(MediaStore.Downloads.DISPLAY_NAME, name);
-            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/BridgeLink");
-            values.put(MediaStore.Downloads.IS_PENDING, 1);
-            Uri uri = context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-            if (uri == null) throw new IllegalStateException("Downloads rejected the file");
-            try (InputStream in = new FileInputStream(partial); OutputStream out = context.getContentResolver().openOutputStream(uri)) {
-                if (out == null) throw new IllegalStateException("Downloads rejected the file");
-                byte[] buffer = new byte[Transfers.CHUNK];
-                int count;
-                while ((count = in.read(buffer)) >= 0) {
-                    if (count > 0) out.write(buffer, 0, count);
-                }
-            }
-            values.clear();
             values.put(MediaStore.Downloads.IS_PENDING, 0);
-            context.getContentResolver().update(uri, values, null, null);
-            lastUri = uri;
-            lastName = name;
-            return "Saved " + name + " in Downloads/BridgeLink";
-        }
-        File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-        if (dir == null) throw new IllegalStateException("No downloads folder");
-        File dest = new File(dir, name);
-        try (InputStream in = new FileInputStream(partial); OutputStream out = new FileOutputStream(dest)) {
-            byte[] buffer = new byte[Transfers.CHUNK];
-            int count;
-            while ((count = in.read(buffer)) >= 0) {
-                if (count > 0) out.write(buffer, 0, count);
+            int updated = context.getContentResolver().update(slot.uri, values, null, null);
+            if (updated < 1) {
+                deleteUri(slot.uri);
+                throw new IllegalStateException("Downloads rejected the file");
             }
+            lastUri = slot.uri;
+            lastName = slot.display;
+            return "Saved " + slot.display + " in Downloads/BridgeLink";
         }
-        lastName = name;
-        return "Saved " + name;
+        if (slot.file == null) throw new IllegalStateException("No downloads folder");
+        lastName = slot.display;
+        return "Saved " + slot.display;
+    }
+
+    private void deleteDest(Slot slot) {
+        if (slot == null) return;
+        if (slot.uri != null) deleteUri(slot.uri);
+        if (slot.file != null) slot.file.delete();
+    }
+
+    private Uri insertPending(String name) {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Downloads.DISPLAY_NAME, name);
+        values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/BridgeLink");
+        values.put(MediaStore.Downloads.IS_PENDING, 1);
+        return context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+    }
+
+    private Uri reopenDownload(String id) {
+        String saved = incomingBook().getString(id, "");
+        if (saved == null || !saved.startsWith("content:")) return null;
+        Uri uri = Uri.parse(saved);
+        try (Cursor cursor = context.getContentResolver().query(uri, new String[]{MediaStore.Downloads._ID}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) return uri;
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private long downloadSize(Uri uri) {
+        try (Cursor cursor = context.getContentResolver().query(uri, new String[]{OpenableColumns.SIZE}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0);
+        } catch (Exception ignored) {
+        }
+        return 0;
+    }
+
+    private void deleteUri(Uri uri) {
+        try {
+            context.getContentResolver().delete(uri, null, null);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void seed(Transfers.Incoming transfer, InputStream prior, long have) throws Exception {
+        byte[] buf = new byte[Transfers.CHUNK];
+        long left = have;
+        while (left > 0) {
+            int n = prior.read(buf, 0, (int) Math.min(buf.length, left));
+            if (n <= 0) break;
+            transfer.seed(java.util.Arrays.copyOf(buf, n));
+            left -= n;
+        }
+    }
+
+    static File uniqueFile(File dir, String name) {
+        File dest = new File(dir, name);
+        if (!dest.exists()) return dest;
+        String base = name;
+        String ext = "";
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) {
+            base = name.substring(0, dot);
+            ext = name.substring(dot);
+        }
+        for (int n = 1; n < 1000; n++) {
+            File next = new File(dir, base + " (" + n + ")" + ext);
+            if (!next.exists()) return next;
+        }
+        return new File(dir, base + " (" + System.currentTimeMillis() + ")" + ext);
+    }
+
+    private SharedPreferences incomingBook() {
+        return context.getSharedPreferences("bridgelink_incoming", Context.MODE_PRIVATE);
+    }
+
+    private void rememberIncoming(String id, String where) {
+        incomingBook().edit().putString(id, where).apply();
+    }
+
+    private void forgetIncoming(String id) {
+        incomingBook().edit().remove(id).apply();
     }
 
     public String lastName() {
@@ -369,7 +463,9 @@ public final class FileBridge {
     private static final class Slot {
         Transfers.Incoming transfer;
         File file;
-        FileOutputStream out;
+        Uri uri;
+        OutputStream out;
+        String display = "";
     }
 
     private static final class Stream {

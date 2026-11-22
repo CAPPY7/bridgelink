@@ -121,3 +121,6 @@ NB12. A stale update file with size 0 was stored in the repo. Fixed: that file i
 V4. Letting a file chunk go could wake a sender that was not waiting. Fixed: the Mac signals only when a sender is waiting. NOT TESTED on a device.
 L13. The phone bottom bar scrolled sideways to fit every page. Fixed: five pages stay on the bar, and Remote, Mirror, and Settings are under More. NOT TESTED on a device.
 X5. An update deleted the old pairing token instead of sealing it. Fixed: the token is sealed into the new store, and it is removed from the old store only after that works. NOT TESTED on a device.
+M22. An incoming file was written to cache and copied again into Downloads. Fixed: the pieces are written straight into a pending Downloads item. NOT TESTED on a device.
+X2. On Android 8 and 9 a new file could replace one with the same name. Fixed: the new file is named with " (1)". NOT TESTED on a device.
+X3. A failed save could leave a pending Downloads item behind. Fixed: that item is deleted when the save fails. NOT TESTED on a device.

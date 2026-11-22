@@ -209,3 +209,5 @@ A Mac file send wakes the next chunk only when a sender is already waiting. An e
 The phone bar shows five pages plus More. More holds Remote, Mirror, and Settings, so the bar does not scroll sideways.
 
 An old pairing token is sealed with the Android keystore key before it is removed. If the seal fails, the old token stays where it was so the upgrade can try again.
+
+Incoming files are written straight into Downloads/BridgeLink. Android 10 and newer use a pending Downloads item. Android 8 and 9 write into the app downloads folder and add " (1)" when the name is taken. A failed save deletes that pending item.
