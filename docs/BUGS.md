@@ -54,3 +54,4 @@ N4. The away relay closed because the connection was old, even when frames were 
 N5. Each Wi-Fi retry tore down a working away relay and started it again. Fixed: if the away relay is already up, it is left alone. NOT TESTED on a device.
 N6. The phone sent the away sign-in once, so a late Mac never accepted it. Fixed: the phone keeps sending until the Mac answers relay_ok, and sends again when the Mac joins. Forgotten stops the away link. Old message types still work. NOT TESTED on a device.
 N7. A late Mac reply on the away relay was thrown away. Fixed: while Wi-Fi is down, replies still go out on the away relay. NOT TESTED on a device.
+N12. The apps said paired as soon as the away relay connected, before the Mac checked the phone. Fixed: paired shows only after the Mac accepts the sign-in, and a drop clears it. NOT TESTED on a device.

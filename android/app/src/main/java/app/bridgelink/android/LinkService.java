@@ -231,11 +231,9 @@ public class LinkService extends Service {
                 relayAttempt = 0;
                 relayAuthed = false;
                 main.removeCallbacks(LinkService.this::rejoinRelay);
-                paired = true;
                 onRelay = true;
-                publish("Away (relay). The relay cannot read the link.", null);
-                main.removeCallbacks(heartbeat);
-                main.postDelayed(heartbeat, 1_000);
+                paired = false;
+                publish("Connecting through the away relay…", null);
                 sendRelayAuth();
             }
 
@@ -698,7 +696,12 @@ public class LinkService extends Service {
                 case "relay_ok" -> {
                     relayAuthed = true;
                     main.removeCallbacks(this::sendRelayAuth);
-                    if (onRelay) publish("Away (relay). The relay cannot read the link.", null);
+                    if (onRelay) {
+                        paired = true;
+                        publish("Away (relay). The relay cannot read the link.", null);
+                        main.removeCallbacks(heartbeat);
+                        main.postDelayed(heartbeat, 1_000);
+                    }
                 }
                 case "battery" -> {
                     if ("mac".equals(message.text("label"))) {

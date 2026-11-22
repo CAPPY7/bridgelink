@@ -19,9 +19,17 @@ extension LinkModel {
             let token = envelope.text("token")
             if book.match(token: token) != nil {
                 relayTrusted = true
+                if live == nil {
+                    let name = pairedSummary.isEmpty ? "Phone" : pairedSummary
+                    phase = .paired(name)
+                    note("Connected through the away relay. The relay cannot read the link.")
+                }
                 send(type: "relay_ok", payload: [:], on: nil)
             } else {
                 relayTrusted = false
+                if live == nil {
+                    if case .paired = phase { phase = .listening }
+                }
                 send(type: "error", payload: ["code": "forgotten", "body": "This phone is not paired"], on: nil)
                 away?.stop()
             }
