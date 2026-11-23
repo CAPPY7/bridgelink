@@ -14,10 +14,10 @@ import app.bridgelink.android.protocol.SecondPhone;
 import app.bridgelink.android.protocol.StageFour;
 
 /** Incoming Mac messages. The socket stays in LinkCore. */
-final class LinkInbox {
+final class LinkReceive {
     private final LinkCore core;
 
-    LinkInbox(LinkCore core) {
+    LinkReceive(LinkCore core) {
         this.core = core;
     }
 

@@ -86,7 +86,7 @@ extension LinkModel {
         }
         clips = []
         ClipFile.save([])
-        dropInboxStore()
+        dropOldListFile()
         rules = []
         messages = []
         try? "".write(to: smsFile(), atomically: true, encoding: .utf8)

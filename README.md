@@ -71,7 +71,7 @@ What was tested: CI unit tests and the emulator pairing test. Nothing in this bu
 | 15 | Shared folder | Built – NOT TESTED on a device. Both ways, conflict copies, pause. You can choose the phone folder. Files over 32 MB use the normal file send and land in the shared folder |
 | 16 | Lock the Mac when you leave | Built – NOT TESTED on a device |
 | 17 | Remote link | Removed. The phone and the Mac stay on the same Wi-Fi |
-| 18 | Unified inbox | Removed. Notifications, texts, and files stay in their own places |
+| 18 | Combined list | Removed. Notifications, texts, and files stay in their own places |
 | 19 | Clipboard history | Built – NOT TESTED on a device |
 | 20 | Scan to Mac | Built – NOT TESTED on a device |
 | 21 | Automations | Built – NOT TESTED on a device. Up to eight when-this-then-that rules |

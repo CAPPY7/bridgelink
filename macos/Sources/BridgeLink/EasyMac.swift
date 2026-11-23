@@ -27,7 +27,7 @@ private func store(_ name: String) -> URL {
 extension LinkModel {
     func loadEasy() {
         clips = ClipFile.load()
-        dropInboxStore()
+        dropOldListFile()
         refreshBeacon()
         loadFive()
     }
@@ -37,7 +37,7 @@ extension LinkModel {
         ClipFile.save(clips)
     }
 
-    func dropInboxStore() {
+    func dropOldListFile() {
         let url = store("inbox.txt")
         try? FileManager.default.removeItem(at: url)
     }

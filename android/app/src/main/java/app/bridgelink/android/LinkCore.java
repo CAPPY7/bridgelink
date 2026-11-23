@@ -97,7 +97,7 @@ class LinkCore extends Service {
     private static final ArrayDeque<Intent> parked = new ArrayDeque<>();
     static volatile LinkCore running;
     final LinkDesk desk = new LinkDesk(this);
-    private final LinkInbox inbox = new LinkInbox(this);
+    private final LinkReceive receive = new LinkReceive(this);
 
     private volatile Attempt attempt;
     volatile boolean paired;
@@ -536,7 +536,7 @@ class LinkCore extends Service {
     }
 
     private void onLine(String line) {
-        inbox.onLine(line);
+        receive.onLine(line);
     }
 
     void dropFolderAck(String id) {

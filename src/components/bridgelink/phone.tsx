@@ -16,7 +16,7 @@ import { Ask, Btn, ClockLabel, Empty, Field, KeyWall, Pill, Progress, SLIDES, ag
 const NAV = [
   { id: "home", label: "Home", icon: House },
   { id: "send", label: "Send", icon: Send },
-  { id: "inbox", label: "Alerts", icon: Bell },
+  { id: "alerts", label: "Alerts", icon: Bell },
   { id: "remote", label: "Remote", icon: Pointer },
   { id: "system", label: "System", icon: SlidersHorizontal },
 ] as const;
@@ -76,7 +76,7 @@ function PhoneApp({ clock }: { clock: number }) {
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {screen === "home" && <Home />}
         {screen === "send" && <SendScreen />}
-        {screen === "inbox" && <InboxScreen />}
+        {screen === "alerts" && <AlertsScreen />}
         {screen === "remote" && <RemoteScreen />}
         {screen === "system" && <SystemScreen />}
       </div>
@@ -117,7 +117,7 @@ function PhoneApp({ clock }: { clock: number }) {
             >
               <span className="relative">
                 <Icon className="size-5" strokeWidth={1.75} />
-                {item.id === "inbox" && badge > 0 && (
+                {item.id === "alerts" && badge > 0 && (
                   <span className="absolute -top-1 -right-2 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-medium text-accent-fg tabular-nums">
                     {badge}
                   </span>
@@ -362,7 +362,7 @@ function TransferList() {
   );
 }
 
-function InboxScreen() {
+function AlertsScreen() {
   const notices = useBridge((s) => s.notices);
   const dismiss = useBridge((s) => s.dismissNotice);
   const pin = useBridge((s) => s.pinNotice);
@@ -778,7 +778,7 @@ function PermissionsPage() {
 function FilesPage() {
   const s = useBridge();
   const [ask, setAsk] = useState(false);
-  const folders = ["DCIM", "Documents", "Downloads", "Mac inbox"];
+  const folders = ["DCIM", "Documents", "Downloads", "From the Mac"];
   if (!s.features.files) {
     return (
       <div className="space-y-3">

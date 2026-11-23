@@ -33,7 +33,7 @@ export type FeatureKey =
   | "camera"
   | "files"
   | "proximity"
-  | "inbox"
+  | "alerts"
   | "clipHistory"
   | "scan"
   | "automations"
@@ -41,7 +41,7 @@ export type FeatureKey =
 
 export type ClipMethod = "tile" | "share" | "notification" | "bubble" | "accessibility";
 export type LinkPath = "lan" | "manual";
-export type PhoneScreen = "home" | "send" | "inbox" | "remote" | "system";
+export type PhoneScreen = "home" | "send" | "alerts" | "remote" | "system";
 export type SystemPage =
   | "root"
   | "settings"
@@ -55,7 +55,7 @@ export type SystemPage =
   | "conditions";
 export type MacPane =
   | "home"
-  | "inbox"
+  | "alerts"
   | "clips"
   | "messages"
   | "mirror"
@@ -211,7 +211,7 @@ function seed(): Pick<
       camera: false,
       files: false,
       proximity: false,
-      inbox: true,
+      alerts: true,
       clipHistory: true,
       scan: false,
       automations: false,
@@ -841,7 +841,7 @@ export const useBridge = create<BridgeState>()(
           else set({ androidBrowser: text, phoneScreen: "home" });
         }
         if (kind === "file") {
-          const folder = from === "android" ? "Mac inbox" : "Downloads";
+          const folder = from === "android" ? "From the Mac" : "Downloads";
           set((s) => ({
             files: [{ id: id(), folder, name, size, kind: "file" }, ...s.files],
           }));

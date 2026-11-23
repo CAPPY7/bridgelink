@@ -23,11 +23,12 @@ N6. Partly. Shared-folder send and receive moved from PhoneFive into PhoneFolder
 N8. Partly. An update file name keeps only letters, digits, dots, and dashes. Anything else, including a path trick, is saved as BridgeLink-update.dmg. NOT TESTED on a device. CI is not green on this commit yet.
 N9. Partly. The owner setup note now says Check for update downloads the disk image, checks the hash, and opens it. NOT TESTED on a device.
 N10. Partly. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is not green on this commit yet.
-Next: Part B. Finish the inbox rename, then remove automations.
+Next: Part B. Remove automations.
+B2. Partly. The demo calls the alerts list alerts. Incoming messages are in LinkReceive. The old list file and the old share file are deleted once. NOT TESTED on a device. CI is not green on this commit yet.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.
-- The phone link is split. LinkService keeps the old name. LinkCore owns the socket. LinkDesk owns clipboard, alerts, files, ringing, and battery. LinkInbox owns incoming messages. NOT TESTED on a device.
+- The phone link is split. LinkService keeps the old name. LinkCore owns the socket. LinkDesk owns clipboard, alerts, files, ringing, and battery. LinkReceive owns incoming messages. NOT TESTED on a device.
 - Mac permissions can still reset after an update until MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD exist.
 - Check for update reads the version, downloads BridgeLink.dmg and SHA256SUMS when a newer version is listed, checks the hash, and opens the disk image. The Sparkle framework is not linked, because that needs an EdDSA secret that is not in this environment. It does not install the update by itself.
 - A free share extension can stay hidden until the app is opened once. Finder Services, Send to phone, is the backup.

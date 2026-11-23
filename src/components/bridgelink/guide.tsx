@@ -21,7 +21,7 @@ const FEATURES: { n: number; name: string; status: "Working" | "Partial" | "Remo
   { n: 15, name: "Shared folder", status: "Partial", note: "Browse folders you mark and copy files. Finder does not mount a disk." },
   { n: 16, name: "Lock when you leave", status: "Working", note: "Delay is configurable. The Mac never unlocks by itself." },
   { n: 17, name: "Remote link", status: "Removed", note: "This path is gone. The phone and the Mac stay on the same Wi-Fi." },
-  { n: 18, name: "Unified inbox", status: "Removed", note: "Notifications, texts, and files stay in their own places. The combined list is gone." },
+  { n: 18, name: "Combined list", status: "Removed", note: "Notifications, texts, and files stay in their own places. The combined list is gone." },
   { n: 19, name: "Clipboard history", status: "Working", note: "Last 100, pins, and a sensitive filter." },
   { n: 20, name: "Scan to Mac", status: "Partial", note: "Contrast cleanup and send. No on-device OCR." },
   { n: 21, name: "Automations", status: "Working", note: "Wi-Fi, charging, time, and headphones can notify, lock, sync, or send." },

@@ -125,16 +125,19 @@ extension LinkModel {
         send(type: "dnd", payload: ["on": on ? "1" : "0", "label": "mac"], on: live)
     }
 
-    func drainShareInbox() {
-        let file = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/BridgeLink/share-inbox.txt")
-        guard let text = try? String(contentsOf: file, encoding: .utf8), !text.isEmpty else { return }
-        try? FileManager.default.removeItem(at: file)
-        fileCancel.on = false
-        for line in text.split(separator: "\n") {
-            let path = String(line).trimmingCharacters(in: .whitespacesAndNewlines)
-            if path.isEmpty { continue }
-            sendFile(URL(fileURLWithPath: path))
+    func drainShareQueue() {
+        let base = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/BridgeLink")
+        for name in ["share-queue.txt", "share-inbox.txt"] {
+            let file = base.appendingPathComponent(name)
+            guard let text = try? String(contentsOf: file, encoding: .utf8), !text.isEmpty else { continue }
+            try? FileManager.default.removeItem(at: file)
+            fileCancel.on = false
+            for line in text.split(separator: "\n") {
+                let path = String(line).trimmingCharacters(in: .whitespacesAndNewlines)
+                if path.isEmpty { continue }
+                sendFile(URL(fileURLWithPath: path))
+            }
         }
     }
 }

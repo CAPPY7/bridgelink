@@ -31,7 +31,7 @@ Install first: `docs/INSTALL.md`. macOS 15 uses Open Anyway. The phone APK must 
 - [ ] 15. Put a small file in the shared folder on one side → it shows up on the other. Pause sync → a new file stays put. A file over 32 MB is skipped.
 - [ ] 16. Turn on leave-lock, then walk the phone away → the Mac locks after the delay. Bring the phone back → the Mac stays locked.
 - [ ] 17. Removed. Away and a remote address do not appear in either app.
-- [x] 18. Removed. There is no combined inbox. Alerts, texts, and files each have their own place.
+- [x] 18. Removed. There is no combined list. Alerts, texts, and files each have their own place.
 - [ ] 19. Copy several things → history shows them, up to 100. A password is not stored. Pin one, delete one.
 - [ ] 20. Scan a page on the phone → a file is saved on the Mac and opened. If the scanner is missing, pick a photo instead and that arrives too.
 - [ ] 21. Add one rule, phone connects then alert → the next connect shows that alert. An eighth rule is the last one accepted.

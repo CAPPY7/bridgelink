@@ -6,7 +6,7 @@ import { Btn, ClockLabel, Empty, Field, KeyWall, Pill, Progress, SLIDES, ago, fo
 import { PairMark } from "./phone";
 
 const PANES: { id: MacPane; label: string }[] = [
-  { id: "inbox", label: "Alerts" },
+  { id: "alerts", label: "Alerts" },
   { id: "clips", label: "Clips" },
   { id: "messages", label: "Messages" },
   { id: "mirror", label: "Mirror" },
@@ -154,7 +154,7 @@ function MacBody() {
         <button className="mb-3 text-sm text-muted" onClick={() => setPane("home")}>
           Back
         </button>
-        {pane === "inbox" && <InboxPane />}
+        {pane === "alerts" && <AlertsPane />}
         {pane === "clips" && <ClipsPane />}
         {pane === "messages" && <MessagesPane />}
         {pane === "mirror" && <MirrorPane />}
@@ -390,7 +390,7 @@ function DeskPad() {
   );
 }
 
-function InboxPane() {
+function AlertsPane() {
   const notices = useBridge((s) => s.notices);
   const blocked = useBridge((s) => s.blockedApps);
   const dismiss = useBridge((s) => s.dismissNotice);
@@ -597,9 +597,9 @@ function MirrorPane() {
           {media.playing ? "Playing" : "Paused"} · {media.title}
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          {(["home", "send", "inbox", "remote"] as const).map((id) => (
+          {(["home", "send", "alerts", "remote"] as const).map((id) => (
             <button key={id} className="h-11 rounded-sm border border-line text-sm" onClick={() => setScreen(id)}>
-              {id === "inbox" ? "Alerts" : id[0].toUpperCase() + id.slice(1)}
+              {id === "alerts" ? "Alerts" : id[0].toUpperCase() + id.slice(1)}
             </button>
           ))}
         </div>

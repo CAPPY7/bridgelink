@@ -21,7 +21,7 @@ Status words are only: Not started, Building, Built – NOT TESTED on a device, 
 | 15 | Shared folder | Built – NOT TESTED on a device | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M15 |
 | 16 | Lock the Mac when you leave | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
 | 17 | Remote link | Removed | — | — | — | — |
-| 18 | Unified inbox | Removed | — | — | — | — |
+| 18 | Combined list | Removed | — | — | — | — |
 | 19 | Clipboard history | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M19 |
 | 20 | Scan to Mac | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M20 |
 | 21 | Automations | Built – NOT TESTED on a device | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M21 |

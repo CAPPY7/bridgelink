@@ -166,11 +166,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
         model.startClipboardWatch()
-        model.drainShareInbox()
+        model.drainShareQueue()
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        model.drainShareInbox()
+        model.drainShareQueue()
     }
 
     @objc func sendToPhone(_ pboard: NSPasteboard, userData: String, error: AutoreleasingUnsafeMutablePointer<NSString?>) {

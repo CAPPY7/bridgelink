@@ -13,7 +13,7 @@ On the phone, Home explains notifications, battery limits, and restricted settin
 - Pair on the same Wi-Fi. Scan the Mac QR. That is the first button on the phone. The code lasts 2 minutes.
 - Send a note, a link, or files either way. Drop files on the Mac window or the menu-bar icon.
 - Clipboard can stay in sync. Passwords and card numbers are skipped. Both apps keep the last 100 copies.
-- Notifications can mirror, with reply when the phone app allows it. Texts can be read and sent from the Mac after you allow SMS. Files stay with files. There is no combined inbox.
+- Notifications can mirror, with reply when the phone app allows it. Texts can be read and sent from the Mac after you allow SMS. Files stay with files. There is no combined list.
 - The phone can be a trackpad, keyboard, and slide remote. The Mac needs Accessibility.
 - Mirror shows the phone screen in a Mac window. Closing it stops the picture. Clicks in that window need the phone accessibility service.
 - Webcam shows the phone camera inside BridgeLink. It does not appear in Zoom unless you have a paid Apple Developer ID.
