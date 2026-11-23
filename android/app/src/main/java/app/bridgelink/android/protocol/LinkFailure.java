@@ -53,7 +53,7 @@ public final class LinkFailure extends IOException {
             case KEY_CHANGED -> "This Mac key changed. Tap Forget this Mac, then scan the Mac QR again.";
             case WRONG_CODE -> "The match code was wrong. Tap Connect to try again.";
             case TOKEN_REJECTED -> "The Mac rejected this phone. Scan the Mac QR to pair again.";
-            case VERSION_MISMATCH -> "Update BridgeLink on the phone and the Mac so both copies match.";
+            case VERSION_MISMATCH -> "The phone and the Mac are different versions. Update both copies, then pair again.";
             case TIMEOUT -> "The Mac did not answer in time. Check that both are on the same Wi-Fi and the Mac app is open.";
             case REFUSED -> "The Mac refused the connection. On the Mac, open System Settings, Network, Firewall, and allow BridgeLink.";
             case NETWORK_LOST -> "The Wi-Fi link dropped. Stay on the same Wi-Fi. BridgeLink will try again.";

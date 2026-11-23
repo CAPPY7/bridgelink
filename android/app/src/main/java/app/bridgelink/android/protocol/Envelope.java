@@ -68,7 +68,7 @@ public final class Envelope {
         envelope.from = required(root, "from");
         // A sender named relay is an old away path. It is refused here.
         if (!"android".equals(envelope.from) && !"mac".equals(envelope.from)) {
-            throw new IllegalArgumentException("Bad sender");
+            throw new BadSender();
         }
         if (!root.has("ts")) throw new IllegalArgumentException("Missing time");
         envelope.ts = root.get("ts").getAsLong();
@@ -82,5 +82,12 @@ public final class Envelope {
         String value = root.get(key).getAsString();
         if (value.isEmpty()) throw new IllegalArgumentException("Missing " + key);
         return value;
+    }
+
+    /** A sender that is not the phone or the Mac. Shown to nobody. */
+    public static final class BadSender extends IllegalArgumentException {
+        public BadSender() {
+            super("Bad sender");
+        }
     }
 }

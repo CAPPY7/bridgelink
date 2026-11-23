@@ -23,6 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import app.bridgelink.android.protocol.PlainFailure;
 import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Transfers;
 
@@ -188,23 +189,23 @@ public final class FileBridge {
     }
 
     public void sendMany(String joined, Out out) throws Exception {
-        if (joined == null || joined.isBlank()) throw new IllegalArgumentException("No file");
+        if (joined == null || joined.isBlank()) throw new PlainFailure("No file");
         int sent = 0;
         for (String part : joined.split("\n")) {
             if (part == null || part.isBlank()) continue;
-            if (out.cancelled()) throw new IllegalArgumentException("File send cancelled.");
+            if (out.cancelled()) throw new PlainFailure("File send cancelled.");
             send(part.trim(), out);
             sent++;
         }
-        if (sent == 0) throw new IllegalArgumentException("No file");
+        if (sent == 0) throw new PlainFailure("No file");
     }
 
     public void send(String source, Out out) throws Exception {
-        if (source == null || source.isEmpty()) throw new IllegalArgumentException("No file");
+        if (source == null || source.isEmpty()) throw new PlainFailure("No file");
         Stream opened = open(source);
         if (opened.size > Transfers.MAX_BYTES) {
             opened.close();
-            throw new IllegalArgumentException("That file is over 4 GB.");
+            throw new PlainFailure("That file is over 4 GB.");
         }
         String id = stableId(source, opened.size);
         try (InputStream in = opened.stream) {
@@ -222,7 +223,7 @@ public final class FileBridge {
             while (offset < skip) {
                 int want = (int) Math.min(buffer.length, skip - offset);
                 int count = in.read(buffer, 0, want);
-                if (count < 0) throw new IllegalArgumentException("The file changed while it was sending.");
+                if (count < 0) throw new PlainFailure("The file changed while it was sending.");
                 if (count == 0) continue;
                 digest.update(buffer, 0, count);
                 offset += count;
@@ -234,7 +235,7 @@ public final class FileBridge {
                     JsonObject cancel = new JsonObject();
                     cancel.addProperty("id", id);
                     out.frame("file_cancel", cancel);
-                    throw new IllegalArgumentException("File send cancelled.");
+                    throw new PlainFailure("File send cancelled.");
                 }
                 if (count == 0) continue;
                 digest.update(buffer, 0, count);
@@ -251,7 +252,7 @@ public final class FileBridge {
                     out.progress(opened.name, percent);
                 }
             }
-            if (offset != opened.size) throw new IllegalArgumentException("The file changed while it was sending.");
+            if (offset != opened.size) throw new PlainFailure("The file changed while it was sending.");
             JsonObject end = new JsonObject();
             end.addProperty("id", id);
             end.addProperty("sha256", hex(digest.digest()));
@@ -263,7 +264,7 @@ public final class FileBridge {
 
     public void sendLink(String raw, Out out) throws Exception {
         String url = Transfers.acceptUrl(raw);
-        if (url == null) throw new IllegalArgumentException("Only http and https links can be sent.");
+        if (url == null) throw new PlainFailure("Only http and https links can be sent.");
         JsonObject payload = new JsonObject();
         payload.addProperty("url", url);
         out.frame("link", payload);
@@ -283,7 +284,7 @@ public final class FileBridge {
                 }
             }
             InputStream in = context.getContentResolver().openInputStream(uri);
-            if (in == null) throw new IllegalArgumentException("Could not read that file.");
+            if (in == null) throw new PlainFailure("Could not read that file.");
             if (size < 0) {
                 File spool = spool(in);
                 in.close();
@@ -294,14 +295,14 @@ public final class FileBridge {
         File file = new File(source);
         String cache = context.getCacheDir().getCanonicalPath();
         if (!file.getCanonicalPath().startsWith(cache + File.separator)) {
-            throw new IllegalArgumentException("Refused a file outside the app cache.");
+            throw new PlainFailure("Refused a file outside the app cache.");
         }
         return new Stream(Transfers.sanitizeName(file.getName()), file.length(), new FileInputStream(file), null);
     }
 
     private File spool(InputStream in) throws Exception {
         File dir = new File(context.getCacheDir(), "outgoing");
-        if (!dir.isDirectory() && !dir.mkdirs()) throw new IllegalArgumentException("Could not store the file.");
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new PlainFailure("Could not store the file.");
         File out = new File(dir, UUID.randomUUID().toString());
         try (OutputStream output = new FileOutputStream(out)) {
             byte[] buffer = new byte[Transfers.CHUNK];
@@ -311,7 +312,7 @@ public final class FileBridge {
                 total += count;
                 if (total > Transfers.MAX_BYTES) {
                     out.delete();
-                    throw new IllegalArgumentException("That file is over 4 GB.");
+                    throw new PlainFailure("That file is over 4 GB.");
                 }
                 if (count > 0) output.write(buffer, 0, count);
             }
