@@ -34,4 +34,20 @@ public class MigrationTest {
         }
         db.close();
     }
+
+    @Test
+    public void versionTwoKeepsTheOldRow() throws Exception {
+        SupportSQLiteDatabase db = helper.createDatabase("history-two.db", 1);
+        db.execSQL("INSERT INTO lines (line) VALUES ('kept')");
+        db.close();
+        db = helper.runMigrationsAndValidate("history-two.db", 2, true, HistoryDatabase.MIGRATION_1_2);
+        try (Cursor cursor = db.query("SELECT line, kind, direction, status FROM lines")) {
+            assertTrue(cursor.moveToFirst());
+            assertEquals("kept", cursor.getString(0));
+            assertEquals("text", cursor.getString(1));
+            assertEquals("in", cursor.getString(2));
+            assertEquals("done", cursor.getString(3));
+        }
+        db.close();
+    }
 }
