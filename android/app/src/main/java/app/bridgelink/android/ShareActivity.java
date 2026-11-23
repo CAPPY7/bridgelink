@@ -25,6 +25,32 @@ public class ShareActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Intent incoming = getIntent();
         String action = incoming == null ? "" : incoming.getAction();
+        if (Intent.ACTION_SEND.equals(action) && incoming != null && incoming.getType() != null && incoming.getType().startsWith("image/")) {
+            Uri picture = incoming.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (picture == null) {
+                finish();
+                return;
+            }
+            showConfirm("Reading the words in this photo…", true);
+            TextFromPhoto.read(this, picture, new TextFromPhoto.Done() {
+                @Override
+                public void text(String value) {
+                    runOnUiThread(() -> {
+                        kind = "clipboard";
+                        body = value == null ? "" : value;
+                        boolean sensitive = app.bridgelink.android.protocol.Features.looksSensitive(body);
+                        String title = body.isEmpty() ? "No words were found." : (sensitive ? "This looks sensitive. Send it only if you mean to." : "Send these words to the Mac clipboard?");
+                        showConfirm(title + (body.isEmpty() ? "" : "\n" + body), body.isEmpty());
+                    });
+                }
+
+                @Override
+                public void failed() {
+                    runOnUiThread(() -> showConfirm("Could not read that photo. Try another picture.", true));
+                }
+            });
+            return;
+        }
         if (Intent.ACTION_SEND.equals(action) && incoming != null && "text/plain".equals(incoming.getType())) {
             String text = incoming.getStringExtra(Intent.EXTRA_TEXT);
             if (Transfers.acceptUrl(text) != null) {
