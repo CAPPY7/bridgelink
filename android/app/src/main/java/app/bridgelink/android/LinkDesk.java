@@ -403,29 +403,28 @@ final class LinkDesk {
     }
 
     private void maybeSendSignal() {
-        int level = -1;
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= 28
-                    && core.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE)
-                    == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                android.telephony.TelephonyManager manager =
-                        (android.telephony.TelephonyManager) core.getSystemService(android.content.Context.TELEPHONY_SERVICE);
-                if (manager != null && manager.getSignalStrength() != null) {
-                    level = manager.getSignalStrength().getLevel();
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        int bars = app.bridgelink.android.protocol.SignalRules.bars(level);
-        if (!app.bridgelink.android.protocol.SignalRules.changed(lastBars, sawBars, bars)) return;
-        sawBars = true;
-        lastBars = bars;
-        int shown = bars;
         core.outbox.submit(() -> {
             if (!core.paired) return;
+            int level = -1;
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 28
+                        && core.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE)
+                        == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    android.telephony.TelephonyManager manager =
+                            (android.telephony.TelephonyManager) core.getSystemService(android.content.Context.TELEPHONY_SERVICE);
+                    if (manager != null && manager.getSignalStrength() != null) {
+                        level = manager.getSignalStrength().getLevel();
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            int bars = app.bridgelink.android.protocol.SignalRules.bars(level);
+            if (!app.bridgelink.android.protocol.SignalRules.changed(lastBars, sawBars, bars)) return;
+            sawBars = true;
+            lastBars = bars;
             try {
                 JsonObject payload = new JsonObject();
-                payload.addProperty("bars", Integer.toString(shown));
+                payload.addProperty("bars", Integer.toString(bars));
                 core.writeEnvelope(Envelope.make("signal", "android", payload));
             } catch (Exception ignored) {
             }
