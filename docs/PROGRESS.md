@@ -14,6 +14,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 ## Next exact step
 N1. Fixed. The phone link files import MediaControl from the phone package. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45129681527 (android, mac, web, and emulator all passed). NOT TESTED on a device.
 N2. Partly. The old history notes say relay again. Those two renamed words are gone from docs, and docs/dev matches commit 9308299. NOT TESTED on a device. CI on this commit is not green yet.
+N5. Partly. A big shared file is accepted only when the folder is on, not paused, and linked. The check is in StageFive.folderAccept and FolderFlags.allows. NOT TESTED on a device. CI is not green on this commit yet.
 Next: N3, drop a stale shared-folder ack before the same file is sent again.
 
 ## Open problems

@@ -50,6 +50,11 @@ public final class StageFive {
         return linked && on && !paused && dueMs > 0 && nowMs >= dueMs;
     }
 
+    /** Accept a big shared file only while the folder is on, not paused, and the link is up. */
+    public static boolean folderAccept(boolean linked, boolean on, boolean paused) {
+        return linked && on && !paused;
+    }
+
     public static final class Sms {
         public final String id;
         public final String address;

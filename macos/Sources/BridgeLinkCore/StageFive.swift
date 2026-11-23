@@ -41,6 +41,11 @@ public enum StageFive {
         linked && on && !paused && dueMs > 0 && nowMs >= dueMs
     }
 
+    /// Accept a big shared file only while the folder is on, not paused, and the link is up.
+    public static func folderAccept(_ linked: Bool, _ on: Bool, _ paused: Bool) -> Bool {
+        linked && on && !paused
+    }
+
     public struct Sms: Equatable, Identifiable {
         public let id: String
         public let address: String
