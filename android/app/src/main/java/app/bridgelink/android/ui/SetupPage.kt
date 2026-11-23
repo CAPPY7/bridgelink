@@ -1,29 +1,28 @@
 package app.bridgelink.android.ui
 
+import android.os.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import app.bridgelink.android.protocol.SetupSteps
 
-/** Shown once, until the person taps I'm ready. Other tabs stay available. */
+/** One permission at a time. Nothing is asked until Allow is tapped. Skip is always there. */
 @Composable
-fun SetupPage(actions: PhoneActions) {
+fun SetupPage(model: PhoneModel, actions: PhoneActions) {
+    val steps = SetupSteps.forSdk(Build.VERSION.SDK_INT)
+    val index = model.setupIndex.coerceIn(0, steps.size)
     PageScroll {
         Text("Set up BridgeLink", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "This takes a minute. After it, scan the Mac QR from Settings.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text("1. Allow notifications when Android asks. That keeps the connection notice visible.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("2. Turn off battery optimization so the phone does not kill the link.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        BigButton("Keep me connected", "setup-battery", actions::batterySettings)
-        Text(
-            "On Xiaomi, Oppo, Vivo, Samsung, OnePlus, or Huawei, also allow autostart for BridgeLink.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            "3. Android 13 and newer may hide notification access, texts, or screen control until you allow restricted settings. Settings has the steps.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        BigButton("I'm ready", "setup-done", actions::finishSetup)
+        if (index >= steps.size) {
+            Text("You can change these any time in Settings > Permissions.")
+            BigButton("I'm ready", "setup-done", actions::finishSetup)
+        } else {
+            val step = steps[index]
+            Text(SetupSteps.title(step), style = MaterialTheme.typography.titleMedium)
+            Text(SetupSteps.why(step), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Step ${index + 1} of ${steps.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            BigButton("Allow", "setup-allow", { actions.allowSetup(step) })
+            BigButton("Skip", "setup-skip", actions::skipSetup, tonal = true)
+        }
     }
 }
