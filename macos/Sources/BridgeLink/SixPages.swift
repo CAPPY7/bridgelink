@@ -101,7 +101,7 @@ private struct MirrorBody: View {
                 model.sendControl(moved ? "drag" : "tap", start.0, start.1, end.0, end.1, "")
             })
         }
-        .frame(height: 360)
+        .frame(height: CGFloat(StageSix.paneHeight(six.picW, six.picH, 360)))
     }
 }
 

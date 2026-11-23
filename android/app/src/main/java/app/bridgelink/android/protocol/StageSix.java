@@ -35,7 +35,7 @@ public final class StageSix {
         return switch (qualityName(name)) {
             case "low" -> new Picture(640, 360, 800_000, 15);
             case "high" -> new Picture(1920, 1080, 6_000_000, 30);
-            default -> new Picture(1280, 720, 2_500_000, 30);
+            default -> new Picture(1280, 720, 2_500_000, 24);
         };
     }
 
@@ -48,7 +48,28 @@ public final class StageSix {
         int height = even((int) Math.round(screenHeight * scale));
         width = Math.max(2, Math.min(width, even(box.width)));
         height = Math.max(2, Math.min(height, even(box.height)));
-        return new Picture(width, height, box.bitrate, box.fps);
+        int fps = box.fps;
+        int rate = bitrateFor(width, height, fps);
+        return new Picture(width, height, rate, fps);
+    }
+
+    /** About 0.1 bit per pixel per frame, kept between 1 and 8 Mbps. */
+    public static int bitrateFor(int width, int height, int fps) {
+        long pixels = (long) Math.max(1, width) * Math.max(1, height);
+        long frames = Math.max(1, fps);
+        long bits = (long) (pixels * frames * 0.1d);
+        if (bits < 1_000_000L) bits = 1_000_000L;
+        if (bits > 8_000_000L) bits = 8_000_000L;
+        return (int) bits;
+    }
+
+    /** Height of the Mac mirror pane so it matches the picture shape. */
+    public static int paneHeight(int picW, int picH, int maxWidth) {
+        if (picW < 2 || picH < 2 || maxWidth < 2) return 360;
+        int height = (int) Math.round(maxWidth * (picH / (double) picW));
+        if (height < 120) return 120;
+        if (height > 900) return 900;
+        return height;
     }
 
     private static int even(int value) {

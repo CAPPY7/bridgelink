@@ -33,4 +33,13 @@ public class PictureFitTest {
         assertEquals(1280, shaped.width);
         assertEquals(720, shaped.height);
     }
+
+    @Test
+    public void bitrateFollowsPixelsAndStaysInRange() {
+        assertEquals(1_000_000, StageSix.bitrateFor(100, 100, 15));
+        assertEquals(6_220_800, StageSix.bitrateFor(1920, 1080, 30));
+        assertEquals(8_000_000, StageSix.bitrateFor(3840, 2160, 30));
+        assertEquals(720, StageSix.paneHeight(1280, 720, 1280));
+        assertEquals(900, StageSix.paneHeight(1080, 2400, 720));
+    }
 }

@@ -36,12 +36,31 @@ public enum StageSix {
         switch qualityName(name) {
         case "low": return Picture(width: 640, height: 360, bitrate: 800_000, fps: 15)
         case "high": return Picture(width: 1920, height: 1080, bitrate: 6_000_000, fps: 30)
-        default: return Picture(width: 1280, height: 720, bitrate: 2_500_000, fps: 30)
+        default: return Picture(width: 1280, height: 720, bitrate: 2_500_000, fps: 24)
         }
     }
 
     public static func qualityName(_ raw: String) -> String {
         raw == "low" || raw == "high" ? raw : "medium"
+    }
+
+    /// About 0.1 bit per pixel per frame, kept between 1 and 8 Mbps.
+    public static func bitrateFor(_ width: Int, _ height: Int, _ fps: Int) -> Int {
+        let pixels = max(1, width) * max(1, height)
+        let frames = max(1, fps)
+        var bits = Int(Double(pixels * frames) * 0.1)
+        if bits < 1_000_000 { bits = 1_000_000 }
+        if bits > 8_000_000 { bits = 8_000_000 }
+        return bits
+    }
+
+    /// Height of the mirror pane so it matches the picture shape.
+    public static func paneHeight(_ picW: Int, _ picH: Int, _ maxWidth: Int) -> Int {
+        if picW < 2 || picH < 2 || maxWidth < 2 { return 360 }
+        let height = Int((Double(maxWidth) * Double(picH) / Double(picW)).rounded())
+        if height < 120 { return 120 }
+        if height > 900 { return 900 }
+        return height
     }
 
     public static func chunks(_ data: Data) -> [Data] {

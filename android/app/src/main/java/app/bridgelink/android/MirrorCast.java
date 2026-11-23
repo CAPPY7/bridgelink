@@ -84,17 +84,51 @@ public final class MirrorCast {
         StageSix.Picture shaped = StageSix.fit(StageSix.quality(qualityName), width, height);
         MediaFormat format = MediaFormat.createVideoFormat("video/avc", shaped.width, shaped.height);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        format.setInteger(MediaFormat.KEY_BIT_RATE, shaped.bitrate);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, StageSix.bitrateFor(shaped.width, shaped.height, shaped.fps));
         format.setInteger(MediaFormat.KEY_FRAME_RATE, shaped.fps);
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         if (Build.VERSION.SDK_INT >= 29) {
             format.setInteger(MediaFormat.KEY_PREPEND_HEADER_TO_SYNC_FRAMES, 1);
         }
+        format.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 100_000);
+        if (Build.VERSION.SDK_INT >= 31) {
+            format.setInteger(MediaFormat.KEY_MAX_FPS_TO_ENCODER, shaped.fps);
+        }
         codec = MediaCodec.createEncoderByType("video/avc");
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        MediaCodecInfo.CodecProfileLevel high = highProfile(codec.getCodecInfo());
+        if (high != null) {
+            format.setInteger(MediaFormat.KEY_PROFILE, high.profile);
+            if (high.level > 0) format.setInteger(MediaFormat.KEY_LEVEL, high.level);
+        }
+        try {
+            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        } catch (Exception error) {
+            codec.release();
+            codec = MediaCodec.createEncoderByType("video/avc");
+            format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
+            format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel31);
+            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        }
         surface = codec.createInputSurface();
         codec.start();
         return shaped;
+    }
+
+    private static MediaCodecInfo.CodecProfileLevel highProfile(MediaCodecInfo info) {
+        if (info == null) return null;
+        MediaCodecInfo.CodecCapabilities caps;
+        try {
+            caps = info.getCapabilitiesForType("video/avc");
+        } catch (Exception error) {
+            return null;
+        }
+        if (caps.profileLevels == null) return null;
+        MediaCodecInfo.CodecProfileLevel best = null;
+        for (MediaCodecInfo.CodecProfileLevel level : caps.profileLevels) {
+            if (level.profile != MediaCodecInfo.CodecProfileLevel.AVCProfileHigh) continue;
+            if (best == null || level.level > best.level) best = level;
+        }
+        return best;
     }
 
     private void startDrain() {

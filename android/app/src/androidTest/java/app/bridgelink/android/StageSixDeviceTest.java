@@ -17,7 +17,7 @@ public class StageSixDeviceTest {
     @Test
     public void stageSixOnDevice() {
         assertEquals(1280, StageSix.quality("medium").width);
-        assertEquals(30, StageSix.quality("medium").fps);
+        assertEquals(24, StageSix.quality("medium").fps);
         assertTrue(StageSix.CONTROL_STEPS.contains("Accessibility"));
         assertTrue(StageSix.CONTROL_STEPS.contains("restricted"));
         assertTrue(StageSix.CAM_NOTE.contains("Zoom"));
