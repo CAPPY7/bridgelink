@@ -63,7 +63,7 @@ public class NotifyMirror extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification notice) {
-        if (notice == null || !Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
+        if (notice == null) return;
         Notification notification = notice.getNotification();
         if (notification == null) return;
         String pkg = notice.getPackageName() == null ? "" : notice.getPackageName();
@@ -88,6 +88,7 @@ public class NotifyMirror extends NotificationListenerService {
             LinkService.post(this, send);
             return;
         }
+        if (!Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
         boolean progress = notification.extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0;
         String stamp = NoticeGate.stamp(key, shown, body);
         boolean duplicate = NoticeGate.skipUpdate(progress, seenNotes.get(key), stamp);
