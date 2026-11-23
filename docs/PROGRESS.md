@@ -12,7 +12,9 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-N1. The phone link files imported MediaControl from the wrong package. That is fixed in this commit. CI on a762609 is red: https://github.com/CAPPY7/bridgelink/actions/runs/45128489647 (android and emulator failed to compile; mac and web passed). This commit is not green until its own run finishes. NOT TESTED on a device.
+N1. Fixed. The phone link files import MediaControl from the phone package. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45129681527 (android, mac, web, and emulator all passed). NOT TESTED on a device.
+N2. Partly. The old history notes say relay again. Those two renamed words are gone from docs, and docs/dev matches commit 9308299. NOT TESTED on a device. CI on this commit is not green yet.
+Next: N3, drop a stale shared-folder ack before the same file is sent again.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.
@@ -35,7 +37,7 @@ N1. The phone link files imported MediaControl from the wrong package. That is f
 - B1. The remote path is removed. Old messages are ignored. The phone and the Mac stay on Wi-Fi. NOT TESTED on a device.
 - C2. A pairing link asks before it connects, and a different Mac does not receive the old token.
 - C3. Received files are not opened by themselves. The share sheet asks before it sends.
-- C4. The removed remote path goes back to Wi-Fi when the network returns, and the heartbeat stays up on the remote-link.
+- C4. Away from home goes back to Wi-Fi when the network returns, and the heartbeat stays up on the relay.
 - C5. Each phone has its own away secret. Forgetting that phone deletes the secret.
 - C6 partly. Every feature message is named in a test and round-trips. The emulator still only sends one real note.
 - N8. Switching to a saved Mac uses that Mac's token. The handshake does not swap the token in the middle, and a mismatch does not erase a saved token. Forget removes that Mac from the token book.
@@ -113,32 +115,32 @@ N1. The phone link files imported MediaControl from the wrong package. That is f
 - M4. Stop Mac ringing tells the Mac. The Mac plays a loud sound for 30 seconds.
 - N1. The Mac app compiles again. Picture code sees the protocol. The listener does not unwrap itself twice. The send-window check does not trap the tests.
 - N2. The emulator pair test waits for the pair screen, then taps Pair.
-- N3. A sleeping remote-link still knows the phone or the Mac, and it still knows the room key.
-- N4. The away remote-link closes after 10 minutes of silence. A drop says "Away link down" and both apps try again.
-- N5. A Wi-Fi retry does not restart an away remote-link that is already up.
-- N6. The phone keeps signing in on the away remote-link until the Mac answers, and stops if the Mac forgot it.
-- N7. A late reply still goes out on the away remote-link when Wi-Fi is down.
+- N3. A sleeping relay still knows the phone or the Mac, and it still knows the room key.
+- N4. The away relay closes after 10 minutes of silence. A drop says "Away link down" and both apps try again.
+- N5. A Wi-Fi retry does not restart an away relay that is already up.
+- N6. The phone keeps signing in on the away relay until the Mac answers, and stops if the Mac forgot it.
+- N7. A late reply still goes out on the away relay when Wi-Fi is down.
 - N12. The removed remote path says paired only after the Mac accepts the phone, and a drop clears it.
-- N17. Each away-remote-link direction has its own rate limit, and old counts are dropped.
+- N17. Each away-relay direction has its own rate limit, and old counts are dropped.
 - X6. A file from the Mac is not opened by itself. An apk has no Open button. A link waits when the screen is off.
-- V1. The away remote-link writes its idle clock at most once every 30 seconds.
-- V2. The remote-link room tests run with the web checks. A wake-up uses a new socket and still forwards a frame.
+- V1. The away relay writes its idle clock at most once every 30 seconds.
+- V2. The relay room tests run with the web checks. A wake-up uses a new socket and still forwards a frame.
 - M10. Password-manager clipboard items are not sent or stored.
 - X8. The phone reconnects after boot or an app update, and ignores other broadcasts.
 - L10. The Mac signing script changes the default keychain only on CI.
 - L12. The Android key-making script is deleted.
 - X9. Java key files ending in .jks are ignored.
 - W2. The away sign-in uses one saved retry, and the write runs on the send thread, not the main thread.
-- N6. Away sign-in keeps going until the Mac answers. remote-link_ok and forgotten both stop it. A unit test covers phone-first, then Mac.
+- N6. Away sign-in keeps going until the Mac answers. relay_ok and forgotten both stop it. A unit test covers phone-first, then Mac.
 - W1. Open and Show in Downloads on a file notice start an activity. The old broadcast receiver is gone.
 - X6. Tapping the file notice opens that file. An install file still has no Open button.
 - L9. A link from the Mac waits for Open unless Always open links is on.
 - W6. Install files (.apk, .apks, .xapk, .aab, and the Android package type) have no Open button.
 - W7. Each file from the Mac gets its own notice, so a second file does not hide the first.
-- W3. The away remote-link drops the room key when the last socket is closed, even without a closed flag.
+- W3. The away relay drops the room key when the last socket is closed, even without a closed flag.
 - W4. Mac signing points codesign at the BridgeLink keychain and restores the old search list.
 - L10. The home Mac default keychain stays alone. Signing points at the BridgeLink keychain instead.
-- W5. The phone uses the away-remote-link send rule. It is not only a test.
+- W5. The phone uses the away-relay send rule. It is not only a test.
 - W8. The progress note no longer says v1.0.0 was released. The releases are v0.12.0 and v1.0.1.
 - X7. Clipboard history is off until it is turned on. Clear history wipes it. Copies older than 24 hours are dropped. The file is sealed.
 - N11. The Home Wi-Fi automation is removed. It could not see the network name.

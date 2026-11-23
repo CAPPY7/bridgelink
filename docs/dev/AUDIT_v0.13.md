@@ -1,7 +1,7 @@
 # BridgeLink v0.13.0: deep code audit
 
 Date: 15 Nov 2026. Source: `bridgelink-main` zip (v0.13.0, versionCode 12).
-Scope: `android/`, `macos/`, `remote-link/`, `.github/workflows/`, `docs/`, `scripts/check-*.py`.
+Scope: `android/`, `macos/`, `relay/`, `.github/workflows/`, `docs/`, `scripts/check-*.py`.
 
 ## How this audit was done (and what was not done)
 
@@ -10,7 +10,7 @@ Scope: `android/`, `macos/`, `remote-link/`, `.github/workflows/`, `docs/`, `scr
 | Android `./gradlew test lint assembleDebug` (JDK 17, SDK 35, on Linux) | **BUILD SUCCESSFUL** in 2m31s. 28 unit tests, run for debug and release (56 runs), **0 failures**. Lint: **0 errors, 50 warnings** (mostly old dependency versions, `commit()` vs `apply()`, default locale). Debug APK built (20 MB). |
 | Android emulator / instrumented tests | **Not run** (no KVM emulator here). Read by hand instead. |
 | Mac Swift build / `swift test` | **Not possible on Linux.** Every Swift file was reviewed by reading only. |
-| `node --check remote-link/worker.js` | Syntax OK. Not deployed. Not load-tested. |
+| `node --check relay/worker.js` | Syntax OK. Not deployed. Not load-tested. |
 | `python3 scripts/check-matrix.py` / `check-versions.py` | Both pass ("matrix ok 25 features", "versions ok 0.13.0 (12)"). Note: check-matrix only checks that a test **name** appears in the code, not that it tests the feature. |
 | Protocol cross-check | Every message type sent by each side was compared with what the other side handles (table at the end). |
 
@@ -34,16 +34,16 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 - `macos/Sources/BridgeLink/MacFiles.swift:205`, `AndroidManifest.xml:62-81` (ShareActivity exported), `ShareActivity.java:17-50`.
 - Fix: never auto-open. Show a banner "photo.jpg saved. Open / Show in Finder". Only auto-open the scan PDF when the user turned that on, and only `.pdf` and `.jpg`. Set the quarantine attribute (`com.apple.quarantine`) on received files, or add `LSFileQuarantineEnabled`. In ShareActivity, show a confirm screen ("Send 3 files to Mac?") before sending.
 
-**C4. "The removed remote path" cannot work as written.** Five separate breaks:
-1. `remote-link/worker-tool.toml:11` uses `new_classes`. On a **free** Cloudflare plan, Durable Objects need `new_sqlite_classes`, so `worker-tool deploy` fails on a free account.
-2. Mac replies go to a fake socket: `acceptRemote-link` passes `live ?? NWConnection(host:"127.0.0.1", port: 9)`, and `send(on: connection)` writes to that unstarted connection. So `pong`, `file_have`, `folder_want`, `folder_part`, `media_now` and `error` replies are lost. `MacSix.swift:49-52`, `LinkExtras.swift:15-24`.
-3. Over the remote-link the phone never starts its heartbeat (it only starts on `paired`). The Mac's silence clock then drops the remote-link "connection" after 45 s. `LinkService.java:189-192`, `LinkListen.swift:116-136`.
-4. Replay counters are never reset. Mac `seen` (`MacSix.swift:178,247`) and phone `seen` (`OldDoor.java:39,163`) live for the whole app run. When the other side restarts, its counter starts at 1 again and **every frame is dropped** until this side also restarts.
-5. No automatic switch. The phone only tries the remote-link when a retry is NOT scheduled (`LinkService.java:481-487`, which almost never happens). Once the remote-link is up, `paired=true` stops Wi-Fi from ever being tried again (`:1402`). The Mac never stops `away` when Wi-Fi returns.
-- Fix: use `new_sqlite_classes` and WebSocket hibernation. Route remote-link replies through `away` (pass `nil` connection when not on the local link). Start the heartbeat on `remote-linkUp`. Use a per-session random 64-bit session id plus counter, and reset `seen` on every new session. Add an auto-switch state machine (Wi-Fi first, remote-link after 2 failed Wi-Fi tries, back to Wi-Fi when the network changes).
+**C4. "Away from home" cannot work as written.** Five separate breaks:
+1. `relay/wrangler.toml:11` uses `new_classes`. On a **free** Cloudflare plan, Durable Objects need `new_sqlite_classes`, so `wrangler deploy` fails on a free account.
+2. Mac replies go to a fake socket: `acceptRelay` passes `live ?? NWConnection(host:"127.0.0.1", port: 9)`, and `send(on: connection)` writes to that unstarted connection. So `pong`, `file_have`, `folder_want`, `folder_part`, `media_now` and `error` replies are lost. `MacSix.swift:49-52`, `LinkExtras.swift:15-24`.
+3. Over the relay the phone never starts its heartbeat (it only starts on `paired`). The Mac's silence clock then drops the relay "connection" after 45 s. `LinkService.java:189-192`, `LinkListen.swift:116-136`.
+4. Replay counters are never reset. Mac `seen` (`MacSix.swift:178,247`) and phone `seen` (`RelayDoor.java:39,163`) live for the whole app run. When the other side restarts, its counter starts at 1 again and **every frame is dropped** until this side also restarts.
+5. No automatic switch. The phone only tries the relay when a retry is NOT scheduled (`LinkService.java:481-487`, which almost never happens). Once the relay is up, `paired=true` stops Wi-Fi from ever being tried again (`:1402`). The Mac never stops `away` when Wi-Fi returns.
+- Fix: use `new_sqlite_classes` and WebSocket hibernation. Route relay replies through `away` (pass `nil` connection when not on the local link). Start the heartbeat on `relayUp`. Use a per-session random 64-bit session id plus counter, and reset `seen` on every new session. Add an auto-switch state machine (Wi-Fi first, relay after 2 failed Wi-Fi tries, back to Wi-Fi when the network changes).
 
-**C5. A forgotten phone (or anyone with the remote-link secret) keeps full control through the remote-link forever.** The remote-link path skips hello/token checks: `acceptRemote-link` calls `handle(..., pending: false)` with `liveID`, so every command is accepted. The remote-link secret is one per Mac, sent to every phone (`MacSix.swift:8-17`), never rotated on forget, and stored in plain UserDefaults and plain SharedPreferences (`PhoneSix.java:98-104`, not in the sealed `Prefs` token slot).
-- Fix: run a short authenticated hello inside the sealed remote-link channel (the device token, checked against the DeviceBook). Use one remote-link secret **per paired phone**. Rotate it on forget. Keep it in the Keychain on the Mac and in the sealed prefs on Android.
+**C5. A forgotten phone (or anyone with the relay secret) keeps full control through the relay forever.** The relay path skips hello/token checks: `acceptRelay` calls `handle(..., pending: false)` with `liveID`, so every command is accepted. The relay secret is one per Mac, sent to every phone (`MacSix.swift:8-17`), never rotated on forget, and stored in plain UserDefaults and plain SharedPreferences (`PhoneSix.java:98-104`, not in the sealed `Prefs` token slot).
+- Fix: run a short authenticated hello inside the sealed relay channel (the device token, checked against the DeviceBook). Use one relay secret **per paired phone**. Rotate it on forget. Keep it in the Keychain on the Mac and in the sealed prefs on Android.
 
 **C6. The feature tests do not test the features.** The "integration" tests listed in `FEATURE_MATRIX.md` for features 1–22 only re-check constants and helper functions on the emulator, for example `assertTrue(StageSix.CONTROL_STEPS.contains("Accessibility"))`. No test sends a single real message between the two apps except pairing and one note. `check-matrix.py` only checks that the test name exists somewhere. So "Built – NOT TESTED on a device" is not backed for 22 of the 25 features.
 - `androidTest/.../StageSixDeviceTest.java:12-24` (same pattern in StageThree, Four and Five), `ProtocolTest.java:284-309` and `:627-725`, `scripts/check-matrix.py:52-56`, `docs/FEATURE_MATRIX.md`.
@@ -59,7 +59,7 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 
 **H1. The mirror encoder can crash the app on stop.** `stop()` releases `codec` on the main thread while the `drain` thread is still calling `getOutputBuffer` and `releaseOutputBuffer`, which are not in a try block. That throws an IllegalStateException on a background thread and kills the app. `MirrorCast.java:79-105` and `:107-134`. Fix: set `running=false`, `join()` the drain thread (with a timeout) before `codec.stop()`/`release()`, and wrap all codec calls in try.
 
-**H2. Video and camera frames have no backpressure, so memory grows without limit.** `LinkService.sendRaw` submits every frame to the unbounded `Outbox` queue. On slow Wi-Fi or the remote-link the queue grows and lag and memory rise until the app dies. `LinkService.java:1012-1022`, `MirrorCast.java:147-155`, `CamCast.java:143-166`. Fix: a small bounded queue for media (for example 3 frames). Drop non-key frames when it is full, and ask for a key frame when frames were dropped.
+**H2. Video and camera frames have no backpressure, so memory grows without limit.** `LinkService.sendRaw` submits every frame to the unbounded `Outbox` queue. On slow Wi-Fi or the relay the queue grows and lag and memory rise until the app dies. `LinkService.java:1012-1022`, `MirrorCast.java:147-155`, `CamCast.java:143-166`. Fix: a small bounded queue for media (for example 3 frames). Drop non-key frames when it is full, and ask for a key frame when frames were dropped.
 
 **H3. A new watchdog thread is started for every frame written.** Mirror at 30 fps × several chunks means hundreds of threads per second, which wastes CPU and battery. `FrameChannel.java:101,125-140`. Fix: one long-lived watchdog that checks `writeStartedNanos`, or socket `setSoTimeout` plus a scheduled executor.
 
@@ -137,11 +137,11 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 
 **M22. Incoming 4 GB files are written to `cacheDir`.** Android may clear that, and it needs double space. `FileBridge.java:64-70`. Fix: write the partial straight into a pending MediaStore Downloads item.
 
-**M23. The remote-link hello ticket is never checked by the remote-link.** Anyone who knows the room id can take the "mac" or "phone" slot and knock the real device off. `remote-link/worker.js:18-31`. Fix: an HMAC ticket with a timestamp that the remote-link can check against a room key, and refusing to replace a live slot without a fresh ticket. Also add size and rate limits and an idle timeout.
+**M23. The relay hello ticket is never checked by the relay.** Anyone who knows the room id can take the "mac" or "phone" slot and knock the real device off. `relay/worker.js:18-31`. Fix: an HMAC ticket with a timestamp that the relay can check against a room key, and refusing to replace a live slot without a fresh ticket. Also add size and rate limits and an idle timeout.
 
-**M24. Both directions use the same remote-link key,** so a remote-link can reflect the phone's own frames back to it. `Features.java:270-273`, `MacSix.swift:192`. Fix: derive two keys (`mac->phone`, `phone->mac`) with HKDF info strings.
+**M24. Both directions use the same relay key,** so a relay can reflect the phone's own frames back to it. `Features.java:270-273`, `MacSix.swift:192`. Fix: derive two keys (`mac->phone`, `phone->mac`) with HKDF info strings.
 
-**M25. Big frames are dropped silently by the remote-link.** A full 1 MiB frame plus 28 bytes of seal is over the worker's limit (`size > 1048576`). `worker.js:37-38`. Fix: keep remote-link frames ≤ 512 KB (split), and report drops.
+**M25. Big frames are dropped silently by the relay.** A full 1 MiB frame plus 28 bytes of seal is over the worker's limit (`size > 1048576`). `worker.js:37-38`. Fix: keep relay frames ≤ 512 KB (split), and report drops.
 
 **M26. Mac DMG layout never applies.** The image is mounted with `-nobrowse`, so Finder cannot `tell disk "BridgeLink"`, and the background and arrow are always skipped. `make-dmg.sh:15-36`. Fix: mount without `-nobrowse`, or build the DMG with `create-dmg` / a pre-made `.DS_Store`.
 
@@ -187,13 +187,13 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 
 | Doc | Problem |
 |---|---|
-| `docs/SERVICES.md:8` | Says the remote-link "is not built. Local Wi-Fi is the only path". The code has a remote-link. |
+| `docs/SERVICES.md:8` | Says the relay "is not built. Local Wi-Fi is the only path". The code has a relay. |
 | `docs/SETUP_FOR_OWNER.md:28`, `INSTALL.md:5`, `TROUBLESHOOTING.md:27` | Say a missing secret attaches `BridgeLink-android-debug.apk`. The release workflow now fails instead. |
-| `docs/SETUP_FOR_OWNER.md:34-36` | Remote-link steps would fail on a free plan (`new_classes`). |
+| `docs/SETUP_FOR_OWNER.md:34-36` | Relay steps would fail on a free plan (`new_classes`). |
 | `docs/PROTOCOL.md` | Stale ("Types in 0.4.0", "no in-app camera scanner in 0.3.0"). Missing: `notify_reply`, `notify_dismiss`, `dnd`, `media`, `media_now`, `lock`, `lock_setup`, `forget`, `folder`, `find_mac`, `clipboard_image`, the `label` and `deviceId` keys. |
 | `docs/FEATURE_MATRIX.md` | Manual ids M1–M25 are not defined anywhere. The integration tests listed don't exercise the features (see C6). |
 | `docs/TESTING.md` | Says manual items are "on the manual list in the release notes". The release uses `--generate-notes`, so no such list exists. |
-| `README.md` | Claims "Either side can stop it" (find), "several phones and Macs", "dismiss both ways", "A folder is sent as a zip" (phone), "The removed remote path: Built" and "All 25 Built – NOT TESTED on a device". None of these is fully true (see above). Screenshots show staged data from `ShotBook.swift` / `DesignShotTest.kt` and are not labelled as staged. |
+| `README.md` | Claims "Either side can stop it" (find), "several phones and Macs", "dismiss both ways", "A folder is sent as a zip" (phone), "Away from home: Built" and "All 25 Built – NOT TESTED on a device". None of these is fully true (see above). Screenshots show staged data from `ShotBook.swift` / `DesignShotTest.kt` and are not labelled as staged. |
 | `docs/PROGRESS.md` | Does not list any of the Critical or High items above. |
 
 ---
@@ -204,7 +204,7 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 |---|---|---|---|
 | hello, sas_reveal, sas_confirm | Phone | Mac yes | OK |
 | sas, paired, error | Mac | Phone yes | OK |
-| ping / pong | Phone / Mac | yes | Not over the remote-link (C4) |
+| ping / pong | Phone / Mac | yes | Not over the relay (C4) |
 | text, link, clipboard, clipboard_image | both | both | OK |
 | battery (`label`) | both | both | `label` key not in PROTOCOL.md |
 | ring, find_stop | Mac | Phone yes | — |
@@ -220,9 +220,9 @@ Nothing here was run on a real phone or a real Mac. "Works in code" below means 
 | folder_index/want/part/delete/pause, folder | both | both | OK |
 | auto_rules, input | both | both | OK |
 | pointer, wifi | Phone | Mac yes | OK |
-| mirror_start, cam_start, control, remote-link_key | Mac | Phone yes | start only if the app is open (C7) |
-| mirror_stop, cam_stop, remote-link_set | both | both | OK |
-| remote-link_use | Phone (internal) | — | local command only, never on the wire. OK |
+| mirror_start, cam_start, control, relay_key | Mac | Phone yes | start only if the app is open (C7) |
+| mirror_stop, cam_stop, relay_set | both | both | OK |
+| relay_use | Phone (internal) | — | local command only, never on the wire. OK |
 | Binary type 2 (video, JPEG, audio) | Phone | Mac yes | Phone ignores binary (fine, the Mac never sends it) |
 
 No type is sent that the other side lacks a handler for, apart from the gaps noted. Payload keys match on both sides. The `label`, `deviceId` and `art` keys are used but not documented in PROTOCOL.md.
@@ -251,14 +251,14 @@ Legend: **Works** = the code path looks complete both sides when read (not devic
 | 14 | Phone as webcam | Partial | Same start problem (C7). Mac choices ignored. Sideways picture (M18). Window only (no Zoom camera, free-account limit) |
 | 15 | Shared folder | Partial | Syncs only on pair/toggle, 32 MB cap, O(n²) hashing, hidden phone folder, flags wiped by H8 |
 | 16 | Lock Mac when you leave | Partial | Works only while still on the same Wi-Fi. Mac has no own detection. Changes system defaults (H9, H10) |
-| 17 | The removed remote path | **Broken** | Free-plan deploy fails, Mac replies lost, 45 s drop, counters break after restart, no auto-switch (C4) |
+| 17 | Away from home | **Broken** | Free-plan deploy fails, Mac replies lost, 45 s drop, counters break after restart, no auto-switch (C4) |
 | 18 | Unified inbox | Works | Mac stores notifications, texts and files with search and filter |
 | 19 | Clipboard history | Works | Mac 100 items, skips sensitive-looking text. Phone history only while in foreground |
 | 20 | Scan to Mac | Works | PDF via Play services, or a photo as JPG (not PDF) fallback |
 | 21 | Automations | Partial | Mac actions work. Phone actions are status text only. Home-Wi-Fi fires for any Wi-Fi (H14) |
 | 22 | Quick drop | Works | QS tile opens the app. Mac menu-bar drop and floating drop zone |
 | 23 | Pairing | Partial | QR and match code work for one phone and one Mac. Multi-Mac and multi-phone broken (H12, H13). Deep-link hijack (C2) |
-| 24 | End-to-end encryption | Partial | Local TLS with pinning OK. Remote-link: same key both ways, unchecked ticket, secret never rotated (C5, M23, M24) |
+| 24 | End-to-end encryption | Partial | Local TLS with pinning OK. Relay: same key both ways, unchecked ticket, secret never rotated (C5, M23, M24) |
 | 25 | Key pin | Partial | Pin enforced, but a deep link can silently replace it (C2) |
 
 **Summary:** 9 Work in code (4, 5, 7, 8, 11, 18, 19, 20, 22) · 15 Partial · 1 Broken (17) · 0 fully missing features. Missing **non-feature** items: Sparkle updater, Mac first-run, phone first-run, Android "Check for update", Mac "Reset BridgeLink".

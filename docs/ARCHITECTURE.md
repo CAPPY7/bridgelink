@@ -20,4 +20,4 @@ A Swift package builds the menu-bar app. `BridgeLinkCore` is the codec, PIN gate
 
 ## What is not here
 
-There is no remote-link process, no push provider, and no database shared by the two apps. The browser demo does not speak this protocol.
+There is no relay process, no push provider, and no database shared by the two apps. The browser demo does not speak this protocol.

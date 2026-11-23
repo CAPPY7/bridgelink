@@ -28,7 +28,7 @@ My rules (never ask me about these):
    New message types are fine. Old ones must keep working.
 7. The Mac app stays FREE and SIDELOADED (a DMG you drag to Applications). No paid Apple
    account. No App Store. The Android app stays a sideloaded APK.
-8. No paid services. The remote-link must run on the FREE Cloudflare plan.
+8. No paid services. The relay must run on the FREE Cloudflare plan.
 9. ONE commit per fix. After EVERY commit: unit tests pass, lint passes, and all CI jobs
    (android, mac, web, emulator) are green. If a job goes red, fix it before the next item.
 10. After EVERY fix, update docs/BUGS.md (one line: the problem and "Fixed: the idea of
@@ -37,7 +37,7 @@ My rules (never ask me about these):
 11. A feature can only be "Built – NOT TESTED on a device" if a test really sends that feature's
     messages between a phone and a Mac (see Step 2). Otherwise it is "Building".
     Only I can set "Final – owner tested".
-12. Things that only I can do (adding Mac signing secrets, deploying the remote-link) are made
+12. Things that only I can do (adding Mac signing secrets, deploying the relay) are made
     into ready-to-run scripts plus simple steps. DO NOT wait for me to do them. Keep
     working. They go in the final message.
 13. Only message me if you are truly blocked. Then send ONE line: what you need and why.
@@ -88,39 +88,39 @@ STEP 1 – CRITICAL FIXES (do these first, in this order)
     - ShareActivity: show a small confirm screen "Send 3 files to the Mac?" with Send and
       Cancel before anything is sent.
 
-1.4 (C4 + C5) Make "The removed remote path" (the remote-link) really work, and make it safe.
-    Files: remote-link/worker.js, remote-link/worker-tool.toml, macos/Sources/BridgeLink/MacSix.swift,
-    LinkExtras.swift, LinkListen.swift, android .../OldDoor.java, PhoneSix.java,
+1.4 (C4 + C5) Make "Away from home" (the relay) really work, and make it safe.
+    Files: relay/worker.js, relay/wrangler.toml, macos/Sources/BridgeLink/MacSix.swift,
+    LinkExtras.swift, LinkListen.swift, android .../RelayDoor.java, PhoneSix.java,
     LinkService.java, protocol/Features.java, protocol/StageSix.java and the matching
     Swift files in BridgeLinkCore.
-    a) worker-tool.toml: use `new_sqlite_classes = ["Room"]` so it deploys on the FREE plan.
+    a) wrangler.toml: use `new_sqlite_classes = ["Room"]` so it deploys on the FREE plan.
        Use the WebSocket Hibernation API (state.acceptWebSocket) so idle rooms cost nothing.
     b) worker.js: check the hello ticket (HMAC with a timestamp, max 2 minutes old). Do not
        let a new socket replace a live slot without a valid fresh ticket. Limit to 2 sockets
        per room, at most 200 messages per second, at most 512 KB per message, and close idle
        rooms after 10 minutes.
-    c) Mac: when a message came over the remote-link, send replies over the remote-link. Never create
-       the fake NWConnection(host: "127.0.0.1", port: 9) in acceptRemote-link.
-    d) Start the phone heartbeat (ping every 20 s) when the remote-link is up, so the Mac does not
+    c) Mac: when a message came over the relay, send replies over the relay. Never create
+       the fake NWConnection(host: "127.0.0.1", port: 9) in acceptRelay.
+    d) Start the phone heartbeat (ping every 20 s) when the relay is up, so the Mac does not
        drop it after 45 s.
-    e) Replay counters: each new remote-link session starts with a random session id. Reset the
+    e) Replay counters: each new relay session starts with a random session id. Reset the
        "seen" counter for each new session on both sides. A restart on one side must not
        break the other.
-    f) Use two keys made with HKDF: one for phone->Mac and one for Mac->phone, so a remote-link
+    f) Use two keys made with HKDF: one for phone->Mac and one for Mac->phone, so a relay
        cannot bounce frames back.
-    g) Inside the locked remote-link channel, the phone must first send its device token. The Mac
+    g) Inside the locked relay channel, the phone must first send its device token. The Mac
        checks it against the paired device list before it accepts anything else. A
        forgotten phone gets refused.
-    h) Use one remote-link secret PER paired phone. Make a new one when a phone is forgotten.
+    h) Use one relay secret PER paired phone. Make a new one when a phone is forgotten.
        Store it in the Mac Keychain and in the phone's sealed preferences (not plain text).
-    i) Automatic switching: Wi-Fi first. After 2 failed Wi-Fi tries, use the remote-link. When
+    i) Automatic switching: Wi-Fi first. After 2 failed Wi-Fi tries, use the relay. When
        the network changes or the Mac is found on Wi-Fi again, go back to Wi-Fi and close
-       the remote-link. Both apps show "On Wi-Fi" or "Away (remote-link)".
-    j) After pairing on Wi-Fi, the Mac sends the remote-link address to the phone automatically
-       (remote-link_set), so I paste the address only once, on the Mac. Move the remote-link setting on
+       the relay. Both apps show "On Wi-Fi" or "Away (relay)".
+    j) After pairing on Wi-Fi, the Mac sends the relay address to the phone automatically
+       (relay_set), so I paste the address only once, on the Mac. Move the relay setting on
        the phone from the Mirror screen to Settings.
-    k) Keep remote-link frames at 512 KB or less (split bigger ones).
-    l) Add a test: a fake remote-link in a unit test forwards frames; restart one side; messages
+    k) Keep relay frames at 512 KB or less (split bigger ones).
+    l) Add a test: a fake relay in a unit test forwards frames; restart one side; messages
        still flow; a reflected frame is rejected; a forgotten phone is refused.
 
 1.5 (C7) Screen mirror and webcam must start even when the phone app is not open.
@@ -251,7 +251,7 @@ STEP 3 – MEDIUM FIXES (features that only half work)
 3.14 (M21, M22) Share sheet: hand the files to the service with read permission
     (ClipData + FLAG_GRANT_READ_URI_PERMISSION). Big incoming files go straight into a
     pending Downloads item, not the cache folder.
-3.15 (M23–M25) Remote-link hardening is done in 1.4. Double-check it here with tests.
+3.15 (M23–M25) Relay hardening is done in 1.4. Double-check it here with tests.
 3.16 (M26) DMG: mount without -nobrowse (or use a pre-made layout) so the background
     picture with the 3 first-open pictures, the arrow, and the Applications shortcut
     really show. Check the DMG window in the CI log (screenshot it as an artifact).
@@ -266,12 +266,12 @@ STEP 4 – LOW FIXES AND CODE CLEANUP
 4.1 (L1) Split LinkService.java (1,495 lines) into small parts under ~400 lines each:
     LinkConnection (socket, TLS, reconnect), Pairing (hello, SAS, token), and one handler
     per feature (Files, Clipboard, Notifications, Find, Media, Battery, Sms,
-    SharedFolder, Remote, Mirror, Webcam, Remote-link, Automations). No behavior change. All
+    SharedFolder, Remote, Mirror, Webcam, Relay, Automations). No behavior change. All
     tests stay green.
 4.2 Rename every stage-named file to a feature name, on BOTH apps:
     StageFour/StageFive/StageSix (Java and Swift), PhoneFive, PhoneSix, FiveWork, SixWork,
     EasyWork, MacFive, MacSix, EasyMac, MacStage, SixPages, FivePages, EasyPages, SixPage
-    -> Media, Sms, SharedFolder, Remote, Mirror, Webcam, Remote-link, Automations, LeaveLock,
+    -> Media, Sms, SharedFolder, Remote, Mirror, Webcam, Relay, Automations, LeaveLock,
     Inbox, ClipHistory, and so on. One feature per folder or module on each side.
 4.3 (L2) One golden JSON fixture per message type in docs/fixtures/, used by both test
     suites.
@@ -326,7 +326,7 @@ STEP 6 – MISSING PIECES FROM THE MASTER PROMPT (H16)
     SHA256SUMS.txt, then opens the installer. Add REQUEST_INSTALL_PACKAGES and explain the
     "Install unknown apps" switch in one line.
 6.5 Mac Settings -> "Reset BridgeLink": removes its Keychain items, login item, saved
-    data, paired devices, and remote-link secrets, after a confirm dialog.
+    data, paired devices, and relay secrets, after a confirm dialog.
 
 ---------------------------------------------------------------------
 STEP 7 – THINGS ONLY THE OWNER CAN DO (prepare them, don't wait for me)
@@ -350,11 +350,11 @@ STEP 7 – THINGS ONLY THE OWNER CAN DO (prepare them, don't wait for me)
     The one command I copy:
     curl -fsSL https://raw.githubusercontent.com/CAPPY7/bridgelink/main/scripts/mac-signing-setup.sh | bash
     (Also allow: download the file, then `bash mac-signing-setup.sh`.)
-7.2 scripts/remote-link-setup.sh – I run it once, on Mac or any computer with Node:
+7.2 scripts/relay-setup.sh – I run it once, on Mac or any computer with Node:
     - Steps in plain words: make a free Cloudflare account, then the script runs
-      `npx worker-tool login`, then `npx worker-tool deploy` from the remote-link folder.
+      `npx wrangler login`, then `npx wrangler deploy` from the relay folder.
     - At the end, print ONLY the wss:// address. Tell me: "Paste this into BridgeLink on
-      the Mac: Settings -> The removed remote path." The Mac sends it to the phone by itself.
+      the Mac: Settings -> Away from home." The Mac sends it to the phone by itself.
 7.3 Write both in docs/SETUP_FOR_OWNER.md in numbered simple steps (max 8 steps each).
 7.4 After I add the secrets later, the next release must use them automatically (CI
     rule from 2.14). No code change needed then.
@@ -366,14 +366,14 @@ Re-read and fix: README.md, docs/INSTALL.md, USER_GUIDE.md, PERMISSIONS.md,
 TROUBLESHOOTING.md, SETUP_FOR_OWNER.md, SERVICES.md, PROTOCOL.md, TESTING.md,
 ARCHITECTURE.md, DECISIONS.md, CHANGELOG.md, FEATURE_MATRIX.md, BUGS.md, PROGRESS.md.
 Known wrong today:
-- SERVICES.md says the remote-link is not built.
+- SERVICES.md says the relay is not built.
 - SETUP_FOR_OWNER.md, INSTALL.md, and TROUBLESHOOTING.md talk about a
   "BridgeLink-android-debug.apk". The release now fails instead.
-- SETUP_FOR_OWNER.md remote-link steps fail on the free plan.
+- SETUP_FOR_OWNER.md relay steps fail on the free plan.
 - PROTOCOL.md is stale ("Types in 0.4.0", "no in-app camera scanner") and is missing
   notify_reply, notify_dismiss, dnd, media, media_now, lock, lock_setup, forget, folder,
   find_mac, clipboard_image, and the label, deviceId, and art keys. Document EVERY message
-  type and key, plus the remote-link session/auth.
+  type and key, plus the relay session/auth.
 - TESTING.md mentions a manual list "in the release notes" that does not exist.
 - README claims that are not true yet (find stop from both sides, several phones and
   Macs, dismiss both ways, folder from phone). Make them true or change the words.
@@ -417,7 +417,7 @@ Only after Step 9. Send me:
    settings on Android 13+, battery optimization off).
 4. The commands I must run once, each in its own copy box:
    - Mac signing + Sparkle key: the one command from 7.1.
-   - Remote-link: the one command from 7.2, then where to paste the wss:// address.
+   - Relay: the one command from 7.2, then where to paste the wss:// address.
 5. The link to docs/FINAL_TEST.md (all 25 features, tick boxes).
 6. A list of anything that is not 100% and why, one line each (for example: "Webcam
    shows in a BridgeLink window only. Zoom can't see it without a paid Apple account.").
