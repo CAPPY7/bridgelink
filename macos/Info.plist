@@ -55,6 +55,12 @@
             <key>NSSendTypes</key>
             <array>
                 <string>public.file-url</string>
+                <string>public.plain-text</string>
+                <string>public.url</string>
+            </array>
+            <key>NSSendFileTypes</key>
+            <array>
+                <string>public.item</string>
             </array>
         </dict>
     </array>
