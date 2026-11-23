@@ -22,6 +22,8 @@ N7. Partly. A message whose sender is relay is refused and shown to nobody. NOT 
 N6. Partly. Shared-folder send and receive moved from PhoneFive into PhoneFolder. No file under android/app/src/main is over 900 lines. Every old message type is still handled. NOT TESTED on a device. CI is not green on this commit yet.
 N8. Partly. An update file name keeps only letters, digits, dots, and dashes. Anything else, including a path trick, is saved as BridgeLink-update.dmg. NOT TESTED on a device. CI is not green on this commit yet.
 N9. Partly. The owner setup note now says Check for update downloads the disk image, checks the hash, and opens it. NOT TESTED on a device.
+N10. Partly. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is not green on this commit yet.
+Next: Part B. Finish the inbox rename, then remove automations.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

@@ -15,7 +15,7 @@ Each line is one problem. Fixed ones say Fixed and the idea of the change.
 11. If the Mac could not listen, the error did not mention the firewall. Fixed: the screen tells you to allow BridgeLink in System Settings, Network, Firewall.
 12. Several errors named the failure and did not say what to do. Fixed: each link error includes a next step, and the raw exception text stays off the screen.
 13. There was no way to save a safe log. Fixed: both apps have Send diagnostics. The file has version, connection, and port. It has no keys and no message text.
-14. LinkService.java was longer than 400 lines. Fixed: the name stays on LinkService. The socket is in LinkCore. Clipboard, alerts, files, ringing, and battery are in LinkDesk. Incoming messages are in LinkInbox. Each of those files is under 900 lines. NOT TESTED on a device.
+14. LinkService.java was longer than 400 lines. Partly: the name stays on LinkService. The socket is in LinkCore. Clipboard, alerts, files, ringing, and battery are in LinkDesk. Incoming messages are in LinkInbox. PhoneFive was still over 900 lines until N6 moved the shared folder into PhoneFolder. NOT TESTED on a device. CI is not green on this commit yet.
 15. The Mac app still cannot skip Apple's first-open warning. That is not a bug. A free sideload cannot be notarized. The disk image explains the one extra step.
 
 ## v0.13 audit
@@ -148,15 +148,15 @@ M15. A shared file over 32 MB was skipped. Fixed: a bigger file is sent with the
 H16. Check for update only opened the release page. Fixed: it downloads the disk image and SHA256SUMS off the main thread, checks the hash against the file name even when the sums line has a folder in front, and opens the disk image only when the hash matches. The file is saved as BridgeLink-version.dmg. A file this code did not write is not deleted. There is still no Sparkle signature. NOT TESTED on a device.
 S0-1. The feature check only allowed "self-tested", so CI stopped before the unit tests. Fixed: it allows Not started, Building, Built – NOT TESTED on a device, Final – owner tested, and Removed. NOT TESTED on a device.
 S0-4. A transfer id from the other side was used as a file name. Fixed: the phone and the Mac accept only 1 to 64 hex characters. NOT TESTED on a device.
-S0-5. A big shared file sent every chunk at once, blocked the folder queue, and the phone sent it on the message thread. Fixed: at most 6 chunks are ahead, the send stops when the link drops, a size change sends file_cancel, and folder disk work stays off the Mac main thread. NOT TESTED on a device.
-S0-6. LinkCore.java was still one long file. Fixed: the socket stays in LinkCore. Clipboard, alerts, files, ringing, and battery are in LinkDesk. Incoming messages are in LinkInbox. NOT TESTED on a device.
+S0-5. A big shared file sent every chunk at once, blocked the folder queue, and the phone sent it on the message thread. Partly: at most 6 chunks are ahead, the send stops when the link drops, a size change sends file_cancel, and folder disk work is queued off the Mac main thread (N4). NOT TESTED on a device. CI is not green on this commit yet.
+S0-6. LinkCore.java was still one long file. Partly: the socket stays in LinkCore. Clipboard, alerts, files, ringing, and battery are in LinkDesk. Incoming messages are in LinkInbox. PhoneFive was still over 900 lines. N6 moved the shared folder into PhoneFolder. NOT TESTED on a device. CI is not green on this commit yet.
 S0-7. The Mac tests did not read the sample messages. Fixed: a Mac test reads docs/fixtures and fails if a message type has no sample. NOT TESTED on a device.
 S0-8. Compose, Room, activity-compose, and core were old. Partly: Room is 2.8.5 and core and core-ktx are 1.16.0. Compose BOM 2026.06.01 made lint crash on this Kotlin 2.0.21 toolchain, so Compose stays on 2024.12.01 and activity-compose stays on 1.9.3. The November 2026 BOM still needs Android Gradle Plugin 9. NOT TESTED on a device.
 S0-9. The web test script was checked. The demo page does not use the database, multiplayer, or app data. The app shell still needs the auth provider, so those files stay. The test script already names files that exist. NOT TESTED on a device.
 S0-10. The default shared folder inserted a Documents row on every lookup. Fixed: that insert happens once and is remembered. The default folder is still the app's own Documents/BridgeLink Shared until you pick one. NOT TESTED on a device.
 S0-11. The progress note still said the next step was L1, and the feature list said CI was green. Fixed: the notes match this pass, and "CI is green" is removed until a green run is real.
 S0-12. The folder watch only saw the top folder. Fixed: the phone watches each subfolder, and the Mac uses a recursive folder event stream. NOT TESTED on a device.
-L1. The phone link file was longer than 900 lines. Fixed: see S0-6. LinkCore, LinkDesk, and LinkInbox are each under 900 lines. NOT TESTED on a device.
+L1. The phone link file was longer than 900 lines. Partly: see S0-6 and N6. No file under android/app/src/main is over 900 lines in this tree. NOT TESTED on a device. CI is not green on this commit yet.
 L2. The Mac tests did not parse every sample message. Fixed: see S0-7. NOT TESTED on a device.
 L15. Library versions were old. Partly: see S0-8. NOT TESTED on a device.
 R1. Already kept. The docs were not claiming a device test in this pass.
@@ -165,5 +165,5 @@ R4. Already kept.
 R5. The demo does not need a database. The shell still uses the auth provider. See S0-9.
 R6. Already kept.
 D1. Docs still said self-tested before this pass. Fixed earlier: the status words say NOT TESTED on a device. NOT TESTED on a device.
-Step 0 self-audit pass 1: 0 found, 0 fixed. NOT TESTED on a device.
+Phase 2 step 0 note: the old line that said the first self-audit found nothing was wrong. PhoneFive was still over 900 lines, folder disk work could wait on the Mac main thread, and a folder ack could be reused. Those are N3, N4, and N6. NOT TESTED on a device.
 B1. The remote path is removed. Old messages of that kind are ignored and never sent. The screens, settings, worker, and tests for it are gone. NOT TESTED on a device.
