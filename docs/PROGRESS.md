@@ -12,7 +12,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-No new feature is next. Part I, the phone link split, B2, the unified inbox, and B1, the remote path, are pushed. None of these is tested on a device.
+N1. The phone link files imported MediaControl from the wrong package. That is fixed in this commit. CI on a762609 is red: https://github.com/CAPPY7/bridgelink/actions/runs/45128489647 (android and emulator failed to compile; mac and web passed). This commit is not green until its own run finishes. NOT TESTED on a device.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

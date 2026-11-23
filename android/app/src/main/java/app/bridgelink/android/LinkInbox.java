@@ -9,7 +9,6 @@ import app.bridgelink.android.protocol.LinkFailure;
 import app.bridgelink.android.protocol.LinkState;
 import app.bridgelink.android.protocol.MacList;
 import app.bridgelink.android.protocol.MacTokens;
-import app.bridgelink.android.protocol.MediaControl;
 import app.bridgelink.android.protocol.Sas;
 import app.bridgelink.android.protocol.SecondPhone;
 import app.bridgelink.android.protocol.StageFour;
