@@ -10,6 +10,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -68,6 +69,30 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         if (granted.values.all { it }) easy.saveLock(true) else model.status = "Bluetooth was not allowed, so the Mac will not lock when you leave."
     }
 
+    private val textPhoto = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        model.status = "Reading the photo…"
+        TextFromPhoto.read(this, uri, object : TextFromPhoto.Done {
+            override fun text(value: String) {
+                runOnUiThread {
+                    model.ocrText = value
+                    model.ocrWarn = app.bridgelink.android.protocol.Features.looksSensitive(value)
+                    model.status = if (value.isEmpty()) "No words were found in that photo." else "Check the words, then send or cancel."
+                }
+            }
+
+            override fun failed() {
+                runOnUiThread { model.status = "Could not read that photo. Try another picture." }
+            }
+        })
+    }
+
+    private val featurePermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        work.refreshPermissions()
+        if (granted.values.any { !it }) model.status = "That permission was not allowed. You can try again in Settings."
+        else model.status = "Permission saved."
+    }
+
     val screenConsent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         six.onScreen(result.resultCode, result.data)
     }
@@ -107,11 +132,6 @@ class MainActivity : AppCompatActivity(), PhoneActions {
         six.load()
         polish.load()
         setContent { BridgeApp(model, this) }
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
-        }
         work.openLink(intent)
     }
 
@@ -131,6 +151,7 @@ class MainActivity : AppCompatActivity(), PhoneActions {
             ContextCompat.RECEIVER_EXPORTED,
         )
         model.restricted = work.restrictedBlocked()
+        work.refreshPermissions()
     }
 
     override fun onStop() {
@@ -216,6 +237,19 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun finishSetup() = polish.finishSetup()
     override fun showSetup() = polish.showSetup()
     override fun resetApp() = polish.reset()
+    override fun searchHistory() = work.searchHistory()
+    override fun resendHistory(id: Long) = work.resendHistory(id)
+    override fun openHistory(id: Long) = work.openHistory(id)
+    override fun deleteHistory(id: Long) = work.deleteHistory(id)
+    override fun clearHistory() = work.clearHistory()
+    override fun toggleCalls() = work.toggleCalls(featurePermission)
+    override fun togglePhotos() = work.togglePhotos(featurePermission)
+    override fun chooseMorePhotos() = work.chooseMorePhotos()
+    override fun allowSetup(step: String) = work.allowSetup(step, featurePermission)
+    override fun skipSetup() = work.skipSetup()
+    override fun pickTextPhoto() = textPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    override fun sendOcr() = work.sendOcr()
+    override fun cancelOcr() = work.cancelOcr()
 
     private fun startScan() {
         try {

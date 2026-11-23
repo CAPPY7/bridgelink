@@ -10,6 +10,7 @@ enum class Page(val label: String, val title: String) {
     Notifications("Alerts", "Notifications"),
     Messages("Texts", "Messages"),
     Files("Files", "Files"),
+    History("History", "History"),
     Remote("Remote", "Remote"),
     Mirror("Mirror", "Mirror"),
     Settings("Settings", "Settings"),
@@ -68,9 +69,27 @@ class PhoneModel {
     var pairDifferent by mutableStateOf(false)
     var pendingFp by mutableStateOf("")
     var pendingHosts by mutableStateOf("")
+    var history by mutableStateOf(listOf<HistoryRow>())
+    var historyQuery by mutableStateOf("")
+    var callsOn by mutableStateOf(false)
+    var photosOn by mutableStateOf(false)
+    var setupIndex by mutableStateOf(0)
+    var permLines by mutableStateOf(listOf<String>())
+    var ocrText by mutableStateOf("")
+    var ocrWarn by mutableStateOf(false)
+    var partialPhotos by mutableStateOf(false)
 }
 
 data class ClipRow(val id: String, val text: String, val pinned: Boolean)
+
+data class HistoryRow(
+    val id: Long,
+    val kind: String,
+    val direction: String,
+    val title: String,
+    val body: String,
+    val status: String,
+)
 
 data class SmsRow(val id: String, val address: String, val body: String, val incoming: Boolean)
 
@@ -130,4 +149,17 @@ interface PhoneActions {
     fun finishSetup()
     fun showSetup()
     fun resetApp()
+    fun searchHistory()
+    fun resendHistory(id: Long)
+    fun openHistory(id: Long)
+    fun deleteHistory(id: Long)
+    fun clearHistory()
+    fun toggleCalls()
+    fun togglePhotos()
+    fun chooseMorePhotos()
+    fun allowSetup(step: String)
+    fun skipSetup()
+    fun pickTextPhoto()
+    fun sendOcr()
+    fun cancelOcr()
 }

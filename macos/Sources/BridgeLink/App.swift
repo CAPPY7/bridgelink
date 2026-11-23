@@ -45,6 +45,16 @@ final class LinkModel: ObservableObject {
     @Published var pendingLink = ""
     @Published var linkDraft = ""
     @Published var phoneBattery = ""
+    @Published var phoneSignal = "Signal —"
+    @Published var latestNote = ""
+    @Published var phonePause = false
+    @Published var callsOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "calls", fallback: false)
+    @Published var photosOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "photos", fallback: false)
+    @Published var menuBattery = UserDefaults.standard.bool(forKey: "menuBattery")
+    @Published var phonePhotos: [PhonePhoto] = []
+    @Published var photoMore = false
+    @Published var photoPicked: Set<String> = []
+    var onStatus: (() -> Void)?
     @Published var macBattery = "—"
     var openWindow: (() -> Void)?
     var openSetup: (() -> Void)?
@@ -214,7 +224,7 @@ final class LinkModel: ObservableObject {
             }
             launchAtLogin = SMAppService.mainApp.status == .enabled
         } catch {
-            note("Login item failed. Move BridgeLink to Applications, then try again. \(error.localizedDescription)")
+            note("Login item failed. Move BridgeLink to Applications, then try again.")
         }
     }
 

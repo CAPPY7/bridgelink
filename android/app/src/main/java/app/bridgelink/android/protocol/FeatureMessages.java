@@ -10,7 +10,8 @@ public final class FeatureMessages {
             "notify", "notify_reply", "notify_dismiss", "otp", "battery",
             "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
             "dnd", "sms", "folder", "pointer", "mirror_start", "mirror_stop",
-            "cam_start", "cam_stop", "control", "forget", "hello", "paired", "error"
+            "cam_start", "cam_stop", "control", "forget", "hello", "paired", "error",
+            "call", "call_decline", "photo_list", "photo_page", "photo_thumb", "photo_get", "signal"
     };
 
     public static boolean known(String type) {

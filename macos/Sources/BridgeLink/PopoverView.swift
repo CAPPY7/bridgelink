@@ -17,11 +17,14 @@ struct PopoverView: View {
             HStack {
                 Label(model.phoneBattery.isEmpty ? "Phone —" : model.phoneBattery, systemImage: "iphone")
                 Spacer()
-                if !model.macBattery.isEmpty {
-                    Label("Mac \(model.macBattery)", systemImage: "laptopcomputer")
-                }
+                Text(model.phoneSignal).font(.callout)
             }
             .font(.callout)
+            Text(model.latestNote.isEmpty ? "No notification yet" : model.latestNote).font(.callout).lineLimit(2)
+            Toggle("Pause phone notifications", isOn: Binding(get: { model.phonePause }, set: { model.pausePhone($0) }))
+            Toggle("Show battery on the icon", isOn: Binding(get: { model.menuBattery }, set: { model.setMenuBattery($0) }))
+            Text("Pause phone notifications follows the phone. Quiet Mac banners while the phone is in Do Not Disturb is a separate switch.")
+                .font(.caption).foregroundStyle(.secondary)
             Text(model.nowPlaying).font(.callout).lineLimit(2)
             HStack {
                 Button("Play on phone") { model.sendMedia("play") }

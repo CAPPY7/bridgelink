@@ -60,6 +60,13 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         Text("Sharing", style = MaterialTheme.typography.titleMedium)
         BigButton("Clipboard sync on or off", "clip-sync", actions::toggleClipboard, tonal = true)
         BigButton("Always open links", "links-always", actions::toggleLinks, tonal = true)
+        BigButton(if (model.callsOn) "Call alerts are on" else "Call alerts are off", "calls-toggle", actions::toggleCalls, tonal = true)
+        Text("Off until you turn it on. A ringing call shows on the Mac with Decline.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        BigButton(if (model.photosOn) "Phone photos are on" else "Phone photos are off", "photos-toggle", actions::togglePhotos, tonal = true)
+        if (model.partialPhotos) {
+            Text("Only the photos you picked are visible.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            BigButton("Choose more photos", "photos-more", actions::chooseMorePhotos, tonal = true)
+        }
         BigButton("Sync Do Not Disturb", "dnd", actions::dndAccess, tonal = true)
         Text("Phone", style = MaterialTheme.typography.titleMedium)
         BigButton("Keep me connected", "battery", actions::batterySettings, tonal = true)
@@ -69,6 +76,14 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
             Text(model.updateLine, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         BigButton("Show setup again", "show-setup", actions::showSetup, tonal = true)
+        Text("Permissions", style = MaterialTheme.typography.titleMedium)
+        Text("This list is checked every time you open Settings.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (model.permLines.isEmpty()) {
+            Text("Open this page again to refresh.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        model.permLines.forEach { line ->
+            Text(line, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         BigButton("Reset BridgeLink", "reset-app", actions::resetApp, tonal = true)
         BigButton("Stop Mac ringing", "stop-ring", actions::stopRing, tonal = true)
         Text("Lock the Mac when you leave", style = MaterialTheme.typography.titleMedium)

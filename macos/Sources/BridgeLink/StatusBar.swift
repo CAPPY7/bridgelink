@@ -60,6 +60,18 @@ final class MenuHost: NSObject, NSWindowDelegate {
         toggle()
     }
 
+    func applyBatteryTitle() {
+        let show = model.menuBattery
+        item.length = show ? NSStatusItem.variableLength : NSStatusItem.squareLength
+        guard let button = item.button else { return }
+        if !show {
+            button.title = ""
+            return
+        }
+        let digits = model.phoneBattery.filter { $0.isNumber }
+        button.title = digits.isEmpty ? "" : " \(digits)%"
+    }
+
     func toggle() {
         guard let button = item.button else { return }
         if popover.isShown {
@@ -155,12 +167,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             do {
                 try ShotBook.write(model: model, to: URL(fileURLWithPath: raw, isDirectory: true))
             } catch {
-                fputs("shots \(error)\n", stderr)
+                fputs("shots failed\n", stderr)
                 exit(1)
             }
             exit(0)
         }
         menu = MenuHost(model: model)
+        model.onStatus = { [weak menu] in menu?.applyBatteryTitle() }
         menu?.presentSetupIfNeeded()
         UNUserNotificationCenter.current().delegate = self
         NSApp.servicesProvider = self
@@ -175,12 +188,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc func sendToPhone(_ pboard: NSPasteboard, userData: String, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
         let urls = pboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
-        if urls.isEmpty {
-            error.pointee = "Choose a file" as NSString
+        if !urls.isEmpty {
+            model.fileCancel.on = false
+            for url in urls { model.sendFile(url) }
             return
         }
-        model.fileCancel.on = false
-        for url in urls { model.sendFile(url) }
+        if let text = pboard.string(forType: .string), !text.isEmpty {
+            model.draft = text
+            model.sendDraft()
+            return
+        }
+        error.pointee = "Choose a file or some text" as NSString
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
@@ -194,6 +212,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
            let typed = response as? UNTextInputNotificationResponse {
             let key = response.notification.request.content.userInfo["key"] as? String ?? ""
             model.replyFromBanner(key, typed.userText)
+        } else if response.actionIdentifier == "decline" {
+            let key = response.notification.request.content.userInfo["key"] as? String ?? ""
+            model.declineCall(key)
         } else if response.actionIdentifier == "open" || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             if !path.isEmpty { NSWorkspace.shared.open(url) }
         } else if response.actionIdentifier == "finder", !path.isEmpty {

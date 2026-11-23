@@ -37,6 +37,15 @@ fun SendPage(model: PhoneModel, actions: PhoneActions) {
             minLines = 3,
         )
         BigButton("Send note", "send", actions::sendNote)
+        BigButton("Text from photo", "text-photo", actions::pickTextPhoto, tonal = true)
+        if (model.ocrText.isNotEmpty()) {
+            Text(model.ocrText, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (model.ocrWarn) {
+                Text("This looks sensitive. Send it only if you mean to.", color = MaterialTheme.colorScheme.error)
+            }
+            BigButton("Send to Mac clipboard", "ocr-send", actions::sendOcr)
+            BigButton("Cancel", "ocr-cancel", actions::cancelOcr, tonal = true)
+        }
         OutlinedTextField(
             value = model.link,
             onValueChange = { model.link = it },

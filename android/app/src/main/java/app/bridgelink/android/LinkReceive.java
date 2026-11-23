@@ -57,6 +57,7 @@ final class LinkReceive {
                     core.main.removeCallbacks(core.heartbeat);
                     core.main.postDelayed(core.heartbeat, 20_000);
                     core.desk.sendBattery();
+                    core.desk.syncCalls();
                     if (core.five != null) core.five.onPaired();
                 }
                 case "sas" -> {
@@ -204,6 +205,8 @@ final class LinkReceive {
                     core.publish(saved, null);
                     if (saved != null && saved.startsWith("Saved")) {
                         core.desk.askFile(core.files.lastName(), core.files.lastUri());
+                        String uri = core.files.lastUri() == null ? "" : core.files.lastUri().toString();
+                        HistoryDatabase.record(core, "file", "in", core.files.lastName(), uri, 0, "done");
                     }
                     }
                 }
@@ -219,6 +222,12 @@ final class LinkReceive {
                 }
                 case "media_now" -> core.publish(StageFour.nowLine(
                         message.text("title"), message.text("artist"), "1".equals(message.text("playing"))), null);
+                case "call_decline" -> {
+                    boolean ended = CallDecline.end(core, message.text("key"));
+                    core.publish(ended ? "Declined the call" : "Could not decline the call. Use the phone.", null);
+                }
+                case "photo_list" -> core.desk.photos(message.text("offset"));
+                case "photo_get" -> core.desk.photoGet(message.text("id"));
                 case "lock_setup" -> {
                     int[] setup = StageFour.parseSetup(message.text("body"));
                     if (setup == null) {
@@ -243,7 +252,7 @@ final class LinkReceive {
                 }
             }
         } catch (Exception error) {
-            if (error instanceof IllegalArgumentException && "Bad sender".equals(error.getMessage())) return;
+            if (error instanceof Envelope.BadSender) return;
             LinkFailure.Kind kind = LinkFailure.classify(error);
             if (kind == LinkFailure.Kind.VERSION_MISMATCH) {
                 core.linkState.failFatal(LinkFailure.message(kind));

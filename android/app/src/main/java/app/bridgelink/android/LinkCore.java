@@ -245,6 +245,8 @@ class LinkCore extends Service {
             else if ("link".equals(kind)) desk.sendLink(intent.getStringExtra(EXTRA_BODY));
             else if ("notify".equals(kind)) desk.sendNotify(intent);
             else if ("notify_dismiss".equals(kind)) desk.sendDismiss(intent.getStringExtra("key"));
+            else if ("call".equals(kind)) desk.sendCall(intent);
+            else if ("sync-calls".equals(kind)) desk.syncCalls();
             else if ("otp".equals(kind)) desk.sendOtp(intent.getStringExtra(EXTRA_BODY));
             else if ("sms_in".equals(kind) && five != null) {
                 five.smsIn(safe(intent.getStringExtra("address")) + "\n" + safe(intent.getStringExtra(EXTRA_BODY)));
@@ -318,6 +320,7 @@ class LinkCore extends Service {
     public void onDestroy() {
         if (five != null) five.onUnlinked();
         desk.stopRing();
+        desk.stopWatchers();
         if (leave != null) leave.stop();
         if (networkCallback != null) {
             ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -554,6 +557,7 @@ class LinkCore extends Service {
     void markUnpaired() {
         paired = false;
         if (five != null) five.onUnlinked();
+        if (desk != null) desk.syncCalls();
     }
 
     private void forgetMac() {
@@ -576,6 +580,7 @@ class LinkCore extends Service {
         generation.incrementAndGet();
         closeSocket();
         markUnpaired();
+        if (desk != null) desk.syncCalls();
         publish("Forgot this Mac", null);
     }
 
@@ -651,6 +656,11 @@ class LinkCore extends Service {
                 }
                 payload.addProperty("body", text);
                 writeEnvelope(Envelope.make(kind == null ? "text" : kind, "android", payload));
+                if ("text".equals(kind) || kind == null) {
+                    HistoryDatabase.record(this, "text", "out", text, text, text.length(), "done");
+                } else if ("link".equals(kind)) {
+                    HistoryDatabase.record(this, "link", "out", text, text, 0, "done");
+                }
                 if (!"ping".equals(kind)) {
                     publish("Sent", body == null || body.isEmpty() ? kind : "Sent");
                 }

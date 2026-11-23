@@ -7,7 +7,7 @@ public enum Features {
     public static let names = [
         "files", "links", "text", "clipboard", "find", "battery", "media",
         "notify", "otp", "sms", "clips", "scan", "folder",
-        "input", "mirror", "control", "camera", "lock",
+        "input", "mirror", "control", "camera", "lock", "calls", "photos",
     ]
 
     private static let keywords = [
@@ -37,7 +37,7 @@ public enum Features {
     }
 
     public static func privateByDefault(_ feature: String) -> Bool {
-        ["clipboard", "notify", "otp", "sms", "clips", "folder", "input", "mirror", "control", "camera", "lock"].contains(feature)
+        ["clipboard", "notify", "otp", "sms", "clips", "folder", "input", "mirror", "control", "camera", "lock", "calls", "photos"].contains(feature)
     }
 
     public static func resumeFrom(have: Int64, size: Int64) -> Int64 {
@@ -447,7 +447,7 @@ public enum LinkKind: Equatable {
         case .keyChanged: return "This Mac key changed. Forget the phone, then pair again."
         case .wrongCode: return "The match code was wrong. Connect again from the phone."
         case .tokenRejected: return "This Mac rejected the phone. Scan the QR to pair again."
-        case .versionMismatch: return "Update BridgeLink on the phone and the Mac so both copies match."
+        case .versionMismatch: return "The phone and the Mac are different versions. Update both copies, then pair again."
         case .timeout: return "The phone did not answer in time. Check that both are on the same Wi-Fi."
         case .refused: return "The phone refused the connection. Leave BridgeLink open on the phone and try again."
         case .networkLost: return "The Wi-Fi link dropped. Stay on the same Wi-Fi. BridgeLink will try again."

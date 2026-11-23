@@ -485,11 +485,16 @@ final class CoreTests: XCTestCase {
     func testStageSixRules() throws {
         XCTAssertEqual(StageSix.quality("medium").width, 1280)
         XCTAssertEqual(StageSix.quality("medium").height, 720)
-        XCTAssertEqual(StageSix.quality("medium").fps, 30)
+        XCTAssertEqual(StageSix.quality("medium").fps, 24)
         XCTAssertEqual(StageSix.quality("medium").bitrate, 2_500_000)
         XCTAssertEqual(StageSix.quality("low").fps, 15)
         XCTAssertEqual(StageSix.quality("high").width, 1920)
         XCTAssertEqual(StageSix.quality("nope").width, 1280)
+        XCTAssertEqual(StageSix.bitrateFor(100, 100, 15), 1_000_000)
+        XCTAssertEqual(StageSix.bitrateFor(1920, 1080, 30), 6_220_800)
+        XCTAssertEqual(StageSix.bitrateFor(3840, 2160, 30), 8_000_000)
+        XCTAssertEqual(StageSix.paneHeight(1280, 720, 1280), 720)
+        XCTAssertEqual(StageSix.paneHeight(1080, 2400, 720), 900)
         XCTAssertEqual(StageSix.qualityName("nope"), "medium")
         XCTAssertEqual(StageSix.qualityName("high"), "high")
         var blob = Data(count: 50_000)
@@ -569,6 +574,19 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(ReleaseCheck.updateFileName("1.0.1"), "BridgeLink-1.0.1.dmg")
         XCTAssertEqual(ReleaseCheck.updateFileName("../x"), "BridgeLink-update.dmg")
         XCTAssertEqual(ReleaseCheck.updateFileName(""), "BridgeLink-update.dmg")
+    }
+
+    func testPlainFailuresAndSignal() {
+        let kinds: [LinkKind] = [.keyChanged, .wrongCode, .tokenRejected, .versionMismatch, .timeout, .refused, .networkLost, .firewall]
+        for kind in kinds {
+            XCTAssertTrue(kind.message.contains(". "), kind.message)
+        }
+        XCTAssertFalse(DndFollow.shown(guess: true, reply: false))
+        XCTAssertTrue(DndFollow.shown(guess: false, reply: true))
+        XCTAssertTrue(DndFollow.needAccess.hasPrefix("Allow Do Not Disturb access on the phone"))
+        XCTAssertEqual(SignalRules.bars(9), 4)
+        XCTAssertFalse(SignalRules.changed(last: 2, saw: true, next: 2))
+        XCTAssertTrue(SignalRules.changed(last: 2, saw: true, next: 3))
     }
 }
 

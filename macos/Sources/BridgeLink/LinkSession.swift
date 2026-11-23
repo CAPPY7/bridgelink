@@ -147,7 +147,14 @@ extension LinkModel {
             note("The phone dismissed a notification")
         case "dnd":
             if envelope.text("label") == "mac" { break }
-            phoneQuiet = envelope.text("on") == "1"
+            if envelope.text("need") == "1" {
+                phonePause = false
+                note("Allow Do Not Disturb access on the phone. Open Settings, then Special app access, then Do Not Disturb access, and turn BridgeLink on.")
+                break
+            }
+            let reply = envelope.text("on") == "1"
+            phoneQuiet = reply
+            phonePause = DndFollow.shown(guess: phonePause, reply: reply)
             if dndSync {
                 note(phoneQuiet ? "Phone is in Do Not Disturb. Banners stay quiet." : "Phone left Do Not Disturb")
             }
@@ -244,6 +251,7 @@ extension LinkModel {
                 showText: showNotificationText
             )
             postNote(key: envelope.text("key"), title: shown.title, body: shown.body, reply: canReply)
+            latestNote = shown.title
             note("Notification from the phone")
         case "otp":
             let otpFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
@@ -271,6 +279,27 @@ extension LinkModel {
                 let chargingText = charging ? ", charging" : ""
                 phoneBattery = "Phone battery \(level)%\(chargingText)"
             }
+            onStatus?()
+        case "signal":
+            let bars = Int(envelope.text("bars")) ?? 0
+            phoneSignal = SignalRules.words(bars)
+        case "call":
+            let callFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
+            guard Features.enabled(callFlags, "calls", fallback: false) else { break }
+            let key = envelope.text("key")
+            let stable = key.isEmpty ? "call" : key
+            if envelope.text("state") == "ended" {
+                removeNote(key: stable)
+                note("The call ended")
+                break
+            }
+            let label = envelope.text("label")
+            postCall(key: stable, title: label.isEmpty ? "Incoming call" : label)
+            note(label.isEmpty ? "Incoming call" : label)
+        case "photo_page":
+            applyPhotoPage(envelope.text("offset"), envelope.text("ids"), envelope.text("more") == "1")
+        case "photo_thumb":
+            applyPhotoThumb(envelope.text("id"), envelope.text("name"), envelope.text("data"))
         case "forget":
             let device = envelope.text("deviceId")
             let forgotten = device.isEmpty ? liveDeviceId : device

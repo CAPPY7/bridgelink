@@ -25,7 +25,7 @@ public final class Features {
     public static final String[] NAMES = {
             "files", "links", "text", "clipboard", "find", "battery", "media",
             "notify", "otp", "sms", "clips", "scan", "folder",
-            "input", "mirror", "control", "camera", "lock"
+            "input", "mirror", "control", "camera", "lock", "calls", "photos"
     };
 
     private static final Pattern CODE = Pattern.compile("(?<!\\d)(\\d{4,8})(?!\\d)");
@@ -64,7 +64,8 @@ public final class Features {
         return "clipboard".equals(feature) || "notify".equals(feature) || "otp".equals(feature)
                 || "sms".equals(feature) || "clips".equals(feature) || "folder".equals(feature)
                 || "input".equals(feature) || "mirror".equals(feature) || "control".equals(feature)
-                || "camera".equals(feature) || "lock".equals(feature);
+                || "camera".equals(feature) || "lock".equals(feature)
+                || "calls".equals(feature) || "photos".equals(feature);
     }
 
     /** Bytes already stored. -1 means the offer is impossible. */

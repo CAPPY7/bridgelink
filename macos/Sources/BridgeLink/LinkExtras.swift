@@ -165,7 +165,9 @@ extension LinkModel {
             textInputPlaceholder: "Reply"
         )
         let note = UNNotificationCategory(identifier: "bridgelink.reply", actions: [reply], intentIdentifiers: [], options: [])
-        UNUserNotificationCenter.current().setNotificationCategories([file, note])
+        let decline = UNNotificationAction(identifier: "decline", title: "Decline", options: [])
+        let call = UNNotificationCategory(identifier: "bridgelink.call", actions: [decline], intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([file, note, call])
     }
 
     func notifySaved(_ name: String, _ url: URL, opened: Bool) {

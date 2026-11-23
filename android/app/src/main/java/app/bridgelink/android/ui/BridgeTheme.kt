@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
@@ -108,11 +109,12 @@ private fun PhoneShell(model: PhoneModel, actions: PhoneActions) {
                 label = "page",
             ) { page ->
                 when (page) {
-                    Page.Home -> if (model.setupDone) HomePage(model, actions) else SetupPage(actions)
+                    Page.Home -> if (model.setupDone) HomePage(model, actions) else SetupPage(model, actions)
                     Page.Send -> SendPage(model, actions)
                     Page.Notifications -> NotificationsPage(model, actions)
                     Page.Messages -> MessagesPage(model, actions)
                     Page.Files -> FilesPage(model, actions)
+                    Page.History -> HistoryPage(model, actions)
                     Page.Remote -> RemotePage(model, actions)
                     Page.Mirror -> MirrorPage(model, actions)
                     Page.Settings -> SettingsPage(model, actions)
@@ -138,7 +140,7 @@ private fun PhoneShell(model: PhoneModel, actions: PhoneActions) {
 @Composable
 private fun BottomNav(model: PhoneModel) {
     val primary = listOf(Page.Home, Page.Send, Page.Notifications, Page.Messages, Page.Files)
-    val extra = listOf(Page.Remote, Page.Mirror, Page.Settings)
+    val extra = listOf(Page.Remote, Page.Mirror, Page.History, Page.Settings)
     var moreOpen by remember { mutableStateOf(false) }
     Surface(tonalElevation = 3.dp) {
         Row(
@@ -217,6 +219,7 @@ private fun Page.icon(): ImageVector = when (this) {
     Page.Notifications -> Icons.Filled.Notifications
     Page.Messages -> Icons.Filled.Email
     Page.Files -> Icons.Filled.Folder
+    Page.History -> Icons.Filled.History
     Page.Remote -> Icons.Filled.PhoneAndroid
     Page.Mirror -> Icons.Filled.Cast
     Page.Settings -> Icons.Filled.Settings

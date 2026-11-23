@@ -540,6 +540,11 @@ public class ProtocolTest {
         assertTrue(LinkFailure.Kind.KEY_CHANGED.fatal);
         assertFalse(LinkFailure.Kind.NETWORK_LOST.fatal);
         assertFalse(LinkFailure.message(LinkFailure.Kind.TIMEOUT).contains("timed out waiting"));
+        for (LinkFailure.Kind kind : LinkFailure.Kind.values()) {
+            String text = LinkFailure.message(kind);
+            assertTrue(kind.name(), text.contains(". "));
+            assertFalse(text.contains("Exception"));
+        }
         java.util.ArrayDeque<String> parked = new java.util.ArrayDeque<>();
         ServiceDoor.Result blocked = ServiceDoor.deliver(false, () -> {
             throw new AssertionError("in process");
@@ -713,7 +718,7 @@ public class ProtocolTest {
     public void stageSixRules() throws Exception {
         assertEquals(1280, StageSix.quality("medium").width);
         assertEquals(720, StageSix.quality("medium").height);
-        assertEquals(30, StageSix.quality("medium").fps);
+        assertEquals(24, StageSix.quality("medium").fps);
         assertEquals(2_500_000, StageSix.quality("medium").bitrate);
         assertEquals(15, StageSix.quality("low").fps);
         assertEquals(1920, StageSix.quality("high").width);
@@ -832,7 +837,8 @@ public class ProtocolTest {
                 "notify", "notify_reply", "notify_dismiss", "otp", "battery",
                 "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
                 "dnd", "sms", "folder", "pointer", "mirror_start", "mirror_stop",
-                "cam_start", "cam_stop", "control", "forget", "hello", "paired", "error"
+                "cam_start", "cam_stop", "control", "forget", "hello", "paired", "error",
+                "call", "call_decline", "photo_list", "photo_page", "photo_thumb", "photo_get", "signal"
         };
         assertEquals(FeatureMessages.TYPES.length, types.length);
         for (String type : types) {

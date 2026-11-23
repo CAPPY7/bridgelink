@@ -459,4 +459,222 @@ class PhoneWork(private val activity: MainActivity) {
         intent.putExtra(LinkService.EXTRA_BODY, body)
         ContextCompat.startForegroundService(activity, intent)
     }
+
+    fun refreshPermissions() {
+        val sdk = Build.VERSION.SDK_INT
+        val steps = app.bridgelink.android.protocol.SetupSteps.forSdk(sdk)
+        val flags = Prefs.open(activity).getString("flags", "") ?: ""
+        model.callsOn = Features.enabled(flags, "calls", false)
+        model.photosOn = Features.enabled(flags, "photos", false)
+        model.partialPhotos = sdk >= 34 && granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) && !granted(Manifest.permission.READ_MEDIA_IMAGES)
+        model.permLines = steps.map { step ->
+            val word = when {
+                !app.bridgelink.android.protocol.SetupSteps.applies(step, sdk) -> "Not needed on this phone"
+                permissionOn(step) -> "On"
+                else -> "Off"
+            }
+            app.bridgelink.android.protocol.SetupSteps.title(step) + ": " + word
+        }
+    }
+
+    private fun permissionOn(step: String): Boolean {
+        return when (step) {
+            "pair" -> (Prefs.open(activity).getString("token", "") ?: "").length >= 16
+            "notifications" -> Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS)
+            "alerts" -> notificationListenerOn()
+            "battery" -> batteryIgnored()
+            "texts" -> granted(Manifest.permission.READ_SMS) && granted(Manifest.permission.READ_PHONE_STATE)
+            "decline" -> Build.VERSION.SDK_INT < 28 || granted(Manifest.permission.ANSWER_PHONE_CALLS)
+            "photos" -> if (Build.VERSION.SDK_INT >= 33) granted(Manifest.permission.READ_MEDIA_IMAGES) || granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) else granted(Manifest.permission.READ_EXTERNAL_STORAGE)
+            "dnd" -> activity.getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
+            "bluetooth" -> if (Build.VERSION.SDK_INT >= 31) granted(Manifest.permission.BLUETOOTH_SCAN) else granted(Manifest.permission.ACCESS_FINE_LOCATION)
+            "accessibility" -> {
+                val flat = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+                flat.contains(activity.packageName)
+            }
+            "fullscreen" -> if (Build.VERSION.SDK_INT >= 34) activity.getSystemService(android.app.NotificationManager::class.java)?.canUseFullScreenIntent() == true else true
+            else -> false
+        }
+    }
+
+    private fun granted(name: String): Boolean {
+        return ContextCompat.checkSelfPermission(activity, name) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun notificationListenerOn(): Boolean {
+        val flat = android.provider.Settings.Secure.getString(activity.contentResolver, "enabled_notification_listeners") ?: return false
+        return flat.contains(activity.packageName)
+    }
+
+    private fun batteryIgnored(): Boolean {
+        val manager = activity.getSystemService(android.os.PowerManager::class.java) ?: return false
+        return manager.isIgnoringBatteryOptimizations(activity.packageName)
+    }
+
+    fun allowSetup(step: String, launcher: androidx.activity.result.ActivityResultLauncher<Array<String>>) {
+        when (step) {
+            "pair" -> scan()
+            "notifications" -> if (Build.VERSION.SDK_INT >= 33) launcher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            "alerts" -> activity.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+            "battery" -> batterySettings()
+            "texts" -> launcher.launch(arrayOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.SEND_SMS, Manifest.permission.READ_PHONE_STATE))
+            "decline" -> if (Build.VERSION.SDK_INT >= 28) launcher.launch(arrayOf(Manifest.permission.ANSWER_PHONE_CALLS, Manifest.permission.READ_PHONE_STATE))
+            "photos" -> askPhotos(launcher)
+            "dnd" -> dndAccess()
+            "bluetooth" -> requestLockBits(launcher)
+            "accessibility" -> activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            "fullscreen" -> if (Build.VERSION.SDK_INT >= 34) activity.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + activity.packageName)))
+        }
+        model.setupIndex += 1
+    }
+
+    fun skipSetup() {
+        model.setupIndex += 1
+    }
+
+    fun toggleCalls(launcher: androidx.activity.result.ActivityResultLauncher<Array<String>>) {
+        val prefs = Prefs.open(activity)
+        val flags = prefs.getString("flags", "") ?: ""
+        val on = !Features.enabled(flags, "calls", false)
+        prefs.edit().putString("flags", StageRules.setFlag(flags, "calls", on)).apply()
+        model.callsOn = on
+        if (on) {
+            val need = mutableListOf(Manifest.permission.READ_PHONE_STATE)
+            if (Build.VERSION.SDK_INT >= 28) need.add(Manifest.permission.ANSWER_PHONE_CALLS)
+            launcher.launch(need.toTypedArray())
+        }
+        val intent = Intent(activity, LinkService::class.java)
+        intent.action = LinkService.ACTION_SEND
+        intent.putExtra(LinkService.EXTRA_KIND, "sync-calls")
+        ContextCompat.startForegroundService(activity, intent)
+        model.status = if (on) "Call alerts are on. A ringing call can show on the Mac." else "Call alerts are off."
+        refreshPermissions()
+    }
+
+    fun togglePhotos(launcher: androidx.activity.result.ActivityResultLauncher<Array<String>>) {
+        val prefs = Prefs.open(activity)
+        val flags = prefs.getString("flags", "") ?: ""
+        val on = !Features.enabled(flags, "photos", false)
+        prefs.edit().putString("flags", StageRules.setFlag(flags, "photos", on)).apply()
+        model.photosOn = on
+        if (on) askPhotos(launcher)
+        model.status = if (on) "Phone photos are on. Open Photos on the Mac." else "Phone photos are off."
+        refreshPermissions()
+    }
+
+    private fun askPhotos(launcher: androidx.activity.result.ActivityResultLauncher<Array<String>>) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            launcher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED))
+        } else if (Build.VERSION.SDK_INT >= 33) {
+            launcher.launch(arrayOf(Manifest.permission.READ_MEDIA_IMAGES))
+        } else {
+            launcher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+        }
+    }
+
+    private fun requestLockBits(launcher: androidx.activity.result.ActivityResultLauncher<Array<String>>) {
+        if (Build.VERSION.SDK_INT >= 31) launcher.launch(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT))
+        else launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH))
+    }
+
+    fun chooseMorePhotos() {
+        PhotoShelf.chooseMore(activity)
+    }
+
+    fun searchHistory() {
+        HistoryDatabase.search(activity, model.historyQuery, 0) { rows ->
+            activity.runOnUiThread { model.history = rows.map { toRow(it) } }
+        }
+    }
+
+    fun resendHistory(id: Long) {
+        HistoryDatabase.one(activity, id) { row ->
+            activity.runOnUiThread {
+                if (row == null) {
+                    model.status = "That row is gone."
+                    return@runOnUiThread
+                }
+                val intent = Intent(activity, LinkService::class.java)
+                intent.action = LinkService.ACTION_SEND
+                when (row.kind) {
+                    "file" -> {
+                        intent.putExtra(LinkService.EXTRA_KIND, "file")
+                        intent.putExtra(LinkService.EXTRA_BODY, row.body)
+                    }
+                    "link" -> {
+                        intent.putExtra(LinkService.EXTRA_KIND, "link")
+                        intent.putExtra(LinkService.EXTRA_BODY, row.body)
+                    }
+                    else -> {
+                        intent.putExtra(LinkService.EXTRA_KIND, "text")
+                        intent.putExtra(LinkService.EXTRA_BODY, row.body.ifEmpty { row.title })
+                    }
+                }
+                ContextCompat.startForegroundService(activity, intent)
+                model.status = "Sending that again."
+            }
+        }
+    }
+
+    fun openHistory(id: Long) {
+        HistoryDatabase.one(activity, id) { row ->
+            activity.runOnUiThread {
+                if (row == null) return@runOnUiThread
+                when (app.bridgelink.android.protocol.HistoryQuery.openPlan(row.kind)) {
+                    "view" -> {
+                        val uri = Uri.parse(row.body)
+                        val view = Intent(Intent.ACTION_VIEW).setData(uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        try {
+                            activity.startActivity(view)
+                        } catch (_: Exception) {
+                            model.status = "Could not open that file. It may have been deleted."
+                        }
+                    }
+                    "browse" -> {
+                        val uri = Uri.parse(row.body)
+                        try {
+                            activity.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                        } catch (_: Exception) {
+                            model.status = "Could not open that link."
+                        }
+                    }
+                    else -> {
+                        val clip = android.content.ClipData.newPlainText("BridgeLink", row.body.ifEmpty { row.title })
+                        val board = activity.getSystemService(android.content.ClipboardManager::class.java)
+                        board?.setPrimaryClip(clip)
+                        model.status = "Copied."
+                    }
+                }
+            }
+        }
+    }
+
+    fun deleteHistory(id: Long) {
+        HistoryDatabase.delete(activity, id) { activity.runOnUiThread { searchHistory() } }
+    }
+
+    fun clearHistory() {
+        HistoryDatabase.clear(activity) { activity.runOnUiThread { model.history = emptyList() } }
+    }
+
+    fun sendOcr() {
+        if (model.ocrText.isEmpty()) return
+        val intent = Intent(activity, LinkService::class.java)
+        intent.action = LinkService.ACTION_SEND
+        intent.putExtra(LinkService.EXTRA_KIND, "clipboard")
+        intent.putExtra(LinkService.EXTRA_BODY, model.ocrText)
+        ContextCompat.startForegroundService(activity, intent)
+        model.ocrText = ""
+        model.ocrWarn = false
+        model.status = "Sent the words to the Mac clipboard."
+    }
+
+    fun cancelOcr() {
+        model.ocrText = ""
+        model.ocrWarn = false
+    }
+
+    private fun toRow(row: HistoryEntry): app.bridgelink.android.ui.HistoryRow {
+        return app.bridgelink.android.ui.HistoryRow(row.id, row.kind ?: "text", row.direction ?: "in", row.title ?: "", row.body ?: "", row.status ?: "")
+    }
 }

@@ -103,8 +103,9 @@ final class LinkDesk {
                 core.files.sendMany(source, fileOut());
                 core.publish("Sent the file", null);
             } catch (Exception error) {
-                String message = error.getMessage() == null ? "Could not send the file" : error.getMessage();
-                core.publish(message, null);
+                core.publish(error instanceof app.bridgelink.android.protocol.PlainFailure plain
+                        ? plain.line
+                        : "Could not send the file. Check the file, then try again.", null);
             }
         }, "bridgelink-file").start();
     }
@@ -131,6 +132,9 @@ final class LinkDesk {
 
             @Override
             public void progress(String name, int percent) {
+                if (percent == 100) {
+                    HistoryDatabase.record(core, "file", "out", name, name, 0, "done");
+                }
                 long now = System.currentTimeMillis();
                 if (!app.bridgelink.android.protocol.ProgressPace.show(lastProgressAt, now, percent)) return;
                 lastProgressAt = now;
@@ -185,6 +189,7 @@ final class LinkDesk {
                     || status == android.os.BatteryManager.BATTERY_STATUS_FULL;
             if (!Features.batteryChanged(lastBattery, lastCharging, sawBattery, percent, charging)) {
                 maybeSendDnd();
+                maybeSendSignal();
                 return;
             }
             sawBattery = true;
@@ -200,6 +205,7 @@ final class LinkDesk {
                     payload.addProperty("label", "phone");
                     core.writeEnvelope(Envelope.make("battery", "android", payload));
                     maybeSendDnd();
+                    maybeSendSignal();
                 } catch (Exception ignored) {
                 }
             });
@@ -231,9 +237,12 @@ final class LinkDesk {
             }
             try {
                 core.files.sendLink(raw, (type, payload) -> core.writeEnvelope(Envelope.make(type, "android", payload)));
+                HistoryDatabase.record(core, "link", "out", raw, raw, 0, "done");
                 core.publish("Sent the link", null);
             } catch (Exception error) {
-                core.publish(error.getMessage() == null ? "Could not send the link" : error.getMessage(), null);
+                core.publish(error instanceof app.bridgelink.android.protocol.PlainFailure plain
+                        ? plain.line
+                        : "Could not send the link. Use an http or https address and try again.", null);
             }
         }, "bridgelink-link").start();
     }
@@ -301,19 +310,126 @@ final class LinkDesk {
     }
 
     void applyMacDnd(boolean on) {
-        if (!Features.enabled(Prefs.open(core).getString("flags", ""), "dnd", false)) {
-            core.publish(on ? "Mac is in Do Not Disturb" : "Mac left Do Not Disturb", null);
+        boolean granted = false;
+        try {
+            granted = core.manager().isNotificationPolicyAccessGranted();
+        } catch (Exception ignored) {
+        }
+        if (!granted) {
+            core.publish(app.bridgelink.android.protocol.DndFollow.needAccess(), null);
+            replyDnd(false, true);
             return;
         }
         try {
-            if (core.manager().isNotificationPolicyAccessGranted()) {
-                core.manager().setInterruptionFilter(on
-                        ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                        : NotificationManager.INTERRUPTION_FILTER_ALL);
+            core.manager().setInterruptionFilter(on
+                    ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                    : NotificationManager.INTERRUPTION_FILTER_ALL);
+        } catch (Exception ignored) {
+            core.publish("Could not change Do Not Disturb. Allow it in phone Settings, then try again.", null);
+            replyDnd(false, true);
+            return;
+        }
+        boolean real = core.manager().getCurrentInterruptionFilter() != NotificationManager.INTERRUPTION_FILTER_ALL;
+        lastDnd = real;
+        sawDnd = true;
+        replyDnd(real, false);
+        core.publish(real ? "Phone notifications are paused." : "Phone notifications are on again.", null);
+    }
+
+    private void replyDnd(boolean on, boolean need) {
+        core.outbox.submit(() -> {
+            if (!core.paired) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("on", on ? "1" : "0");
+                payload.addProperty("label", "phone");
+                payload.addProperty("need", need ? "1" : "0");
+                core.writeEnvelope(Envelope.make("dnd", "android", payload));
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    private CallWatch calls;
+    private int lastBars = -1;
+    private boolean sawBars;
+
+    void syncCalls() {
+        if (calls == null) calls = new CallWatch(core);
+        boolean on = Features.enabled(Prefs.open(core).getString("flags", ""), "calls", false);
+        calls.update(on, core.paired);
+    }
+
+    void stopWatchers() {
+        if (calls != null) calls.stop();
+    }
+
+    void sendCall(android.content.Intent intent) {
+        core.outbox.submit(() -> {
+            if (!core.paired) return;
+            if (!Features.enabled(Prefs.open(core).getString("flags", ""), "calls", false)) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("label", safe(intent.getStringExtra("label")));
+                payload.addProperty("key", safe(intent.getStringExtra("key")));
+                payload.addProperty("state", safe(intent.getStringExtra("state")));
+                core.writeEnvelope(Envelope.make("call", "android", payload));
+            } catch (Exception ignored) {
+                core.publish("Could not show the call on the Mac. Stay on the same Wi-Fi.", null);
+            }
+        });
+    }
+
+    void photos(String offset) {
+        PhotoShelf.list(core, offset);
+    }
+
+    void photoGet(String id) {
+        PhotoShelf.sendFull(core, id);
+    }
+
+    void sendPhoto(String source) {
+        new Thread(() -> {
+            if (!core.paired || core.files == null) return;
+            try {
+                core.files.send(source, fileOut());
+                core.publish("Sent the photo", null);
+            } catch (Exception error) {
+                core.publish(error instanceof app.bridgelink.android.protocol.PlainFailure plain
+                        ? plain.line
+                        : "Could not send the photo. Try again.", null);
+            }
+        }, "bridgelink-photo").start();
+    }
+
+    private void maybeSendSignal() {
+        int level = -1;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 28
+                    && core.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE)
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                android.telephony.TelephonyManager manager =
+                        (android.telephony.TelephonyManager) core.getSystemService(android.content.Context.TELEPHONY_SERVICE);
+                if (manager != null && manager.getSignalStrength() != null) {
+                    level = manager.getSignalStrength().getLevel();
+                }
             }
         } catch (Exception ignored) {
         }
-        core.publish(on ? "Mac is in Do Not Disturb" : "Mac left Do Not Disturb", null);
+        int bars = app.bridgelink.android.protocol.SignalRules.bars(level);
+        if (!app.bridgelink.android.protocol.SignalRules.changed(lastBars, sawBars, bars)) return;
+        sawBars = true;
+        lastBars = bars;
+        int shown = bars;
+        core.outbox.submit(() -> {
+            if (!core.paired) return;
+            try {
+                JsonObject payload = new JsonObject();
+                payload.addProperty("bars", Integer.toString(shown));
+                core.writeEnvelope(Envelope.make("signal", "android", payload));
+            } catch (Exception ignored) {
+            }
+        });
     }
 
     boolean acceptClipboard() {
@@ -354,6 +470,7 @@ final class LinkDesk {
                 JsonObject payload = new JsonObject();
                 payload.addProperty("body", value);
                 core.writeEnvelope(Envelope.make("clipboard", "android", payload));
+                HistoryDatabase.record(core, "text", "out", value, value, value.length(), "done");
                 ClipStore.addText(core, value);
                 core.publish("Sent clipboard", null);
             } catch (Exception error) {

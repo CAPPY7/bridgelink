@@ -11,6 +11,7 @@ import android.service.notification.StatusBarNotification;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import app.bridgelink.android.protocol.CallRules;
 import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.NoticeGate;
 import app.bridgelink.android.protocol.StageRules;
@@ -31,6 +32,35 @@ public class NotifyMirror extends NotificationListenerService {
         if (current == this) current = null;
     }
 
+    static NotifyMirror current() {
+        return current;
+    }
+
+    /** Press the call notification's own Decline button when it has one. */
+    boolean decline(String key) {
+        if (key == null || key.isEmpty()) return false;
+        try {
+            StatusBarNotification[] active = getActiveNotifications();
+            if (active == null) return false;
+            for (StatusBarNotification notice : active) {
+                if (notice == null || !key.equals(notice.getKey()) || notice.getNotification() == null) continue;
+                Notification.Action[] actions = notice.getNotification().actions;
+                if (actions == null) return false;
+                for (Notification.Action action : actions) {
+                    if (!CallDecline.isDecline(action)) continue;
+                    try {
+                        action.actionIntent.send();
+                        return true;
+                    } catch (Exception ignored) {
+                        return false;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     @Override
     public void onNotificationPosted(StatusBarNotification notice) {
         if (notice == null || !Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
@@ -46,6 +76,18 @@ public class NotifyMirror extends NotificationListenerService {
         String shown = title == null ? "" : title.toString();
         String body = text == null ? "" : text.toString();
         String key = notice.getKey() == null ? "" : notice.getKey();
+        if (CallRules.isCall(notification.category) && Features.enabled(Prefs.open(this).getString("flags", ""), "calls", false)) {
+            app.bridgelink.android.protocol.CallRules.Call call =
+                    CallRules.fromNotice(notification.category, shown, body, key);
+            Intent send = new Intent(this, LinkService.class);
+            send.setAction(LinkService.ACTION_SEND);
+            send.putExtra(LinkService.EXTRA_KIND, "call");
+            send.putExtra("label", CallRules.label(call));
+            send.putExtra("key", key);
+            send.putExtra("state", "ringing");
+            LinkService.post(this, send);
+            return;
+        }
         boolean progress = notification.extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0;
         String stamp = NoticeGate.stamp(key, shown, body);
         boolean duplicate = NoticeGate.skipUpdate(progress, seenNotes.get(key), stamp);
@@ -71,6 +113,17 @@ public class NotifyMirror extends NotificationListenerService {
         if (notice == null || notice.getKey() == null) return;
         seenNotes.remove(notice.getKey());
         if (SELF.remove(notice.getKey())) return;
+        if (CallRules.isCall(notice.getNotification() == null ? "" : notice.getNotification().category)
+                && Features.enabled(Prefs.open(this).getString("flags", ""), "calls", false)) {
+            Intent send = new Intent(this, LinkService.class);
+            send.setAction(LinkService.ACTION_SEND);
+            send.putExtra(LinkService.EXTRA_KIND, "call");
+            send.putExtra("key", notice.getKey());
+            send.putExtra("state", "ended");
+            send.putExtra("label", "Incoming call");
+            LinkService.post(this, send);
+            return;
+        }
         if (!Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
         Intent send = new Intent(this, LinkService.class);
         send.setAction(LinkService.ACTION_SEND);

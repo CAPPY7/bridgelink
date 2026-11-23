@@ -25,6 +25,8 @@ struct DeskDetail: View {
         case .messages:
             MessagesPane()
         case .files: files
+        case .photos:
+            PhotosPane()
         case .clipboard: clipboard
         case .shared:
             SharedPane()
@@ -188,6 +190,11 @@ struct DeskDetail: View {
             Button("Show setup again") { model.replaySetup() }
             ResetBridgeButton(model: model)
             LockPane()
+            Toggle("Show call alerts", isOn: Binding(get: { model.callsOn }, set: { model.setCalls($0) }))
+            Toggle("Show phone photos", isOn: Binding(get: { model.photosOn }, set: { model.setPhotos($0) }))
+            Text("Right-click a file in Finder, then Quick Actions or Services, then Send to phone. Put BridgeLink in Applications. macOS 13, 14, and 15 use the same Services list.")
+                .font(.callout).foregroundStyle(.secondary)
+            Button("Open Keyboard Shortcuts") { model.openFinderServices() }
             Text("Phone trackpad").font(.headline)
             Text(StageFive.pointerSteps).font(.callout).foregroundStyle(.secondary)
             Toggle("Let the phone move the pointer and type", isOn: Binding(get: { model.trackpadOn }, set: { model.setTrackpad($0) }))

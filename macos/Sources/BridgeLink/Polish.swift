@@ -117,13 +117,16 @@ struct FirstRunView: View {
             if step == 3 {
                 Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { _ in model.toggleLogin() }))
             }
+            if step == 4 {
+                Button("Open Keyboard Shortcuts") { model.openFinderServices() }
+            }
             HStack {
                 if step > 0 {
                     Button("Back") { step -= 1 }
                 }
                 Spacer()
-                Button(step == 4 ? "Done" : "Next") {
-                    if step == 4 {
+                Button(step == 5 ? "Done" : "Next") {
+                    if step == 5 {
                         model.finishSetup()
                     } else {
                         step += 1
@@ -142,6 +145,7 @@ struct FirstRunView: View {
         case 1: return "Notifications"
         case 2: return "Local network"
         case 3: return "Launch at login"
+        case 4: return "Send to phone"
         default: return "Pair the phone"
         }
     }
@@ -156,6 +160,8 @@ struct FirstRunView: View {
             return "macOS asks for the local network the first time the phone connects. Allow it. The phone and the Mac need the same Wi-Fi for the first pair."
         case 3:
             return "Launch at login is optional. The app should live in Applications if you turn it on."
+        case 4:
+            return "Right-click a file in Finder, then Quick Actions or Services, then Send to phone. The same steps work on macOS 13, 14, and 15. The app must be in Applications."
         default:
             return "On the next screen, scan the QR with the phone. Scan the Mac QR is the first button. The PIN lasts two minutes."
         }
