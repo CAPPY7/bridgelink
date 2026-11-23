@@ -9,7 +9,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Short code both screens show. It uses the Mac certificate the phone
- * actually saw, so a relay with a different certificate shows a different code.
+ * actually saw, so someone in the middle with a different certificate shows a different code.
  */
 public final class Sas {
     private Sas() {}

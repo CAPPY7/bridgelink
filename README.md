@@ -70,14 +70,14 @@ What was tested: CI unit tests and the emulator pairing test. Nothing in this bu
 | 14 | Phone as webcam | Built – NOT TESTED on a device. Live camera inside BridgeLink, with front or back, zoom, flash, and mic. A Zoom or FaceTime camera needs a paid Apple Developer ID, so that extension stays off |
 | 15 | Shared folder | Built – NOT TESTED on a device. Both ways, conflict copies, pause. You can choose the phone folder. Files over 32 MB use the normal file send and land in the shared folder |
 | 16 | Lock the Mac when you leave | Built – NOT TESTED on a device |
-| 17 | Away from home | Built – NOT TESTED on a device. A free relay forwards locked frames only. Pair once on Wi-Fi first |
-| 18 | Unified inbox | Built – NOT TESTED on a device |
+| 17 | Remote link | Removed. The phone and the Mac stay on the same Wi-Fi |
+| 18 | Unified inbox | Removed. Notifications, texts, and files stay in their own places |
 | 19 | Clipboard history | Built – NOT TESTED on a device |
 | 20 | Scan to Mac | Built – NOT TESTED on a device |
 | 21 | Automations | Built – NOT TESTED on a device. Up to eight when-this-then-that rules |
 | 22 | Quick drop | Built – NOT TESTED on a device. Quick Settings tile, menu-bar drop, and a floating drop zone |
 | 23 | Pairing | Built – NOT TESTED on a device. QR, several phones and Macs, rename, and forget |
-| 24 | End-to-end encryption | Built – NOT TESTED on a device. TLS on the local link. The away relay only forwards frames that are already locked |
+| 24 | Encrypted local link | Built – NOT TESTED on a device. TLS on the local link, with the Mac key pinned |
 | 25 | Key pin | Built – NOT TESTED on a device. If the Mac key changed, forget it and scan again |
 
 ## Build

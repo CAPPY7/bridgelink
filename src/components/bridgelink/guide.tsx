@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useBridge } from "@/lib/bridgelink/store";
 import { Btn } from "./ui";
 
-const FEATURES: { n: number; name: string; status: "Working" | "Partial"; note: string }[] = [
+const FEATURES: { n: number; name: string; status: "Working" | "Partial" | "Removed"; note: string }[] = [
   { n: 1, name: "Send files, links, and text", status: "Working", note: "Both ways, with pause and resume. Files are read in chunks." },
   { n: 2, name: "Share sheet and Mac drop", status: "Working", note: "Share to Mac on the phone. Drop a real file on the Mac pane." },
   { n: 3, name: "Notification mirror", status: "Working", note: "Dismiss and reply stay in sync. Apps can be blocked." },
@@ -20,14 +20,14 @@ const FEATURES: { n: number; name: string; status: "Working" | "Partial"; note: 
   { n: 14, name: "Phone as webcam", status: "Partial", note: "Browser preview only. No virtual camera other apps can select." },
   { n: 15, name: "Shared folder", status: "Partial", note: "Browse folders you mark and copy files. Finder does not mount a disk." },
   { n: 16, name: "Lock when you leave", status: "Working", note: "Delay is configurable. The Mac never unlocks by itself." },
-  { n: 17, name: "Away from home", status: "Partial", note: "Local, a saved host, and an encrypted relay path. No Tailscale install and no Firebase project." },
-  { n: 18, name: "Unified inbox", status: "Working", note: "Search, filters, pin, copy, and reply." },
+  { n: 17, name: "Remote link", status: "Removed", note: "This path is gone. The phone and the Mac stay on the same Wi-Fi." },
+  { n: 18, name: "Unified inbox", status: "Removed", note: "Notifications, texts, and files stay in their own places. The combined list is gone." },
   { n: 19, name: "Clipboard history", status: "Working", note: "Last 100, pins, and a sensitive filter." },
   { n: 20, name: "Scan to Mac", status: "Partial", note: "Contrast cleanup and send. No on-device OCR." },
   { n: 21, name: "Automations", status: "Working", note: "Wi-Fi, charging, time, and headphones can notify, lock, sync, or send." },
   { n: 22, name: "Quick drop", status: "Working", note: "The Mac drop zone targets the only paired phone." },
   { n: 23, name: "Pairing", status: "Working", note: "Six-digit PIN, two-minute expiry, forget, and pair again." },
-  { n: 24, name: "End-to-end encryption", status: "Working", note: "Relay traffic is sealed with AES-GCM. The log shows ciphertext length, not the note." },
+  { n: 24, name: "Encrypted local link", status: "Working", note: "The local link uses TLS and a pinned key." },
   { n: 25, name: "Key pin", status: "Working", note: "A changed fingerprint blocks sending until you trust or reject it." },
 ];
 
@@ -51,8 +51,8 @@ export function GuideDialog({ open, onOpenChange }: { open: boolean; onOpenChang
                 <li>The link pill should say Linked. Sample history is already there so you can try things immediately.</li>
                 <li>On the phone, open Send and deliver a note. Watch the chunk count finish on both sides.</li>
                 <li>Drop a file on the Mac drop zone, or type a link. A link opens on the other device.</li>
-                <li>Open Inbox on the Mac and dismiss an alert. It clears on the phone too.</li>
-                <li>Copy the bank code from the inbox. It lands on the Mac clipboard.</li>
+                <li>Open Alerts on the Mac and dismiss an alert. It clears on the phone too.</li>
+                <li>Copy the bank code from Alerts. It lands on the Mac clipboard.</li>
                 <li>On the phone, open Remote and allow accessibility, then drag the trackpad. The Mac pointer follows.</li>
                 <li>Approve Screen mirror for this session. Turn on control if you want clicks on the Mac to change the phone.</li>
                 <li>In Phone conditions, mark the phone as away and turn on proximity lock in Mac settings. Wait out the delay. Unlock only with the button.</li>
@@ -82,7 +82,7 @@ export function GuideDialog({ open, onOpenChange }: { open: boolean; onOpenChang
               </ul>
             </section>
             <Section title="If the link looks dead">
-              Drop the link in Settings and wait. It backs off and reconnects. Local is tried first. A saved host is for an address you already have, such as a Tailscale IP. Relay seals the payload before it would leave the device.
+              Drop the link in Settings and wait. It backs off and reconnects. Local is tried first. A saved host is for an address you already have, such as a Tailscale IP.
             </Section>
             <Section title="If the phone would be killed in the background">
               Allow the battery exemption, leave the foreground notice up, and on Xiaomi, Oppo, Vivo, Samsung, OnePlus, or Huawei also allow autostart and lock the app in recents. The permission screen says this in plain language.

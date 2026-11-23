@@ -81,7 +81,6 @@ struct DeskDetail: View {
             Toggle("Show notification text", isOn: Binding(get: { model.showNotificationText }, set: { model.setShowNotificationText($0) }))
             Text("Notification text is shown only while this Mac is unlocked and that switch is on. Otherwise only the app name is shown.")
                 .font(.callout).foregroundStyle(.secondary)
-            InboxPane()
             Button("Allow notifications") { model.notifications() }
             if model.canReply {
                 TextField("Reply", text: $model.replyDraft)
@@ -195,7 +194,6 @@ struct DeskDetail: View {
             Text(StageFive.pointerSteps).font(.callout).foregroundStyle(.secondary)
             Toggle("Let the phone move the pointer and type", isOn: Binding(get: { model.trackpadOn }, set: { model.setTrackpad($0) }))
             Button("Show the Accessibility steps") { model.explainPointer() }
-            RelayPane()
             Text("The first open needs one extra step because this app is not from the Mac App Store. macOS 13 or 14: right-click the app, choose Open, then Open. macOS 15 or newer: System Settings, Privacy and Security, Open Anyway.")
                 .font(.callout).foregroundStyle(.secondary)
             Text("BridgeLink 1.0.1").font(.headline)

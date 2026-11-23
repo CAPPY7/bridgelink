@@ -47,17 +47,6 @@ fun MirrorPage(model: PhoneModel, actions: PhoneActions) {
         BigButton(if (model.camMic) "Mic on" else "Mic off", "cam-mic", { model.camMic = !model.camMic }, tonal = true)
         BigButton("Start camera", "cam-start", actions::startCamera)
         BigButton("Stop camera", "cam-stop", actions::stopCamera, tonal = true)
-        Text("Away from home", style = MaterialTheme.typography.titleMedium)
-        Text(StageSix.RELAY_STEPS, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = model.relayUrl,
-            onValueChange = { model.relayUrl = it },
-            modifier = Modifier.fillMaxWidth().testTag("relay-url"),
-            label = { Text("Relay address, wss://") },
-            singleLine = true,
-        )
-        BigButton("Save relay", "relay-save", actions::saveRelay, tonal = true)
-        BigButton("Use away relay", "relay-use", actions::useRelay)
         EmptyState(Icons.Filled.Cast, "The picture shows on the Mac.", "This page starts it. The Mac window shows the screen.")
     }
 }

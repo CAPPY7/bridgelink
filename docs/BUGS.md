@@ -15,7 +15,7 @@ Each line is one problem. Fixed ones say Fixed and the idea of the change.
 11. If the Mac could not listen, the error did not mention the firewall. Fixed: the screen tells you to allow BridgeLink in System Settings, Network, Firewall.
 12. Several errors named the failure and did not say what to do. Fixed: each link error includes a next step, and the raw exception text stays off the screen.
 13. There was no way to save a safe log. Fixed: both apps have Send diagnostics. The file has version, connection, and port. It has no keys and no message text.
-14. LinkService.java is still longer than 400 lines. Left open on purpose this round so the connection fixes stay in one place. Split it in the next pass before adding features.
+14. LinkService.java was longer than 400 lines. Fixed: the name stays on LinkService. The socket is in LinkCore. Clipboard, alerts, files, ringing, and battery are in LinkDesk. Incoming messages are in LinkInbox. Each of those files is under 900 lines. NOT TESTED on a device.
 15. The Mac app still cannot skip Apple's first-open warning. That is not a bug. A free sideload cannot be notarized. The disk image explains the one extra step.
 
 ## v0.13 audit
@@ -23,7 +23,7 @@ Each line is one problem. Fixed ones say Fixed and the idea of the change.
 C1. The phone stayed Disconnected after the Mac closed the link with no error, until you tapped Connect. Fixed: a clean close with a saved token schedules the same backoff reconnect, and a bad key or a bad code does not.
 C2. A web page could open a pairing link, replace the saved Mac key, and the phone would send the old token to that fake Mac. Fixed: the link asks "Pair with this Mac?" first, a different key says "This is a different Mac", and the old token is removed before any hello.
 C3. The Mac opened every received file, and any phone app could push a file with no tap. Fixed: files stay closed until you press Open or Show in Finder. Only a scan can open by itself, and only if Open scans automatically is on. The share sheet asks Send or Cancel first.
-C4. Away from home could not switch back to Wi-Fi, and a quiet relay was dropped. Fixed: a returning network still starts a Wi-Fi try while the away link is up. A real Wi-Fi pair closes the relay.
+C4. The removed remote path could not switch back to Wi-Fi, and a quiet remote-link was dropped. Fixed: a returning network still starts a Wi-Fi try while the away link is up. A real Wi-Fi pair closes the remote-link.
 C5. A forgotten phone kept the away-from-home secret and could still send commands. Fixed: each phone has its own secret in the Mac keychain. Forgetting that phone deletes only its secret.
 C6. Finished features were marked not device-tested even when the test only checked a sentence. Partly fixed: every feature message now has to appear in a test, and a unit test sends each message through the envelope and reads it back. The emulator still only pairs and sends one note, not every feature.
 C7. The Mac could only start the screen or the camera while the phone app was open, and it ignored the Mac's quality and camera choices. Fixed: a high-priority "Tap to allow" notice opens the allow screen with the Mac's choices, even if BridgeLink is in the background.
@@ -49,32 +49,32 @@ M3. A second phone that was still pairing silently dropped the first waiting con
 M4. The phone could not stop the Mac ringing, and the Mac only beeped. Fixed: Stop Mac ringing sends find-stop. The Mac plays a loud system sound for 30 seconds.
 N1. The Mac app did not compile. Fixed: the picture decoder can see the shared protocol, the listener no longer unwraps itself twice, and the read buffer is not captured as a non-sendable value. The test can build an incoming frame. The send-window check no longer calls the semaphore, which stopped the Mac tests with signal 5. NOT TESTED on a device. Swift was not run here.
 N2. The emulator pair test never tapped Pair, so it never saw "Paired with the Mac". Fixed: the test waits until the pair screen is up, then taps Pair. The pair question is on the screen. It is not a service status line. NOT TESTED on a device. The emulator only runs in CI.
-N3. A sleeping relay forgot which side was which, and forgot the room key. Fixed: the role stays on the socket, and the room key stays in storage. NOT TESTED on a device. A local relay test covers a wake-up. The worker is not deployed.
-N4. The away relay closed because the connection was old, even when frames were still moving. A drop also left the apps looking paired. Fixed: it closes after 10 minutes of silence. Both apps say "Away link down" and try again after a wait. NOT TESTED on a device.
-N5. Each Wi-Fi retry tore down a working away relay and started it again. Fixed: if the away relay is already up, it is left alone. NOT TESTED on a device.
-N6. The phone sent the away sign-in once, so a late Mac never accepted it. Fixed: the phone keeps sending until the Mac answers relay_ok, and sends again when the Mac joins. Forgotten stops the away link. Old message types still work. NOT TESTED on a device.
-N7. A late Mac reply on the away relay was thrown away. Fixed: while Wi-Fi is down, replies still go out on the away relay. NOT TESTED on a device.
-N12. The apps said paired as soon as the away relay connected, before the Mac checked the phone. Fixed: paired shows only after the Mac accepts the sign-in, and a drop clears it. NOT TESTED on a device.
-N17. The away relay counted both directions together and never forgot old counts. Fixed: each direction has its own count, and counts older than a few seconds are dropped. NOT TESTED on a device. A local relay test covers it. The worker is not deployed.
+N3. A sleeping remote-link forgot which side was which, and forgot the room key. Fixed: the role stays on the socket, and the room key stays in storage. NOT TESTED on a device. A local remote-link test covers a wake-up. The worker is not deployed.
+N4. The away remote-link closed because the connection was old, even when frames were still moving. A drop also left the apps looking paired. Fixed: it closes after 10 minutes of silence. Both apps say "Away link down" and try again after a wait. NOT TESTED on a device.
+N5. Each Wi-Fi retry tore down a working away remote-link and started it again. Fixed: if the away remote-link is already up, it is left alone. NOT TESTED on a device.
+N6. The phone sent the away sign-in once, so a late Mac never accepted it. Fixed: the phone keeps sending until the Mac answers remote-link_ok, and sends again when the Mac joins. Forgotten stops the away link. Old message types still work. NOT TESTED on a device.
+N7. A late Mac reply on the away remote-link was thrown away. Fixed: while Wi-Fi is down, replies still go out on the away remote-link. NOT TESTED on a device.
+N12. The apps said paired as soon as the away remote-link connected, before the Mac checked the phone. Fixed: paired shows only after the Mac accepts the sign-in, and a drop clears it. NOT TESTED on a device.
+N17. The away remote-link counted both directions together and never forgot old counts. Fixed: each direction has its own count, and counts older than a few seconds are dropped. NOT TESTED on a device. A local remote-link test covers it. The worker is not deployed.
 X6. A file from the Mac opened by itself. Partly fixed earlier: the phone showed a notice. The tap did not open the file until the activity button. See the later X6 line.
-V1. The away relay rewrote its idle clock on every frame. Fixed: the clock moves at most once every 30 seconds. A quiet room still closes after 10 minutes. NOT TESTED on a device. A local relay test covers the clock.
-V2. The relay room tests were not part of the checks. Fixed: they run with the other web tests, and a wake-up uses a new socket that only has the saved note, then a frame is forwarded. NOT TESTED on a device.
+V1. The away remote-link rewrote its idle clock on every frame. Fixed: the clock moves at most once every 30 seconds. A quiet room still closes after 10 minutes. NOT TESTED on a device. A local remote-link test covers the clock.
+V2. The remote-link room tests were not part of the checks. Fixed: they run with the other web tests, and a wake-up uses a new socket that only has the saved note, then a frame is forwarded. NOT TESTED on a device.
 M10. Password-manager clipboard items could be copied and stored. Fixed: Android skips clips marked sensitive on Android 13 and newer. The Mac skips concealed and transient pasteboard types. Those clips are not sent and not stored. NOT TESTED on a device.
 X8. The phone could start the link for any broadcast the boot receiver saw. Fixed: it starts only after the phone boots or the app is updated. NOT TESTED on a device.
 L10. Signing the Mac app changed the default keychain even on a home computer. Partly fixed earlier: the default changes only on CI. The certificate was still invisible on a home Mac until W4. See the later L10 line.
 L12. A script in the repo could make a new Android signing key. Fixed: that script is deleted, and the docs no longer tell anyone to run it. Do not add it back.
 X9. A Java key file could be committed by accident. Fixed: .jks files are ignored, the same way .keystore files already were.
 W2. The away sign-in retry ran on the phone's main thread, so the send was dropped, and cancelling it never found the old wait. Fixed: one saved retry posts the sign-in, and the actual write runs on the send thread. NOT TESTED on a device.
-N6. Partly fixed before. The phone now keeps one sign-in until the Mac answers, including when the phone joins first. A test covers relay_ok and forgotten both stopping that retry. NOT TESTED on a device.
+N6. Partly fixed before. The phone now keeps one sign-in until the Mac answers, including when the phone joins first. A test covers remote-link_ok and forgotten both stopping that retry. NOT TESTED on a device.
 W1. File and link notice buttons used a broadcast, which Android 12 and newer blocks, so Open did nothing. Fixed: Open and Show in Downloads are real activity buttons. The file grant sits on the view itself. NOT TESTED on a device.
 X6. A file from the Mac is not opened by itself. Tapping the notice or Open starts the real view screen for that file. An install file still has no Open button. NOT TESTED on a device.
 L9. A link from the Mac opened itself whenever the screen was on. Fixed: it waits for Open unless Always open links is on. NOT TESTED on a device.
 W6. Open was offered for some Android install files, not only .apk. Fixed: .apks, .xapk, .aab, and the Android package type have no Open button. NOT TESTED on a device.
 W7. Every file notice used the same number, so a second file hid the first. Fixed: each file gets its own notice number. NOT TESTED on a device.
-W3. The away relay looked for a closed flag that Cloudflare sockets do not have, so it kept the room key after the last socket closed. Fixed: a socket just closed, or one whose ready state is closed, is not counted. NOT TESTED on a device. The worker is not deployed.
+W3. The away remote-link looked for a closed flag that Cloudflare sockets do not have, so it kept the room key after the last socket closed. Fixed: a socket just closed, or one whose ready state is closed, is not counted. NOT TESTED on a device. The worker is not deployed.
 W4. On a home Mac, signing could not see the BridgeLink certificate because the tool was not pointed at that keychain. Fixed: codesign gets --keychain, the keychain is on the search list only while signing, and the old list is restored. The default keychain still changes only on CI. NOT TESTED on a device.
 L10. The Mac signing script used to change the home default keychain. Fixed: it changes that default only on CI, and codesign is pointed at the BridgeLink keychain instead. NOT TESTED on a device.
-W5. The away-relay send rule lived only in a test. Fixed: the phone uses that same rule, so a late reply still goes out on the away relay when it should. NOT TESTED on a device.
+W5. The away-remote-link send rule lived only in a test. Fixed: the phone uses that same rule, so a late reply still goes out on the away remote-link when it should. NOT TESTED on a device.
 W8. The progress note said v1.0.0 was released. Fixed: it now says there is no v1.0.0 release. The published builds are v0.12.0 and v1.0.1.
 X7. Every phone copy was saved as plain text, even when clipboard history was off. Fixed: history stays off until you turn it on, Clear history wipes it, copies older than 24 hours are dropped, and the file is sealed with the keystore key. If the keystore cannot be used, the copies stay in memory only. NOT TESTED on a device.
 N11. Home Wi-Fi automations cannot see the network name on Android 10 and newer. Fixed: that trigger is removed. Saved rules that used it are ignored. NOT TESTED on a device.
@@ -149,14 +149,14 @@ H16. Check for update only opened the release page. Fixed: it downloads the disk
 S0-1. The feature check only allowed "self-tested", so CI stopped before the unit tests. Fixed: it allows Not started, Building, Built – NOT TESTED on a device, Final – owner tested, and Removed. NOT TESTED on a device.
 S0-4. A transfer id from the other side was used as a file name. Fixed: the phone and the Mac accept only 1 to 64 hex characters. NOT TESTED on a device.
 S0-5. A big shared file sent every chunk at once, blocked the folder queue, and the phone sent it on the message thread. Fixed: at most 6 chunks are ahead, the send stops when the link drops, a size change sends file_cancel, and folder disk work stays off the Mac main thread. NOT TESTED on a device.
-S0-6. LinkCore.java is still one long file. Partly: the split waits until the away relay is removed, and it must be finished before the phase 2 audit. NOT TESTED on a device.
+S0-6. LinkCore.java was still one long file. Fixed: the socket stays in LinkCore. Clipboard, alerts, files, ringing, and battery are in LinkDesk. Incoming messages are in LinkInbox. NOT TESTED on a device.
 S0-7. The Mac tests did not read the sample messages. Fixed: a Mac test reads docs/fixtures and fails if a message type has no sample. NOT TESTED on a device.
 S0-8. Compose, Room, activity-compose, and core were old. Partly: Room is 2.8.5 and core and core-ktx are 1.16.0. Compose BOM 2026.06.01 made lint crash on this Kotlin 2.0.21 toolchain, so Compose stays on 2024.12.01 and activity-compose stays on 1.9.3. The November 2026 BOM still needs Android Gradle Plugin 9. NOT TESTED on a device.
 S0-9. The web test script was checked. The demo page does not use the database, multiplayer, or app data. The app shell still needs the auth provider, so those files stay. The test script already names files that exist. NOT TESTED on a device.
 S0-10. The default shared folder inserted a Documents row on every lookup. Fixed: that insert happens once and is remembered. The default folder is still the app's own Documents/BridgeLink Shared until you pick one. NOT TESTED on a device.
 S0-11. The progress note still said the next step was L1, and the feature list said CI was green. Fixed: the notes match this pass, and "CI is green" is removed until a green run is real.
 S0-12. The folder watch only saw the top folder. Fixed: the phone watches each subfolder, and the Mac uses a recursive folder event stream. NOT TESTED on a device.
-L1. The phone link file is still longer than 900 lines. Partly: the work moved into LinkCore, and the real split is S0-6. NOT TESTED on a device.
+L1. The phone link file was longer than 900 lines. Fixed: see S0-6. LinkCore, LinkDesk, and LinkInbox are each under 900 lines. NOT TESTED on a device.
 L2. The Mac tests did not parse every sample message. Fixed: see S0-7. NOT TESTED on a device.
 L15. Library versions were old. Partly: see S0-8. NOT TESTED on a device.
 R1. Already kept. The docs were not claiming a device test in this pass.
@@ -166,3 +166,4 @@ R5. The demo does not need a database. The shell still uses the auth provider. S
 R6. Already kept.
 D1. Docs still said self-tested before this pass. Fixed earlier: the status words say NOT TESTED on a device. NOT TESTED on a device.
 Step 0 self-audit pass 1: 0 found, 0 fixed. NOT TESTED on a device.
+B1. The remote path is removed. Old messages of that kind are ignored and never sent. The screens, settings, worker, and tests for it are gone. NOT TESTED on a device.

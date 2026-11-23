@@ -6,8 +6,8 @@ import Foundation
 public enum Features {
     public static let names = [
         "files", "links", "text", "clipboard", "find", "battery", "media",
-        "notify", "otp", "sms", "inbox", "clips", "scan", "auto", "folder",
-        "input", "mirror", "control", "camera", "relay", "lock",
+        "notify", "otp", "sms", "clips", "scan", "auto", "folder",
+        "input", "mirror", "control", "camera", "lock",
     ]
 
     private static let keywords = [

@@ -66,6 +66,7 @@ public final class Envelope {
         envelope.id = required(root, "id");
         envelope.type = required(root, "type");
         envelope.from = required(root, "from");
+        // Ignore old relay_* messages. A sender named relay is still parsed, then dropped.
         if (!"android".equals(envelope.from) && !"mac".equals(envelope.from) && !"relay".equals(envelope.from)) {
             throw new IllegalArgumentException("Bad sender");
         }

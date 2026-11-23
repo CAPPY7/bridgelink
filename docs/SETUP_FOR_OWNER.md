@@ -35,13 +35,6 @@ Push a tag `v1.0.0`, or run the Release workflow and type that tag. The release 
 
 Check for update reads appcast.xml from the latest release. The Sparkle app framework is not linked. The button opens the release page instead of installing by itself. A Sparkle EdDSA key was not created here.
 
-## 4. Away-from-home relay (free, optional)
+## 4. Remote path
 
-The phone and the Mac still pair on the same Wi-Fi first. That gives them a key. After that, a relay can carry the locked frames when they are not on the same network. The relay cannot read the frames.
-
-1. Create a free Cloudflare account.
-2. Install Wrangler: `npm install -g wrangler`, then `wrangler login`.
-3. From the `relay` folder, run `wrangler deploy`.
-4. Copy the `wss://` address it prints.
-5. Paste that address in Settings on the Mac and on the phone, then save it.
-6. When the local link fails, tap Use away relay on both.
+Removed. Do not deploy a worker. The phone and the Mac link only on the same Wi-Fi.

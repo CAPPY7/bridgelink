@@ -13,7 +13,6 @@ final class SixHold: ObservableObject {
     @Published var zoom = 1
     @Published var flash = false
     @Published var mic = false
-    @Published var relayUrl = UserDefaults.standard.string(forKey: "relayUrl") ?? ""
     @Published var mirrorStatus = "Waiting for the phone to allow the screen."
     @Published var camStatus = "The phone camera shows here. Share this window in a call if you need it there."
     @Published var picW = 1280
@@ -145,30 +144,5 @@ private struct WebcamBody: View {
             .frame(height: 360)
         }
         .onDisappear { model.stopCamera() }
-    }
-}
-
-struct RelayPane: View {
-    @EnvironmentObject private var model: LinkModel
-
-    var body: some View {
-        RelayBody(six: model.six)
-    }
-}
-
-private struct RelayBody: View {
-    @ObservedObject var six: SixHold
-    @EnvironmentObject private var model: LinkModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Away from home").font(.headline)
-            Text(StageSix.relaySteps).font(.callout).foregroundStyle(.secondary)
-            TextField("wss:// relay address", text: $six.relayUrl)
-            HStack {
-                Button("Save relay") { model.saveRelay() }
-                Button("Use away relay") { model.tryRelay() }
-            }
-        }
     }
 }

@@ -14,18 +14,12 @@ import UserNotifications
 extension LinkModel {
     func send(type: String, payload: [String: String], on connection: NWConnection?, done: (() -> Void)? = nil) {
         let json = EnvelopeCodec.json(type: type, from: "mac", payload: payload)
-        let wifiUp = live != nil
-        let relayUp = away?.isLive == true
-        if StageSix.useRelay(reply: replyOnRelay, wifiUp: wifiUp, relayUp: relayUp), let away {
-            away.sendJson(json, done: done)
+        if let connection {
+            connection.send(content: encodeFrame(json: json), completion: .contentProcessed { _ in done?() })
             return
         }
-        if connection != nil {
-            connection?.send(content: encodeFrame(json: json), completion: .contentProcessed { _ in done?() })
-            return
-        }
-        if let away, away.isLive {
-            away.sendJson(json, done: done)
+        if let live {
+            live.send(content: encodeFrame(json: json), completion: .contentProcessed { _ in done?() })
             return
         }
         done?()

@@ -178,7 +178,7 @@ STAGE 3 – FINISH EVERY HALF-DONE FEATURE (version 0.10.0)
  10 Clipboard sync: automatic both ways (on/off), skip passwords/sensitive text, images too.
  22 Quick drop: tile, menu-bar drop, and a floating drop zone on the Mac.
  23 Pairing: one-tap QR, several phones and several Macs, rename and forget devices.
- 24 Encryption: keep TLS; every new feature (incl. relay in Stage 6) must stay end-to-end encrypted.
+ 24 Encryption: keep TLS; every new feature (incl. remote-link in Stage 6) must stay end-to-end encrypted.
  25 Key pin: keep; clear "this Mac changed" screen with a safe re-pair button.
 
 STAGE 4 – EASY NEW FEATURES (version 0.11.0)
@@ -218,10 +218,10 @@ STAGE 6 – HARD NEW FEATURES (version 0.13.0)
         (front/back, zoom, flash, mic option), which can be shared in calls via screen share.
       - Write the Camera Extension code too, but enable it only when the APPLE_* secrets exist.
     Say this in README in one line.
- 17 Away from home: works when phone and Mac are on different networks.
-    Use a FREE relay: a small Cloudflare Worker with Durable Objects (free tier) that only
+ 17 The removed remote path: works when phone and Mac are on different networks.
+    Use a FREE remote-link: a small Cloudflare Worker with Durable Objects (free tier) that only
     forwards already-encrypted frames, OR peer-to-peer WebRTC with a free STUN server and the
-    relay as fallback. The relay must never see plain data. Deploy steps in SETUP_FOR_OWNER.md.
+    remote-link as fallback. The remote-link must never see plain data. Deploy steps in SETUP_FOR_OWNER.md.
     If you need me to create a free account, ask ONCE with exact simple steps.
 
 STAGE 7 – POLISH + FINAL CHECK (version 1.0.0)
@@ -252,7 +252,7 @@ PART 6 – ALL 25 FEATURES (checklist – every one must be built)
  1 Send files, links, text          14 Phone as webcam
  2 Share sheet + drag-drop          15 Shared folder
  3 Notification mirroring           16 Lock the Mac when you leave
- 4 Media control                    17 Away from home (relay)
+ 4 Media control                    17 The removed remote path (remote-link)
  5 Battery status                   18 Unified inbox
  6 Find phone / Find Mac            19 Clipboard history
  7 OTP auto-copy                    20 Scan to Mac

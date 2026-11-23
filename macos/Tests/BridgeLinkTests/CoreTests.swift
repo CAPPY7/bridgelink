@@ -161,7 +161,7 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(preferredLanAddress(interface: "en0", address: "192.168.1.20"))
     }
 
-    func testRelayCannotReuseAMatchCode() {
+    func testMiddlemanCannotReuseAMatchCode() {
         XCTAssertEqual(sasCode(macFingerprint: "ab", phoneNonce: "phone", macNonce: "mac"), "001826")
         let phoneSees = sasCode(macFingerprint: "attacker", phoneNonce: "phone", macNonce: "mac")
         let macSees = sasCode(macFingerprint: "realmac", phoneNonce: "phone", macNonce: "mac")
@@ -252,6 +252,17 @@ final class CoreTests: XCTestCase {
         }
     }
 
+    func testOldRelayMessageIsIgnored() throws {
+        let json = #"{"v":1,"id":"old1","type":"relay_auth","from":"android","ts":1000,"payload":{"body":"x"}}"#
+        let env = try EnvelopeCodec.parse(Data(json.utf8))
+        XCTAssertTrue(OldMessages.ignore(env.type))
+        XCTAssertFalse(FeatureMessages.types.contains(env.type))
+        let oldFrom = json.replacingOccurrences(of: "\"android\"", with: "\"relay\"")
+        let parsed = try EnvelopeCodec.parse(Data(oldFrom.utf8))
+        XCTAssertEqual(parsed.from, "relay")
+        XCTAssertTrue(OldMessages.ignore(parsed.type))
+    }
+
     private func fixtureDir() -> URL {
         let start = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         var cursor = start
@@ -331,15 +342,6 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(clips.contains { $0.id == pinned && $0.pinned })
         clips = StageFour.delete(clips, pinned)
         XCTAssertFalse(clips.contains { $0.id == pinned })
-        var inbox = StageFour.addInbox([], "notify", "Mail", "hi", false, 1)
-        inbox = StageFour.addInbox(inbox, "file", "a.pdf", "Saved", false, 2)
-        inbox = StageFour.addInbox(inbox, "sms", "Ada", "password: secret", true, 3)
-        inbox = StageFour.addInbox(inbox, "notify", "Bank", "482193", false, 4)
-        XCTAssertEqual(inbox[0].detail, "Hidden")
-        XCTAssertEqual(inbox[1].detail, "Hidden")
-        XCTAssertEqual(StageFour.filter(inbox, "file", "").count, 1)
-        XCTAssertEqual(StageFour.filter(inbox, "all", "pdf").count, 1)
-        XCTAssertEqual(StageFour.decodeInbox(StageFour.encodeInbox(inbox))[2].title, "a.pdf")
     }
 
     func testFeaturesMatchThePhoneRules() throws {
@@ -519,35 +521,6 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(StageSix.facing("front"), "front")
         XCTAssertEqual(StageSix.facing("side"), "back")
         XCTAssertEqual(StageSix.jpegQuality("low"), 40)
-        XCTAssertFalse(StageSix.relayUrl("ws://relay.example.com"))
-        XCTAssertFalse(StageSix.relayUrl("wss://user@relay.example.com/x"))
-        XCTAssertFalse(StageSix.relayUrl("wss://localhost/room"))
-        XCTAssertFalse(StageSix.relayUrl("wss://127.0.0.1/room"))
-        XCTAssertTrue(StageSix.relayUrl("wss://relay.example.com"))
-        XCTAssertTrue(StageSix.relayUrl("wss://relay.example.com:8443/bridge"))
-        XCTAssertTrue(StageSix.useRelay(reply: false, wifiUp: false, relayUp: true))
-        XCTAssertTrue(StageSix.useRelay(reply: true, wifiUp: true, relayUp: true))
-        XCTAssertFalse(StageSix.useRelay(reply: false, wifiUp: true, relayUp: true))
-        XCTAssertFalse(StageSix.useRelay(reply: true, wifiUp: false, relayUp: false))
-        let whereTo = try XCTUnwrap(StageSix.relayParts("wss://relay.example.com:8443/bridge"))
-        XCTAssertEqual(whereTo.host, "relay.example.com")
-        XCTAssertEqual(whereTo.port, "8443")
-        XCTAssertEqual(whereTo.path, "/bridge")
-        let secret = "0123456789abcdefRELAY"
-        let ticket = StageSix.ticket(secret, "phone")
-        XCTAssertEqual(ticket.count, 32)
-        XCTAssertFalse(ticket.contains("RELAY"))
-        XCTAssertEqual(ticket, StageSix.ticket(secret, "other"))
-        XCTAssertNotEqual(ticket, StageSix.ticket(secret, "mac"))
-        XCTAssertEqual(StageSix.ticket("short", "phone"), "")
-        XCTAssertEqual(StageSix.room(secret), Features.roomId(secret))
-        let key = Features.deriveKey(secret)
-        var nonce = Data(count: 12)
-        nonce[0] = 9
-        let plain = Data("hello-frame-unique".utf8)
-        let sealed = try Features.seal(key: key, counter: 4, nonce: nonce, plaintext: plain)
-        XCTAssertTrue(StageSix.sealedLooksOpaque(plain: plain, sealed: sealed))
-        XCTAssertFalse(StageSix.sealedLooksOpaque(plain: plain, sealed: plain))
         XCTAssertFalse(StageSix.cameraExtension(false))
         XCTAssertTrue(StageSix.cameraExtension(true))
         XCTAssertTrue(StageSix.stopWhenClosed(false))

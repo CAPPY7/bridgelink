@@ -30,14 +30,14 @@ Install first: `docs/INSTALL.md`. macOS 15 uses Open Anyway. The phone APK must 
 - [ ] 14. Start the camera → the Mac shows the live camera inside BridgeLink. Switch front and back. It does not appear as a camera in Zoom.
 - [ ] 15. Put a small file in the shared folder on one side → it shows up on the other. Pause sync → a new file stays put. A file over 32 MB is skipped.
 - [ ] 16. Turn on leave-lock, then walk the phone away → the Mac locks after the delay. Bring the phone back → the Mac stays locked.
-- [ ] 17. After one Wi-Fi pairing, set the same relay address on both and leave the Wi-Fi → a note still arrives. The relay address is only a forwarder.
-- [ ] 18. Open the Mac inbox → notifications, texts, and received files are in one list. Search finds one of them.
+- [ ] 17. Removed. Away and a remote address do not appear in either app.
+- [x] 18. Removed. There is no combined inbox. Alerts, texts, and files each have their own place.
 - [ ] 19. Copy several things → history shows them, up to 100. A password is not stored. Pin one, delete one.
 - [ ] 20. Scan a page on the phone → a file is saved on the Mac and opened. If the scanner is missing, pick a photo instead and that arrives too.
 - [ ] 21. Add one rule, phone connects then alert → the next connect shows that alert. An eighth rule is the last one accepted.
 - [ ] 22. Drop a file on the menu-bar icon → the phone receives it.
 - [ ] 23. Forget the phone, then scan the QR again → you are paired without reinstalling. Rename the phone → the Mac shows the new name.
-- [ ] 24. Pair, then look at a note on the wire only if you are debugging → the away relay never shows the note text. Local traffic still uses the pinned Mac certificate.
+- [ ] 24. Pair, then look at a note on the wire only if you are debugging. Local traffic uses the pinned Mac certificate.
 - [ ] 25. Delete is not required. If the Mac key changes, the phone says so and sending stops → Forget this Mac, then scan again, and sending works.
 
 ## Update and reset

@@ -32,52 +32,6 @@ struct MediaButtons: View {
     }
 }
 
-struct InboxPane: View {
-    @EnvironmentObject private var model: LinkModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Notifications, text messages, and files you received. Search does not show passwords or codes.")
-                .foregroundStyle(.secondary)
-            Picker("Show", selection: Binding(get: { model.inboxFilter }, set: { model.inboxFilter = $0 })) {
-                Text("All").tag("all")
-                Text("Notifications").tag("notify")
-                Text("Messages").tag("sms")
-                Text("Files").tag("file")
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 420)
-            TextField("Search", text: Binding(get: { model.inboxQuery }, set: { model.inboxQuery = $0 }))
-            let rows = StageFour.filter(model.inbox, model.inboxFilter, model.inboxQuery)
-            if rows.isEmpty {
-                EmptyNote(
-                    symbol: "tray",
-                    title: "Nothing in the inbox yet.",
-                    line: "Notifications, text messages, and received files show up here."
-                )
-            } else {
-                ForEach(Array(rows.prefix(30).enumerated()), id: \.offset) { _, item in
-                    CardBox {
-                        Text(label(item.kind) + " · " + item.title).font(.headline)
-                        if !item.detail.isEmpty {
-                            Text(item.detail).font(.callout).foregroundStyle(.secondary).lineLimit(3)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func label(_ kind: String) -> String {
-        switch kind {
-        case "notify": return "Notification"
-        case "sms": return "Message"
-        case "file": return "File"
-        default: return "Item"
-        }
-    }
-}
-
 struct ClipHistoryPane: View {
     @EnvironmentObject private var model: LinkModel
 

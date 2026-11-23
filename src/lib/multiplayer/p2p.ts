@@ -12,9 +12,9 @@
 export type SignalKind = "offer" | "answer" | "ice";
 
 /**
- * Wire contract between this client and the signaling relay the app provides
+ * Wire contract between this client and the signaling service the app provides
  * at /api/rtc (see the multiplayer-p2p skill for a reference implementation).
- * The client only needs these shapes — the relay's storage is the app's choice.
+ * The client only needs these shapes — how those signals are stored is the app's choice.
  */
 export interface PeerRow {
   id: string;
@@ -35,7 +35,7 @@ export interface PeerInfo {
   id: string;
   name: string;
   connectionState: RTCPeerConnectionState;
-  /** Selected local ICE candidate type: host | srflx | prflx | relay. */
+  /** Selected local ICE candidate type: host, server-reflexive, or peer-reflexive. */
   candidateType: string | null;
   /** Data-channel ping RTT (ms), measured every 2s once connected. */
   rttMs: number | null;
@@ -536,7 +536,7 @@ export class P2PRoom {
   }
 
   private async readCandidateType(slot: PeerSlot): Promise<void> {
-    // relay = TURN (none configured by default); srflx/host = direct path.
+    // TURN is not configured; a server-reflexive or host candidate is a direct path.
     try {
       const stats = await slot.pc.getStats();
       let selected: RTCIceCandidatePairStats | undefined;

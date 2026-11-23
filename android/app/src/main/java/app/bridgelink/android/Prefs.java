@@ -13,6 +13,7 @@ import java.util.Set;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
+import app.bridgelink.android.protocol.OldMessages;
 import app.bridgelink.android.protocol.SecretBox;
 
 /**
@@ -22,8 +23,6 @@ import app.bridgelink.android.protocol.SecretBox;
 public final class Prefs {
     public static final String TOKEN = "token";
     public static final String TOKENS = "macTokens";
-    public static final String RELAY = "relaySecret";
-    public static final String RELAY_BOOK = "relayBook";
     public static final String WARNING =
             "Android Keystore is unavailable. The pairing token will not be saved on this phone.";
 
@@ -49,6 +48,14 @@ public final class Prefs {
             keystoreFailed = true;
         }
         migrateLegacy(raw, legacy, key);
+        SharedPreferences.Editor drop = raw.edit();
+        SharedPreferences.Editor dropLegacy = legacy.edit();
+        for (String name : OldMessages.SAVED) {
+            drop.remove(name);
+            dropLegacy.remove(name);
+        }
+        drop.commit();
+        dropLegacy.commit();
         cached = new SealedPrefs(raw, key);
         heldKey = key;
         return cached;
@@ -257,7 +264,7 @@ public final class Prefs {
         }
 
         private void flushSecrets() {
-            for (String name : new String[]{TOKEN, TOKENS, RELAY, RELAY_BOOK}) {
+            for (String name : new String[]{TOKEN, TOKENS}) {
                 if (!pending.containsKey(name)) continue;
                 String value = pending.remove(name);
                 if (value == null || value.isEmpty() || key == null) {
@@ -274,6 +281,6 @@ public final class Prefs {
     }
 
     private static boolean secret(String name) {
-        return TOKEN.equals(name) || TOKENS.equals(name) || RELAY.equals(name) || RELAY_BOOK.equals(name);
+        return TOKEN.equals(name) || TOKENS.equals(name);
     }
 }

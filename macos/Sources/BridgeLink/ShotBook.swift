@@ -29,8 +29,6 @@ enum ShotBook {
         model.mirrorOn = true
         model.nowPlaying = "Playing Sunny - Ada"
         model.clips = StageFour.add([], "Grocery list", false, 5)
-        model.inbox = StageFour.addInbox([], "file", "scan.pdf", "Saved on this Mac", false, 2)
-        model.inbox = StageFour.addInbox(model.inbox, "notify", "Mail", "Package arrived", false, 3)
         model.lockOn = true
         model.lockFar = 70
         model.lockDelay = 30
@@ -42,7 +40,6 @@ enum ShotBook {
         model.six.mirrorStatus = "Waiting for the phone to allow the screen."
         model.six.camStatus = "The phone camera shows here."
         model.six.quality = "medium"
-        model.six.relayUrl = "wss://relay.example.com"
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover.png", folder, .light)
         try saveImage(PopoverView().environmentObject(model).frame(width: 360), "mac-popover-dark.png", folder, .dark)
         for tab in DeskTab.allCases {

@@ -64,8 +64,6 @@ jobs:
       - run: npm run typecheck
       - name: Demo protocol tests
         run: node --experimental-strip-types --test src/lib/bridgelink/protocol.test.ts
-      - name: Relay room tests
-        run: node --test relay/room.test.js
 
   emulator:
     runs-on: ubuntu-latest

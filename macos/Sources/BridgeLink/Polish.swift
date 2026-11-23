@@ -75,19 +75,18 @@ extension LinkModel {
         book = DeviceBook()
         saveBook()
         phase = .listening
-        RelayVault.deleteAll()
+        OldMessages.dropSaved()
         let keys = [
             "clipboardMode", "flags", "showNotificationText", "linksAlways", "dndSync",
             "lockOn", "atDesk", "lockFar", "lockDelay", "notifyOff", "autoRules",
-            "folderPaused", "relayUrl", "didFinishSetup",
+            "folderPaused", "didFinishSetup",
         ]
         for key in keys {
             UserDefaults.standard.removeObject(forKey: key)
         }
         clips = []
         ClipFile.save([])
-        inbox = []
-        InboxFile.save([])
+        dropInboxStore()
         rules = []
         messages = []
         try? "".write(to: smsFile(), atomically: true, encoding: .utf8)

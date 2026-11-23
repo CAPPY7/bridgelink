@@ -87,16 +87,6 @@ public class ProtocolTest {
         assertEquals(500L, Backoff.nextMs(0));
         assertEquals(1000L, Backoff.nextMs(1));
         assertEquals(30_000L, Backoff.nextMs(20));
-        assertTrue(RelayRetry.rejoin(RelayRetry.DOWN));
-        assertFalse(RelayRetry.rejoin("The away relay could not be reached."));
-        assertEquals(500L, RelayRetry.delayMs(0));
-        assertEquals(30_000L, RelayRetry.delayMs(20));
-        assertTrue(RelayRetry.leaveIt(true));
-        assertFalse(RelayRetry.leaveIt(false));
-        assertTrue(RelayAuth.keepSending(false, ""));
-        assertFalse(RelayAuth.keepSending(true, ""));
-        assertFalse(RelayAuth.keepSending(false, "forgotten"));
-        assertTrue(RelayAuth.forgotten("forgotten"));
     }
 
     @Test
@@ -164,20 +154,20 @@ public class ProtocolTest {
     }
 
     @Test
-    public void relayShowsADifferentMatchCodeAndGetsNoToken() {
+    public void middlemanShowsADifferentMatchCodeAndGetsNoToken() {
         assertEquals("001826", Sas.code("ab", "phone", "mac"));
         String phoneSees = Sas.code("attacker", "phone", "mac");
         String macSees = Sas.code("realmac", "phone", "mac");
         assertFalse(phoneSees.equals(macSees));
-        HelloPlan relay = HelloPlan.decide("Pixel", "123456", "", "", "attacker", "phone");
-        assertFalse(relay.payload.has("proof"));
-        assertFalse(relay.payload.has("token"));
-        assertFalse(relay.payload.has("pin"));
-        assertFalse(relay.payload.has("nonce"));
+        HelloPlan middle = HelloPlan.decide("Pixel", "123456", "", "", "attacker", "phone");
+        assertFalse(middle.payload.has("proof"));
+        assertFalse(middle.payload.has("token"));
+        assertFalse(middle.payload.has("pin"));
+        assertFalse(middle.payload.has("nonce"));
     }
 
     @Test
-    public void relayCannotGrindACommittedNonce() {
+    public void middlemanCannotGrindACommittedNonce() {
         String macNonce = "mac-nonce-fixed";
         String commit = Sas.commit(macNonce);
         String target = Sas.code("realmac", "phone-nonce-fixed", macNonce);
@@ -451,15 +441,6 @@ public class ProtocolTest {
         for (StageFour.Clip clip : clips) if (clip.id.equals(pinned)) found = true;
         assertFalse(found);
         assertEquals(0, StageFour.search(clips, "no-such-clip").size());
-        java.util.List<StageFour.Item> inbox = StageFour.addInbox(java.util.List.of(), "notify", "Mail", "hi", false, 1);
-        inbox = StageFour.addInbox(inbox, "file", "a.pdf", "Saved", false, 2);
-        inbox = StageFour.addInbox(inbox, "sms", "Ada", "password: secret", true, 3);
-        inbox = StageFour.addInbox(inbox, "notify", "Bank", "482193", false, 4);
-        assertEquals("Hidden", inbox.get(0).detail);
-        assertEquals("Hidden", inbox.get(1).detail);
-        assertEquals(1, StageFour.filter(inbox, "file", "").size());
-        assertEquals(1, StageFour.filter(inbox, "all", "pdf").size());
-        assertEquals("a.pdf", StageFour.decodeInbox(StageFour.encodeInbox(inbox)).get(2).title);
         assertEquals(StageFour.BLE_UUID, "f1a0b4c0-6d3e-4a5b-8c7d-9e0f1a2b3c4d");
         assertFalse(StageFour.keepHistory(false));
         assertTrue(StageFour.keepHistory(true));
@@ -769,35 +750,6 @@ public class ProtocolTest {
         assertEquals("front", StageSix.facing("front"));
         assertEquals("back", StageSix.facing("side"));
         assertEquals(40, StageSix.jpegQuality("low"));
-        assertFalse(StageSix.relayUrl("ws://relay.example.com"));
-        assertFalse(StageSix.relayUrl("wss://user@relay.example.com/x"));
-        assertFalse(StageSix.relayUrl("wss://localhost/room"));
-        assertFalse(StageSix.relayUrl("wss://127.0.0.1/room"));
-        assertTrue(StageSix.relayUrl("wss://relay.example.com"));
-        assertTrue(StageSix.relayUrl("wss://relay.example.com:8443/bridge"));
-        assertTrue(StageSix.useRelay(false, false, true));
-        assertTrue(StageSix.useRelay(true, true, true));
-        assertFalse(StageSix.useRelay(false, true, true));
-        assertFalse(StageSix.useRelay(true, false, false));
-        String[] where = StageSix.relayParts("wss://relay.example.com:8443/bridge");
-        assertEquals("relay.example.com", where[0]);
-        assertEquals("8443", where[1]);
-        assertEquals("/bridge", where[2]);
-        String secret = "0123456789abcdefRELAY";
-        String ticket = StageSix.ticket(secret, "phone");
-        assertEquals(32, ticket.length());
-        assertFalse(ticket.contains("RELAY"));
-        assertEquals(ticket, StageSix.ticket(secret, "other"));
-        assertNotEquals(ticket, StageSix.ticket(secret, "mac"));
-        assertEquals("", StageSix.ticket("short", "phone"));
-        assertEquals(Features.roomId(secret), StageSix.room(secret));
-        byte[] key = Features.deriveKey(secret);
-        byte[] nonce = new byte[12];
-        nonce[0] = 9;
-        byte[] plain = "hello-frame-unique".getBytes(StandardCharsets.UTF_8);
-        byte[] sealed = Features.seal(key, 4, nonce, plain);
-        assertTrue(StageSix.sealedLooksOpaque(plain, sealed));
-        assertFalse(StageSix.sealedLooksOpaque(plain, plain));
         assertFalse(StageSix.cameraExtension(false));
         assertTrue(StageSix.cameraExtension(true));
         assertTrue(StageSix.stopWhenClosed(false));
@@ -880,8 +832,7 @@ public class ProtocolTest {
                 "notify", "notify_reply", "notify_dismiss", "otp", "battery",
                 "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
                 "dnd", "sms", "folder", "open_app", "pointer", "mirror_start", "mirror_stop",
-                "cam_start", "cam_stop", "control", "relay_key", "relay_set",
-                "relay_use", "relay_auth", "relay_ok", "forget", "hello", "paired", "error"
+                "cam_start", "cam_stop", "control", "forget", "hello", "paired", "error"
         };
         assertEquals(FeatureMessages.TYPES.length, types.length);
         for (String type : types) {
@@ -917,53 +868,14 @@ public class ProtocolTest {
     }
 
     @Test
-    public void forgottenPhoneLosesOnlyItsRelaySecret() {
-        String book = RelaySecrets.put("{}", "phone-a", "phone-a-secret-ok1");
-        book = RelaySecrets.put(book, "phone-b", "phone-b-secret-ok2");
-        assertTrue(RelaySecrets.allowed(book, "phone-a", "phone-a-secret-ok1"));
-        String left = RelaySecrets.drop(book, "phone-a");
-        assertEquals("", RelaySecrets.of(left, "phone-a"));
-        assertFalse(RelaySecrets.allowed(left, "phone-a", "phone-a-secret-ok1"));
-        assertTrue(RelaySecrets.allowed(left, "phone-b", "phone-b-secret-ok2"));
-    }
-
-    @Test
-    public void relayRestartsAndRejectsAReflectedFrame() throws Exception {
-        String secret = "pairing-secret-value";
-        long now = 1_700_000_000L;
-        String hello = RelayRules.hello(secret, "phone", now);
-        assertTrue(RelayRules.ticketOk(hello, now));
-        assertFalse(RelayRules.ticketOk(hello, now + 180));
-        RelayRules.Hub hub = new RelayRules.Hub();
-        assertTrue(hub.join("phone", hello, now, new byte[] {1}));
-        assertTrue(hub.join("mac", RelayRules.hello(secret, "mac", now), now, new byte[] {2}));
-        byte[] frame = new byte[] {9, 9, 9};
-        assertArrayEquals(frame, hub.forward("phone", frame));
-        assertNull(hub.forward("phone", new byte[RelayRules.MAX_MESSAGE + 1]));
-        String attacker = "phone " + now + " 00112233445566778899aabbccddeeff " + RelayRules.ticketKey("other-secret-value");
-        assertFalse(hub.join("phone", attacker, now, new byte[] {3}));
-
-        byte[] outKey = RelayRules.phoneToMac(secret);
-        byte[] backKey = RelayRules.macToPhone(secret);
-        assertFalse(java.util.Arrays.equals(outKey, backKey));
-        byte[] nonce = new byte[12];
-        byte[] sealed = Features.seal(outKey, 1, nonce, "hello".getBytes(StandardCharsets.UTF_8));
-        assertEquals("hello", new String(Features.open(outKey, sealed), StandardCharsets.UTF_8));
-        boolean reflected = false;
-        try {
-            Features.open(backKey, sealed);
-        } catch (Exception expected) {
-            reflected = true;
-        }
-        assertTrue(reflected);
-
-        RelayRules.Replay replay = new RelayRules.Replay();
-        assertTrue(replay.accept(11L, 1));
-        assertFalse(replay.accept(11L, 1));
-        assertTrue(replay.accept(22L, 1));
-        assertTrue(RelayRules.knownPhone("tokentokentoken1", new String[] {"tokentokentoken1"}, new String[0]));
-        assertFalse(RelayRules.knownPhone("tokentokentoken1", new String[] {"tokentokentoken1"}, new String[] {"tokentokentoken1"}));
-        assertFalse(RelayRules.knownPhone("tokentokentoken1", new String[] {"someoneelse123456"}, new String[0]));
+    public void oldRelayMessageIsIgnored() throws Exception {
+        String json = "{\"v\":1,\"id\":\"old1\",\"type\":\"relay_auth\",\"from\":\"android\",\"ts\":1000,\"payload\":{\"body\":\"x\"}}";
+        Envelope envelope = Envelope.parse(json);
+        assertTrue(OldMessages.ignore(envelope.type));
+        assertFalse(FeatureMessages.known(envelope.type));
+        Envelope fromOld = Envelope.parse(json.replace("\"android\"", "\"relay\""));
+        assertEquals("relay", fromOld.from);
+        assertTrue(OldMessages.ignore(fromOld.type));
     }
 
     @Test

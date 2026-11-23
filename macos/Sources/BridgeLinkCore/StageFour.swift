@@ -1,9 +1,8 @@
 import Foundation
 
-/// Rules for media, leave-lock, the inbox, and clipboard history. Matches the Android class.
+/// Rules for media, leave-lock, and clipboard history. Matches the Android class.
 public enum StageFour {
     public static let clipCap = 100
-    public static let inboxCap = 200
     public static let artCap = 48_000
     public static let bleUUID = "f1a0b4c0-6d3e-4a5b-8c7d-9e0f1a2b3c4d"
 
@@ -17,22 +16,6 @@ public enum StageFour {
             self.id = id
             self.text = text
             self.pinned = pinned
-            self.at = at
-        }
-    }
-
-    public struct Item: Equatable {
-        public let id: String
-        public let kind: String
-        public let title: String
-        public let detail: String
-        public let at: Int64
-
-        public init(id: String, kind: String, title: String, detail: String, at: Int64) {
-            self.id = id
-            self.kind = kind
-            self.title = title
-            self.detail = detail
             self.at = at
         }
     }
@@ -174,56 +157,11 @@ public enum StageFour {
         return clips
     }
 
-    public static func addInbox(_ existing: [Item], _ kind: String, _ title: String, _ detail: String,
-                                 _ sensitive: Bool, _ now: Int64) -> [Item] {
-        if kind != "notify" && kind != "sms" && kind != "file" { return existing }
-        var shownTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if shownTitle.isEmpty { shownTitle = "Item" }
-        if shownTitle.count > 120 { shownTitle = String(shownTitle.prefix(120)) }
-        var shown = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !shown.isEmpty && (sensitive || !storable(shown) || looksSecret(shown)) { shown = "Hidden" }
-        if shown.count > 240 { shown = String(shown.prefix(240)) }
-        var next = [Item(id: clipId(kind + " " + shownTitle, now), kind: kind, title: shownTitle, detail: shown, at: now)]
-        for item in existing where next.count < inboxCap { next.append(item) }
-        return next
-    }
-
-    public static func filter(_ items: [Item], _ kind: String, _ query: String) -> [Item] {
-        let want = kind.isEmpty ? "all" : kind
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return items.filter { item in
-            if want != "all" && item.kind != want { return false }
-            if q.isEmpty { return true }
-            return (item.title + " " + item.detail).lowercased().contains(q)
-        }
-    }
-
-    public static func encodeInbox(_ items: [Item]) -> String {
-        items.map { "\($0.id)\t\($0.kind)\t\($0.at)\t\(escape($0.title))\t\(escape($0.detail))" }.joined(separator: "\n")
-    }
-
-    public static func decodeInbox(_ raw: String) -> [Item] {
-        if raw.isEmpty { return [] }
-        var items: [Item] = []
-        for line in raw.split(separator: "\n", omittingEmptySubsequences: false) {
-            if line.isEmpty { continue }
-            let parts = line.split(separator: "\t", maxSplits: 4, omittingEmptySubsequences: false).map(String.init)
-            if parts.count < 5 { continue }
-            guard let at = Int64(parts[2]) else { continue }
-            items.append(Item(id: parts[0], kind: parts[1], title: unescape(parts[3]), detail: unescape(parts[4]), at: at))
-        }
-        return items
-    }
-
     private static func storable(_ clean: String) -> Bool {
         if clean.isEmpty { return false }
         let compact = clean.replacingOccurrences(of: " ", with: "")
         if compact.count >= 4 && compact.count <= 8 && compact.allSatisfy({ $0.isNumber }) { return false }
         return true
-    }
-
-    private static func looksSecret(_ text: String) -> Bool {
-        text.lowercased().contains("password")
     }
 
     private static func cap(_ items: [Clip]) -> [Clip] {

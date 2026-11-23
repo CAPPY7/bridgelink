@@ -7,10 +7,8 @@ import {
   extractOtp,
   looksSensitive,
   nextBackoff,
-  openJson,
   randomHex,
   rememberId,
-  sealJson,
   type Envelope,
   type Side,
 } from "./protocol";
@@ -35,7 +33,6 @@ export type FeatureKey =
   | "camera"
   | "files"
   | "proximity"
-  | "relay"
   | "inbox"
   | "clipHistory"
   | "scan"
@@ -43,7 +40,7 @@ export type FeatureKey =
   | "quickdrop";
 
 export type ClipMethod = "tile" | "share" | "notification" | "bubble" | "accessibility";
-export type LinkPath = "lan" | "manual" | "relay";
+export type LinkPath = "lan" | "manual";
 export type PhoneScreen = "home" | "send" | "inbox" | "remote" | "system";
 export type SystemPage =
   | "root"
@@ -214,7 +211,6 @@ function seed(): Pick<
       camera: false,
       files: false,
       proximity: false,
-      relay: true,
       inbox: true,
       clipHistory: true,
       scan: false,
@@ -732,7 +728,7 @@ export const useBridge = create<BridgeState>()(
 
       setPath: (path) => {
         set({ path });
-        get().log("info", path === "lan" ? "Using the local network." : path === "manual" ? "Using the saved host." : "Using the encrypted relay.");
+        get().log("info", path === "lan" ? "Using the local network." : "Using the saved host.");
       },
 
       setManualHost: (manualHost) => set({ manualHost }),
@@ -810,23 +806,7 @@ export const useBridge = create<BridgeState>()(
         const remembered = rememberId(get().seenIds, env.id);
         if (!remembered.fresh) return transferId;
         set({ seenIds: remembered.seen });
-
-        if (get().path === "relay") {
-          try {
-            const sealed = await sealJson(env, get().sharedKey);
-            get().log("info", `Relay forwarded ${sealed.length} sealed characters. Plaintext stayed on the devices.`);
-            await openJson<Envelope>(sealed, get().sharedKey);
-          } catch {
-            set((s) => ({
-              transfers: s.transfers.map((t) => (t.id === transferId ? { ...t, status: "failed" } : t)),
-              lastError: "Could not seal the relay payload.",
-            }));
-            get().log("error", "Relay seal failed.");
-            return transferId;
-          }
-        } else {
-          get().log("info", `${kind} ${name} · ${total} chunk${total === 1 ? "" : "s"} on ${get().path}.`);
-        }
+        get().log("info", `${kind} ${name} · ${total} chunk${total === 1 ? "" : "s"} on ${get().path}.`);
 
         for (let i = 1; i <= total; i++) {
           if (pauses.has(transferId)) {

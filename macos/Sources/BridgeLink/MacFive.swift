@@ -756,7 +756,6 @@ extension LinkModel {
             try? StageFive.encodeSms(messages).write(to: messagesURL(), atomically: true, encoding: .utf8)
             let preview = item.body.count > 80 ? String(item.body.prefix(80)) : item.body
             notify("Text from \(item.address)", preview)
-            rememberInbox(kind: "sms", title: item.address, detail: item.body)
             note("New text message")
             if let code = Features.otp(item.body) { fireAuto("sms_code", code) }
             return true

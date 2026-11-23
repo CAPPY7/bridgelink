@@ -9,12 +9,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import app.bridgelink.android.protocol.StageSix
 
-/** Screen buttons for mirror, camera, and the away relay. */
+/** Screen buttons for mirror and camera. */
 class SixWork(private val activity: MainActivity) {
     private val model get() = activity.model
 
     fun load() {
-        model.relayUrl = Prefs.open(activity).getString("relayUrl", "") ?: ""
     }
 
     fun shareScreen() {
@@ -72,21 +71,6 @@ class SixWork(private val activity: MainActivity) {
         activity.stopService(Intent(activity, CamService::class.java))
         send("cam_stop", "")
         model.status = "Camera is off."
-    }
-
-    fun saveRelay() {
-        val url = model.relayUrl.trim()
-        if (!StageSix.relayUrl(url)) {
-            model.status = "The relay address must start with wss://"
-            return
-        }
-        Prefs.open(activity).edit().putString("relayUrl", url).apply()
-        model.status = "Saved the relay address."
-        send("relay_set", url)
-    }
-
-    fun useRelay() {
-        send("relay_use", "")
     }
 
     fun controlSteps() {

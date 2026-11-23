@@ -6,17 +6,17 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 1 bug fixes are in v0.8.0.
 - Stage 2 design is in v0.9.0.
 - Stage 3 half-done features are in v0.10.0.
-- Stage 4 easy features are in v0.11.0. Media control works both ways. The Mac can lock when the phone leaves, and it never unlocks. The Mac has one inbox. Clipboard history keeps 100 items and skips secrets. A phone scan is saved on the Mac and opened.
+- Stage 4 easy features are in v0.11.0. Media control works both ways. The Mac can lock when the phone leaves, and it never unlocks. Clipboard history keeps 100 items and skips secrets. A phone scan is saved on the Mac and opened.
 - Stage 5 medium features are in v0.12.0. Texts, a shared folder, automations, and the phone trackpad, keyboard, and slides.
-- Stage 6 hard features are in v0.13.0. Screen mirror, control while mirroring, the phone camera inside BridgeLink, and an away relay that only forwards locked frames.
+- Stage 6 hard features are in v0.13.0. Screen mirror, control while mirroring, and the phone camera inside BridgeLink. The remote path from that stage was removed in Part B.
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
 ## Next exact step
-Final fix pass. A first CI run failed: the sample-message test used a method the Android test tools do not have, and Compose BOM 2026.06.01 crashed lint. Those are fixed and pushed again. S0-6 still waits until the away relay is removed. Next is a green CI run, then Part B.
+No new feature is next. Part I, the phone link split, B2, the unified inbox, and B1, the remote path, are pushed. None of these is tested on a device.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.
-- LinkService.java is still longer than 400 lines.
+- The phone link is split. LinkService keeps the old name. LinkCore owns the socket. LinkDesk owns clipboard, alerts, files, ringing, and battery. LinkInbox owns incoming messages. NOT TESTED on a device.
 - Mac permissions can still reset after an update until MAC_SIGN_P12_BASE64 and MAC_SIGN_P12_PASSWORD exist.
 - Check for update reads the version, downloads BridgeLink.dmg and SHA256SUMS when a newer version is listed, checks the hash, and opens the disk image. The Sparkle framework is not linked, because that needs an EdDSA secret that is not in this environment. It does not install the update by itself.
 - A free share extension can stay hidden until the app is opened once. Finder Services, Send to phone, is the backup.
@@ -26,15 +26,16 @@ Final fix pass. A first CI run failed: the sample-message test used a method the
 - Shared folder files over 32 MB are sent as a normal file into the shared folder. Smaller files still use the old shared-folder pieces.
 - Screen mirror needs the phone to allow screen share each time Android asks. Control needs the accessibility service, including Allow restricted settings on Android 13 and newer.
 - The phone camera inside BridgeLink is the free webcam. A system camera for Zoom needs a paid Apple Developer ID. That extension is in the repo and stays off.
-- Away from home returns to Wi-Fi and each phone has its own secret. The relay worker still has to be deployed by the owner. The relay cannot read the frames.
+- The phone and the Mac link only on the same Wi-Fi. The remote path is removed. NOT TESTED on a device.
 - The signed downloads are produced by the Release workflow. This environment cannot sign them or upload them.
 - Do not create a new Android signing key. Do not print secrets.
 
 ## Fix-all done
 - C1. Phone reconnects by itself after a clean disconnect. A bad key or a bad code does not.
+- B1. The remote path is removed. Old messages are ignored. The phone and the Mac stay on Wi-Fi. NOT TESTED on a device.
 - C2. A pairing link asks before it connects, and a different Mac does not receive the old token.
 - C3. Received files are not opened by themselves. The share sheet asks before it sends.
-- C4. Away from home goes back to Wi-Fi when the network returns, and the heartbeat stays up on the relay.
+- C4. The removed remote path goes back to Wi-Fi when the network returns, and the heartbeat stays up on the remote-link.
 - C5. Each phone has its own away secret. Forgetting that phone deletes the secret.
 - C6 partly. Every feature message is named in a test and round-trips. The emulator still only sends one real note.
 - N8. Switching to a saved Mac uses that Mac's token. The handshake does not swap the token in the middle, and a mismatch does not erase a saved token. Forget removes that Mac from the token book.
@@ -112,32 +113,32 @@ Final fix pass. A first CI run failed: the sample-message test used a method the
 - M4. Stop Mac ringing tells the Mac. The Mac plays a loud sound for 30 seconds.
 - N1. The Mac app compiles again. Picture code sees the protocol. The listener does not unwrap itself twice. The send-window check does not trap the tests.
 - N2. The emulator pair test waits for the pair screen, then taps Pair.
-- N3. A sleeping relay still knows the phone or the Mac, and it still knows the room key.
-- N4. The away relay closes after 10 minutes of silence. A drop says "Away link down" and both apps try again.
-- N5. A Wi-Fi retry does not restart an away relay that is already up.
-- N6. The phone keeps signing in on the away relay until the Mac answers, and stops if the Mac forgot it.
-- N7. A late reply still goes out on the away relay when Wi-Fi is down.
-- N12. Away from home says paired only after the Mac accepts the phone, and a drop clears it.
-- N17. Each away-relay direction has its own rate limit, and old counts are dropped.
+- N3. A sleeping remote-link still knows the phone or the Mac, and it still knows the room key.
+- N4. The away remote-link closes after 10 minutes of silence. A drop says "Away link down" and both apps try again.
+- N5. A Wi-Fi retry does not restart an away remote-link that is already up.
+- N6. The phone keeps signing in on the away remote-link until the Mac answers, and stops if the Mac forgot it.
+- N7. A late reply still goes out on the away remote-link when Wi-Fi is down.
+- N12. The removed remote path says paired only after the Mac accepts the phone, and a drop clears it.
+- N17. Each away-remote-link direction has its own rate limit, and old counts are dropped.
 - X6. A file from the Mac is not opened by itself. An apk has no Open button. A link waits when the screen is off.
-- V1. The away relay writes its idle clock at most once every 30 seconds.
-- V2. The relay room tests run with the web checks. A wake-up uses a new socket and still forwards a frame.
+- V1. The away remote-link writes its idle clock at most once every 30 seconds.
+- V2. The remote-link room tests run with the web checks. A wake-up uses a new socket and still forwards a frame.
 - M10. Password-manager clipboard items are not sent or stored.
 - X8. The phone reconnects after boot or an app update, and ignores other broadcasts.
 - L10. The Mac signing script changes the default keychain only on CI.
 - L12. The Android key-making script is deleted.
 - X9. Java key files ending in .jks are ignored.
 - W2. The away sign-in uses one saved retry, and the write runs on the send thread, not the main thread.
-- N6. Away sign-in keeps going until the Mac answers. relay_ok and forgotten both stop it. A unit test covers phone-first, then Mac.
+- N6. Away sign-in keeps going until the Mac answers. remote-link_ok and forgotten both stop it. A unit test covers phone-first, then Mac.
 - W1. Open and Show in Downloads on a file notice start an activity. The old broadcast receiver is gone.
 - X6. Tapping the file notice opens that file. An install file still has no Open button.
 - L9. A link from the Mac waits for Open unless Always open links is on.
 - W6. Install files (.apk, .apks, .xapk, .aab, and the Android package type) have no Open button.
 - W7. Each file from the Mac gets its own notice, so a second file does not hide the first.
-- W3. The away relay drops the room key when the last socket is closed, even without a closed flag.
+- W3. The away remote-link drops the room key when the last socket is closed, even without a closed flag.
 - W4. Mac signing points codesign at the BridgeLink keychain and restores the old search list.
 - L10. The home Mac default keychain stays alone. Signing points at the BridgeLink keychain instead.
-- W5. The phone uses the away-relay send rule. It is not only a test.
+- W5. The phone uses the away-remote-link send rule. It is not only a test.
 - W8. The progress note no longer says v1.0.0 was released. The releases are v0.12.0 and v1.0.1.
 - X7. Clipboard history is off until it is turned on. Clear history wipes it. Copies older than 24 hours are dropped. The file is sealed.
 - N11. The Home Wi-Fi automation is removed. It could not see the network name.

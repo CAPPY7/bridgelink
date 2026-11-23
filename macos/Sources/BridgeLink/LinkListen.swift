@@ -234,7 +234,6 @@ extension LinkModel {
                         self.phase = .listening
                         self.note("Phone disconnected")
                         self.armLeaveLock()
-                        self.tryRelay()
                     }
                     return
                 }

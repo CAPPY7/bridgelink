@@ -67,9 +67,6 @@ final class LinkModel: ObservableObject {
     var mediaBusy = false
     @Published var clips: [StageFour.Clip] = []
     @Published var clipQuery = ""
-    @Published var inbox: [StageFour.Item] = []
-    @Published var inboxQuery = ""
-    @Published var inboxFilter = "all"
     @Published var lockOn = UserDefaults.standard.bool(forKey: "lockOn")
     @Published var atDesk = UserDefaults.standard.bool(forKey: "atDesk")
     @Published var lockFar = savedLockInt("lockFar", 70)
@@ -101,9 +98,6 @@ final class LinkModel: ObservableObject {
     @Published var folderPath = ""
     @Published var rules: [StageFive.Rule] = []
     let six = SixHold()
-    var away: AwayLink?
-    var relayAttempt = 0
-    var relayJoin: DispatchWorkItem?
     @Published var ruleWhen = "connect"
     @Published var ruleThen = "alert"
     @Published var ruleExtra = ""
@@ -144,15 +138,12 @@ final class LinkModel: ObservableObject {
     var pendingLinks: [UUID: NWConnection] = [:]
     var pendingSet = PendingSet()
     var liveID = UUID()
-    var replyOnRelay = false
-    var relayTrusted = false
     let queue = DispatchQueue(label: "app.bridgelink.mac")
     var book = DeviceBook()
     @Published var phoneList: [PairedDevice] = []
     var pendingGate = PendingGate()
     var pendingCount = 0
     var liveDeviceId = ""
-    var awayDeviceId = ""
     var sasConnectionID: UUID?
     var sasPhoneCommit = ""
     var sasPhoneNonce = ""
@@ -174,6 +165,7 @@ final class LinkModel: ObservableObject {
         if !saved.isEmpty { lines = saved }
         refreshAddresses()
         refreshMacBatteryLabel()
+        OldMessages.dropSaved()
         if ProcessInfo.processInfo.environment["BRIDGELINK_SHOTS"] != nil { return }
         loadEasy()
         start()

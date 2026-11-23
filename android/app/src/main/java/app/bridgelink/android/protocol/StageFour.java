@@ -5,12 +5,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Rules for media, leave-lock, the inbox, and clipboard history.
+ * Rules for media, leave-lock, and clipboard history.
  * No Android APIs, so the unit tests and the Mac port can match them.
  */
 public final class StageFour {
     public static final int CLIP_CAP = 100;
-    public static final int INBOX_CAP = 200;
     public static final int ART_CAP = 48_000;
     /** Advertised by the Mac. The phone measures how near this signal is. */
     public static final String BLE_UUID = "f1a0b4c0-6d3e-4a5b-8c7d-9e0f1a2b3c4d";
@@ -27,22 +26,6 @@ public final class StageFour {
             this.id = id;
             this.text = text;
             this.pinned = pinned;
-            this.at = at;
-        }
-    }
-
-    public static final class Item {
-        public final String id;
-        public final String kind;
-        public final String title;
-        public final String detail;
-        public final long at;
-
-        public Item(String id, String kind, String title, String detail, long at) {
-            this.id = id;
-            this.kind = kind;
-            this.title = title;
-            this.detail = detail;
             this.at = at;
         }
     }
@@ -285,69 +268,6 @@ public final class StageFour {
         return clips;
     }
 
-    public static List<Item> addInbox(List<Item> existing, String kind, String title, String detail,
-                                       boolean sensitive, long now) {
-        if (!"notify".equals(kind) && !"sms".equals(kind) && !"file".equals(kind)) {
-            return existing == null ? List.of() : new ArrayList<>(existing);
-        }
-        String shownTitle = title == null || title.trim().isEmpty() ? "Item" : title.trim();
-        if (shownTitle.length() > 120) shownTitle = shownTitle.substring(0, 120);
-        String shown = detail == null ? "" : detail.trim();
-        if (!shown.isEmpty() && (sensitive || !storable(shown) || looksSecret(shown))) shown = "Hidden";
-        if (shown.length() > 240) shown = shown.substring(0, 240);
-        ArrayList<Item> next = new ArrayList<>();
-        next.add(new Item(clipId(kind + " " + shownTitle, now), kind, shownTitle, shown, now));
-        if (existing != null) {
-            for (Item item : existing) {
-                if (next.size() >= INBOX_CAP) break;
-                next.add(item);
-            }
-        }
-        return next;
-    }
-
-    public static List<Item> filter(List<Item> items, String kind, String query) {
-        ArrayList<Item> next = new ArrayList<>();
-        if (items == null) return next;
-        String want = kind == null || kind.isEmpty() ? "all" : kind;
-        String q = query == null ? "" : query.trim().toLowerCase(Locale.US);
-        for (Item item : items) {
-            if (!"all".equals(want) && !want.equals(item.kind)) continue;
-            if (!q.isEmpty() && !(item.title + " " + item.detail).toLowerCase(Locale.US).contains(q)) continue;
-            next.add(item);
-        }
-        return next;
-    }
-
-    public static String encodeInbox(List<Item> items) {
-        StringBuilder out = new StringBuilder();
-        if (items == null) return "";
-        for (Item item : items) {
-            if (out.length() > 0) out.append('\n');
-            out.append(item.id).append('\t').append(item.kind).append('\t').append(item.at).append('\t')
-                    .append(escape(item.title)).append('\t').append(escape(item.detail));
-        }
-        return out.toString();
-    }
-
-    public static List<Item> decodeInbox(String raw) {
-        ArrayList<Item> items = new ArrayList<>();
-        if (raw == null || raw.isEmpty()) return items;
-        for (String line : raw.split("\n", -1)) {
-            if (line.isEmpty()) continue;
-            String[] parts = line.split("\t", 5);
-            if (parts.length < 5) continue;
-            long at;
-            try {
-                at = Long.parseLong(parts[2]);
-            } catch (NumberFormatException error) {
-                continue;
-            }
-            items.add(new Item(parts[0], parts[1], unescape(parts[3]), unescape(parts[4]), at));
-        }
-        return items;
-    }
-
     private static boolean storable(String clean) {
         if (clean == null || clean.isEmpty()) return false;
         String compact = clean.replace(" ", "");
@@ -359,10 +279,6 @@ public final class StageFour {
             if (digits) return false;
         }
         return true;
-    }
-
-    private static boolean looksSecret(String text) {
-        return text != null && text.toLowerCase(Locale.US).contains("password");
     }
 
     private static List<Clip> cap(List<Clip> items) {

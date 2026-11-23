@@ -65,7 +65,7 @@ test("otp and sensitive detection", () => {
   assert.equal(looksSensitive("hello", "1Password"), true);
 });
 
-test("relay seal is not plaintext and opens", async () => {
+test("seal is not plaintext and opens", async () => {
   const key = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
   const sealed = await sealJson({ text: "secret-note" }, key);
   assert.equal(sealed.includes("secret-note"), false);

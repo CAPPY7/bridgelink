@@ -14,33 +14,9 @@ import UserNotifications
 extension LinkModel {
     func handle(_ data: Data, connection: NWConnection, id: UUID, pending: Bool) {
         guard let envelope = try? EnvelopeCodec.parse(data) else { return }
+        // Ignore old relay_* messages. They are never sent.
+        if OldMessages.ignore(envelope.type) { return }
         lastRx = Date()
-        if replyOnRelay && envelope.type == "relay_auth" {
-            let token = envelope.text("token")
-            if book.match(token: token) != nil {
-                relayTrusted = true
-                if live == nil {
-                    let name = pairedSummary.isEmpty ? "Phone" : pairedSummary
-                    phase = .paired(name)
-                    note("Connected through the away relay. The relay cannot read the link.")
-                }
-                send(type: "relay_ok", payload: [:], on: nil)
-            } else {
-                relayTrusted = false
-                if live == nil {
-                    if case .paired = phase {
-                        MacInput.releaseHeld()
-                        phase = .listening
-                    }
-                }
-                send(type: "error", payload: ["code": "forgotten", "body": "This phone is not paired"], on: nil)
-                away?.stop()
-            }
-            return
-        }
-        if replyOnRelay && !relayTrusted {
-            return
-        }
         if envelope.type == "hello" {
             let now = Int64(Date().timeIntervalSince1970 * 1000)
             let token = envelope.text("token")
@@ -222,7 +198,6 @@ extension LinkModel {
                     } else {
                         self?.notify("File from the phone", line)
                     }
-                    self?.rememberInbox(kind: "file", title: StageFour.fileTitle(line), detail: "Saved on this Mac")
                     self?.fireAuto("file_in", line)
                 }
             }
@@ -256,7 +231,6 @@ extension LinkModel {
                 showText: showNotificationText
             )
             postNote(key: envelope.text("key"), title: shown.title, body: shown.body, reply: canReply)
-            rememberInbox(kind: "notify", title: shown.title, detail: shown.body)
             note("Notification from the phone")
             fireAuto("notify", app)
         case "otp":
@@ -296,20 +270,14 @@ extension LinkModel {
             }
         case "forget":
             let device = envelope.text("deviceId")
-            let forgotten = device.isEmpty ? (liveDeviceId.isEmpty ? awayDeviceId : liveDeviceId) : device
+            let forgotten = device.isEmpty ? liveDeviceId : device
             if !forgotten.isEmpty {
                 book.forget(id: forgotten)
-                RelayVault.delete(forgotten)
             }
             saveBook()
             live?.cancel()
             live = nil
             liveDeviceId = ""
-            awayDeviceId = ""
-            relayTrusted = false
-            away?.stop()
-            relayJoin?.cancel()
-            relayAttempt = 0
             phase = .listening
             MacInput.releaseHeld()
             note("The phone forgot this Mac")
@@ -335,13 +303,8 @@ extension LinkModel {
         liveID = id
         live = connection
         liveDeviceId = deviceId
-        awayDeviceId = deviceId
         pending = nil
         pendingCount = max(0, pendingCount - 1)
-        away?.stop()
-        relayJoin?.cancel()
-        relayAttempt = 0
-        replyOnRelay = false
         phase = .paired(name)
         clearLeaveLock()
         send(type: "paired", payload: ["token": token, "deviceId": deviceId], on: connection)
@@ -349,7 +312,6 @@ extension LinkModel {
         note("Paired with \(name)")
         sendMacBattery()
         startFive()
-        ensureRelayKey()
     }
 
     func finishSas(connection: NWConnection, id: UUID) {

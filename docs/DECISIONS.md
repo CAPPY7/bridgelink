@@ -2,6 +2,12 @@
 
 The current rules are the developer notes. If an older paragraph below disagrees with those notes, the notes win.
 
+The phone link is split so the socket file stays under 900 lines. LinkService is still the name the rest of the app uses. LinkCore owns the connection. LinkDesk owns clipboard, alerts, files, ringing, and battery. LinkInbox owns incoming messages. The behavior is unchanged. NOT TESTED on a device.
+
+The unified inbox is removed. Notifications, texts, and received files are not copied into one list. The Mac deletes a saved inbox file the next time it opens. NOT TESTED on a device.
+
+The away relay was removed. The phone and the Mac link only on the same Wi-Fi. An old relay message is ignored and is never sent. Saved relay settings are deleted on the next open. NOT TESTED on a device.
+
 The Mac app is sideloaded. There is no paid Apple Developer account. A self-signed certificate keeps the same signature across updates when the Mac signing secrets are set. Permissions can still be forgotten if a build is ad-hoc signed. The menu window explains the first open.
 
 A pairing link never connects by itself. A different Mac key drops the active token before any hello, and each Mac's token is sealed under its own fingerprint.

@@ -14,8 +14,6 @@ public final class StageSix {
             "Turn on BridgeLink under Accessibility. On Android 13 and newer, open App info, the menu, and Allow restricted settings, then turn the service on. Back, Home, and Recents work after that. The Mac never unlocks the phone.";
     public static final String CAM_NOTE =
             "The free app shows the phone camera inside a BridgeLink window. You can share that window in a call. A camera that appears in Zoom, Meet, or FaceTime needs a paid Apple Developer ID, so that extension stays off until those secrets exist.";
-    public static final String RELAY_STEPS =
-            "Away from home uses a free relay. Pair once on the same Wi-Fi so both sides share a key. The relay only forwards locked frames. It cannot read them.";
 
     private StageSix() {}
 
@@ -329,68 +327,6 @@ public final class StageSix {
             }
         }
         return dst;
-    }
-
-    public static boolean relayUrl(String url) {
-        return relayParts(url) != null;
-    }
-
-    /** A late reply still uses the away relay when Wi-Fi is down. */
-    public static boolean useRelay(boolean reply, boolean wifiUp, boolean relayUp) {
-        return relayUp && (reply || !wifiUp);
-    }
-
-    /** Host, port, and path. Null if the address is not a wss relay. */
-    public static String[] relayParts(String url) {
-        if (url == null) return null;
-        String raw = url.trim();
-        if (!raw.startsWith("wss://") || raw.length() > 200) return null;
-        if (raw.indexOf(' ') >= 0 || raw.indexOf('@') >= 0 || raw.indexOf('\\') >= 0) return null;
-        String rest = raw.substring(6);
-        if (rest.isEmpty() || rest.startsWith("/") || rest.startsWith(".")) return null;
-        int slash = rest.indexOf('/');
-        String hostport = slash < 0 ? rest : rest.substring(0, slash);
-        String path = slash < 0 ? "/" : rest.substring(slash);
-        if (path.isEmpty()) path = "/";
-        if (hostport.isEmpty() || hostport.startsWith("[")) return null;
-        String host = hostport;
-        int port = 443;
-        int colon = hostport.lastIndexOf(':');
-        if (colon > 0 && hostport.indexOf(':') == colon) {
-            host = hostport.substring(0, colon);
-            try {
-                port = Integer.parseInt(hostport.substring(colon + 1));
-            } catch (NumberFormatException error) {
-                return null;
-            }
-        }
-        if (port < 1 || port > 65535 || host.isEmpty() || !host.contains(".")) return null;
-        String lower = host.toLowerCase(java.util.Locale.US);
-        if (lower.equals("localhost") || lower.startsWith("127.")) return null;
-        return new String[] {host, Integer.toString(port), path};
-    }
-
-    public static String room(String secret) {
-        return Features.roomId(secret);
-    }
-
-    /** A short proof that is not the secret. An unknown role counts as the phone. */
-    public static String ticket(String secret, String role) {
-        if (secret == null || secret.length() < 16) return "";
-        String who = "mac".equals(role) ? "mac" : "phone";
-        return Features.echoKey(secret + "\n" + who).substring(0, 32);
-    }
-
-    public static boolean sealedLooksOpaque(byte[] plain, byte[] sealed) {
-        if (plain == null || plain.length == 0 || sealed == null || sealed.length < plain.length + 16) return false;
-        outer:
-        for (int i = 0; i + plain.length <= sealed.length; i++) {
-            for (int j = 0; j < plain.length; j++) {
-                if (sealed[i + j] != plain[j]) continue outer;
-            }
-            return false;
-        }
-        return true;
     }
 
     public static boolean cameraExtension(boolean appleSecrets) {

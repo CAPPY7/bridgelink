@@ -21,7 +21,7 @@ Each message is a frame:
 | v | Must be 1 |
 | id | Unique id. Receivers drop duplicates |
 | type | Message name |
-| from | `android`, `mac`, or `relay` |
+| from | `android` or `mac`. An older sender name is still read, then the message is ignored |
 | ts | Unix milliseconds |
 | payload | JSON object. Unknown fields are ignored |
 
@@ -37,16 +37,16 @@ A QR or `bridgelink://` link contains the Mac certificate fingerprint. The phone
 proof = HMAC-SHA256(key = PIN, message = fingerprint from the QR)
 ```
 
-If the certificate is different, the phone sends nothing. A relay cannot collect a proof and guess the PIN offline.
+If the certificate is different, the phone sends nothing. Someone in the middle cannot collect a proof and guess the PIN offline.
 
-If the phone has no fingerprint yet (typed address or Wi-Fi discovery), it sends only `SHA-256(phoneNonce)`. The Mac answers with only `SHA-256(macNonce)`. After both commits, each side reveals its nonce. A reveal that does not match the commit drops the link. The 6-digit code is computed only after both reveals, from the certificate the phone actually saw. A relay cannot grind a nonce after the commit, so it cannot force both screens to show the same code. Three wrong confirms, or one bad reveal, end the attempt on both sides.
+If the phone has no fingerprint yet (typed address or Wi-Fi discovery), it sends only `SHA-256(phoneNonce)`. The Mac answers with only `SHA-256(macNonce)`. After both commits, each side reveals its nonce. A reveal that does not match the commit drops the link. The 6-digit code is computed only after both reveals, from the certificate the phone actually saw. Someone in the middle cannot grind a nonce after the commit, so it cannot force both screens to show the same code. Three wrong confirms, or one bad reveal, end the attempt on both sides.
 
 ```text
 code = first 6 digits of HMAC-SHA256(key = "bridgelink-sas-v1",
         message = macFingerprint + newline + phoneNonce + newline + macNonce)
 ```
 
-The phone uses the fingerprint it actually saw. The Mac uses its own. A relay makes the codes differ. The Mac issues a token only after both sides tap confirm and the codes match. Three wrong confirms end the attempt.
+The phone uses the fingerprint it actually saw. The Mac uses its own. Someone in the middle makes the codes differ. The Mac issues a token only after both sides tap confirm and the codes match. Three wrong confirms end the attempt.
 
 A saved token is sent only when the certificate matches the pinned fingerprint. The Mac stores a hash of each phone token, not the token itself. `New PIN` adds a slot. It does not remove phones that are already paired.
 
@@ -112,10 +112,10 @@ A shared path cannot start with a slash, contain `..`, or leave the folder. If b
 | control | `kind`, `x`, `y`, `x2`, `y2`, `text` | Mac. Kinds are tap, drag, scroll, text, back, home, recents |
 | cam_start | `facing`, `zoom`, `flash`, `mic` | Mac |
 | cam_stop | empty | Either side |
-| relay_key | `body` shared secret | Mac, only on the local TLS link, after pairing |
-| relay_set | `url` must be `wss://` | Either side |
 
-Picture and camera bytes use binary frames (type 2), not JSON. A binary payload is a 4 byte stream, 1 flag byte, 2 byte part, 2 byte part count, then bytes. Stream 1 is H.264. Flag 1 is a key frame. Flag 2 is a parameter set. Stream 2 is a JPEG. Stream 3 is 16-bit mic audio. The away relay never sees these bytes in the clear. Each side locks the whole frame with the key from `relay_key` before the relay forwards it.
+Old message names from the removed remote path are ignored. They are not sent.
+
+Picture and camera bytes use binary frames (type 2), not JSON. A binary payload is a 4 byte stream, 1 flag byte, 2 byte part, 2 byte part count, then bytes. Stream 1 is H.264. Flag 1 is a key frame. Flag 2 is a parameter set. Stream 2 is a JPEG. Stream 3 is 16-bit mic audio.
 
 ## Pairing
 

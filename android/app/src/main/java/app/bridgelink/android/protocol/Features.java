@@ -24,8 +24,8 @@ import javax.crypto.spec.SecretKeySpec;
 public final class Features {
     public static final String[] NAMES = {
             "files", "links", "text", "clipboard", "find", "battery", "media",
-            "notify", "otp", "sms", "inbox", "clips", "scan", "auto", "folder",
-            "input", "mirror", "control", "camera", "relay", "lock"
+            "notify", "otp", "sms", "clips", "scan", "auto", "folder",
+            "input", "mirror", "control", "camera", "lock"
     };
 
     private static final Pattern CODE = Pattern.compile("(?<!\\d)(\\d{4,8})(?!\\d)");

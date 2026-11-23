@@ -75,7 +75,7 @@ public final class LinkState {
         return true;
     }
 
-    /** Reconnect when the phone is not on Wi-Fi, even if an away relay is up. */
+    /** Reconnect when the phone is not linked on Wi-Fi. */
     public static boolean networkShouldConnect(Phase phase, boolean linkedOnWifi) {
         if (linkedOnWifi) return false;
         return phase != Phase.CONNECTING && phase != Phase.FATAL;

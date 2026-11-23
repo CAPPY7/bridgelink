@@ -161,7 +161,7 @@ function b64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
-/** AES-GCM seal for relay blobs. The relay would only see this string. */
+/** AES-GCM seal. The sealed string does not contain the original text. */
 export async function sealJson(value: unknown, keyHex: string): Promise<string> {
   const key = await aesKey(keyHex);
   const iv = crypto.getRandomValues(new Uint8Array(12));

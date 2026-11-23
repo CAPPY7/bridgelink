@@ -3,7 +3,7 @@ import {
   ChevronLeft,
   ClipboardCopy,
   House,
-  Inbox,
+  Bell,
   Pointer,
   Send,
   SlidersHorizontal,
@@ -16,7 +16,7 @@ import { Ask, Btn, ClockLabel, Empty, Field, KeyWall, Pill, Progress, SLIDES, ag
 const NAV = [
   { id: "home", label: "Home", icon: House },
   { id: "send", label: "Send", icon: Send },
-  { id: "inbox", label: "Inbox", icon: Inbox },
+  { id: "inbox", label: "Alerts", icon: Bell },
   { id: "remote", label: "Remote", icon: Pointer },
   { id: "system", label: "System", icon: SlidersHorizontal },
 ] as const;
@@ -58,7 +58,7 @@ function PhoneApp({ clock }: { clock: number }) {
   const overlay = useBridge((s) => s.permissions.android.overlay);
   const push = useBridge((s) => s.pushClipboard);
   const notices = useBridge((s) => s.notices);
-  const badge = notices.filter((n) => !n.dismissed).length;
+  const badge = notices.filter((n) => !n.dismissed && n.source !== "sms" && n.source !== "system").length;
   const browser = useBridge((s) => s.androidBrowser);
   const closeBrowser = useBridge((s) => s.closeBrowser);
 
@@ -157,7 +157,7 @@ function Home() {
           <Pill tone={s.status === "connected" ? "ok" : "warn"}>{s.status === "connected" ? "Linked" : "Reconnecting"}</Pill>
         </div>
         <p className="mt-2 text-sm text-muted tabular-nums">
-          {s.path === "lan" ? "Local network" : s.path === "manual" ? s.manualHost || "Saved host" : "Encrypted relay"} · {s.latencyMs} ms
+          {s.path === "lan" ? "Local network" : s.manualHost || "Saved host"} · {s.latencyMs} ms
         </p>
         <p className="mt-3 text-sm">
           Mac battery <span className="tabular-nums">{s.macBattery}%</span>
@@ -371,36 +371,37 @@ function InboxScreen() {
   const blocked = useBridge((s) => s.blockedApps);
   const copy = useBridge((s) => s.copyText);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "otp" | "sms" | "notification">("all");
+  const [filter, setFilter] = useState<"all" | "otp" | "notification">("all");
   const [draft, setDraft] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const items = notices.filter((n) => {
+    if (n.source === "sms" || n.source === "system") return false;
     if (filter !== "all" && n.source !== filter) return false;
     const blob = `${n.app} ${n.title} ${n.body}`.toLowerCase();
     return blob.includes(q.toLowerCase());
   });
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-medium tracking-tight">Inbox</h2>
+      <h2 className="text-lg font-medium tracking-tight">Alerts</h2>
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search alerts, codes, messages"
+        placeholder="Search alerts and codes"
         className="h-11 w-full rounded-sm border border-line bg-inset px-3 text-sm outline-none"
-        aria-label="Search inbox"
+        aria-label="Search alerts"
       />
       <div className="flex gap-2 overflow-x-auto">
-        {(["all", "notification", "otp", "sms"] as const).map((f) => (
+        {(["all", "notification", "otp"] as const).map((f) => (
           <button
             key={f}
             className={filter === f ? "h-9 shrink-0 rounded-full bg-accent px-3 text-sm text-accent-fg" : "h-9 shrink-0 rounded-full border border-line px-3 text-sm text-muted"}
             onClick={() => setFilter(f)}
           >
-            {f === "all" ? "All" : f === "notification" ? "Alerts" : f === "otp" ? "Codes" : "SMS"}
+            {f === "all" ? "All" : f === "notification" ? "Alerts" : "Codes"}
           </button>
         ))}
       </div>
-      {items.length === 0 && <Empty title="Nothing matches" body="Alerts you mirror, codes, and texts show up here." />}
+      {items.length === 0 && <Empty title="Nothing matches" body="Mirrored alerts and codes show up here. Texts stay in Messages on the Mac." />}
       <ul className="space-y-2">
         {items.map((n) => (
           <li key={n.id} className={n.dismissed ? "rounded-lg border border-line px-3 py-3 opacity-50" : "rounded-lg border border-line bg-panel px-3 py-3"}>

@@ -6,36 +6,23 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
-import android.content.ClipData;
-import android.content.ClipDescription;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
-import android.hardware.camera2.CameraManager;
-import android.media.AudioAttributes;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
-import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.PowerManager;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 
 import androidx.core.content.ContextCompat;
 
 import com.google.gson.JsonObject;
 
-import app.bridgelink.android.protocol.Backoff;
 import app.bridgelink.android.protocol.BrowseAgain;
 import app.bridgelink.android.protocol.Dedup;
 import app.bridgelink.android.protocol.Envelope;
@@ -43,7 +30,6 @@ import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.MediaQueue;
 import app.bridgelink.android.protocol.MediaWatch;
 import app.bridgelink.android.protocol.StageFour;
-import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Frame;
 import app.bridgelink.android.protocol.FrameChannel;
 import app.bridgelink.android.protocol.HelloPlan;
@@ -52,13 +38,9 @@ import app.bridgelink.android.protocol.LinkFailure;
 import app.bridgelink.android.protocol.LinkState;
 import app.bridgelink.android.protocol.MacBook;
 import app.bridgelink.android.protocol.MacList;
-import app.bridgelink.android.protocol.MacTokens;
 import app.bridgelink.android.protocol.Outbox;
 import app.bridgelink.android.protocol.PairGate;
-import app.bridgelink.android.protocol.Sas;
 import app.bridgelink.android.protocol.ServiceDoor;
-import app.bridgelink.android.protocol.SecondPhone;
-import app.bridgelink.android.protocol.Transfers;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -95,119 +77,59 @@ class LinkCore extends Service {
     public static final String EXTRA_STATUS = "status";
     public static final String EXTRA_LINE = "line";
 
-    private static final String CHANNEL = "link";
-    private static final String RING_CHANNEL = "find";
-    private static final int NOTE_ID = 1;
-    private static final int RING_ID = 2;
+    static final String CHANNEL = "link";
+    static final String RING_CHANNEL = "find";
+    static final int NOTE_ID = 1;
+    static final int RING_ID = 2;
 
     private final IBinder binder = new LocalBinder();
-    private final Outbox outbox = new Outbox();
+    final Outbox outbox = new Outbox();
     private final MediaQueue media = new MediaQueue();
     private final AtomicBoolean mediaPumping = new AtomicBoolean();
     private static volatile Runnable needKey;
-    private final AtomicInteger generation = new AtomicInteger();
-    private final AtomicInteger alertIds = new AtomicInteger();
-    private final AtomicInteger fileNoteIds = new AtomicInteger();
-    private final Dedup seen = new Dedup(500);
-    private final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
-    private final Handler main = new Handler(Looper.getMainLooper());
+    final AtomicInteger generation = new AtomicInteger();
+    final Dedup seen = new Dedup(500);
+    final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
+    final Handler main = new Handler(Looper.getMainLooper());
     private static final Object PARK = new Object();
     private static final ArrayDeque<Intent> parked = new ArrayDeque<>();
     static volatile LinkCore running;
+    final LinkDesk desk = new LinkDesk(this);
+    private final LinkInbox inbox = new LinkInbox(this);
 
     private volatile Attempt attempt;
-    private MediaPlayer player;
-    private volatile boolean paired;
-    private int relayAttempt;
-
-    private void rejoinRelay() {
-        if (six == null) return;
-        if (six.relayLive()) return;
-        if (paired && !onRelay) return;
-        six.tryRelay();
-    }
-    private volatile String lastHost = "";
-    private volatile int lastPort = 8787;
-    private int savedAlarmVolume = -1;
-    private final LinkState linkState = new LinkState();
-    private FileBridge files;
+    volatile boolean paired;
+    volatile String lastHost = "";
+    volatile int lastPort = 8787;
+    final LinkState linkState = new LinkState();
+    FileBridge files;
     private ConnectivityManager.NetworkCallback networkCallback;
     private BroadcastReceiver batteryWatch;
     private final List<String> pendingHosts = new ArrayList<>();
-    private volatile long lastRx;
-    private volatile String sessionFp = "";
-    private volatile String matchCode = "";
-    private volatile String lastEcho = "";
-    private final AtomicBoolean fileCancel = new AtomicBoolean();
-    private boolean macLowAlerted;
-    private boolean macFullAlerted;
-    private boolean sawDnd;
-    private boolean lastDnd;
-    private volatile String sasPhoneNonce = "";
-    private volatile String macCommit = "";
-    private volatile String lastNow = "";
-    private LeaveWatch leave;
-    private PhoneFive five;
-    private PhoneSix six;
+    volatile long lastRx;
+    volatile String sessionFp = "";
+    volatile String matchCode = "";
+    final AtomicBoolean fileCancel = new AtomicBoolean();
+    volatile String sasPhoneNonce = "";
+    volatile String macCommit = "";
+    LeaveWatch leave;
+    PhoneFive five;
+    PhoneSix six;
     private MacBrowser browser;
-    private volatile boolean onRelay;
-    private volatile boolean relayAuthed;
-    private volatile boolean replyOnRelay;
-    private final Runnable rejoinTick = new Runnable() {
-        @Override
-        public void run() {
-            rejoinRelay();
-        }
-    };
-    private final app.bridgelink.android.protocol.AwayAuth awayAuth =
-            new app.bridgelink.android.protocol.AwayAuth(new app.bridgelink.android.protocol.AwayAuth.Sink() {
-                @Override
-                public void writeAuth() {
-                    outbox.submit(() -> {
-                        if (!onRelay || six == null || !six.relayLive()) return;
-                        if (!app.bridgelink.android.protocol.RelayAuth.keepSending(relayAuthed, "")) return;
-                        try {
-                            JsonObject auth = new JsonObject();
-                            String token = Prefs.open(LinkCore.this).getString("token", "");
-                            auth.addProperty("token", token == null ? "" : token);
-                            writeEnvelope(Envelope.make(app.bridgelink.android.protocol.RelayAuth.AUTH, "android", auth));
-                        } catch (Exception ignored) {
-                        }
-                    });
-                }
-
-                @Override
-                public void post(Runnable task, long delayMs) {
-                    main.postDelayed(task, delayMs);
-                }
-
-                @Override
-                public void remove(Runnable task) {
-                    main.removeCallbacks(task);
-                }
-            });
-    private final Runnable heartbeat = new Runnable() {
+    final Runnable heartbeat = new Runnable() {
         @Override
         public void run() {
             if (!paired) return;
             if (lastRx > 0 && System.currentTimeMillis() - lastRx > 45_000) {
-                if (six != null && six.relayLive()) {
-                    main.postDelayed(this, 20_000);
-                    return;
-                }
                 closeSocket();
                 return;
             }
             send("ping", "");
             if (leave != null) leave.tick();
-            sendNowPlaying();
+            desk.sendNowPlaying();
             main.postDelayed(this, 20_000);
         }
     };
-    private Runnable ringStop;
-    private Runnable flashBlink;
-    private boolean torchOn;
-    private String torchId = "";
 
     public class LocalBinder extends Binder {
         public LinkCore getService() {
@@ -258,59 +180,17 @@ class LinkCore extends Service {
             public void status(String line) {
                 publish(line, null);
             }
-
-            @Override
-            public void relayUp() {
-                relayAttempt = 0;
-                relayAuthed = false;
-                main.removeCallbacks(rejoinTick);
-                onRelay = true;
-                replyOnRelay = true;
-                markUnpaired();
-                publish("Connecting through the away relay…", null);
-                awayAuth.start();
-            }
-
-            @Override
-            public void relayDown(String reason) {
-                boolean wasRelay = onRelay;
-                replyOnRelay = false;
-                if (app.bridgelink.android.protocol.RelayRetry.rejoin(reason)) {
-                    relayAuthed = false;
-                    awayAuth.stop();
-                    if (wasRelay) {
-                        markUnpaired();
-                        onRelay = false;
-                    }
-                    publish(app.bridgelink.android.protocol.RelayRetry.DOWN, null);
-                    if (wasRelay) {
-                        long delay = app.bridgelink.android.protocol.RelayRetry.delayMs(relayAttempt++);
-                        main.removeCallbacks(rejoinTick);
-                        main.postDelayed(rejoinTick, delay);
-                    }
-                    return;
-                }
-                publish(reason, null);
-            }
-
-            @Override
-            public void relayFrames(java.util.List<Frame> frames) {
-                replyOnRelay = true;
-                for (Frame frame : frames) {
-                    if (frame.type == Frame.JSON) onLine(new String(frame.payload, StandardCharsets.UTF_8));
-                }
-            }
         });
         running = this;
         watchNetwork();
         batteryWatch = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (paired) sendBattery();
+                if (paired) desk.sendBattery();
             }
         };
         registerReceiver(batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        watchClipboard();
+        desk.watchClipboard();
         leave = new LeaveWatch(this, new LeaveWatch.Sink() {
             @Override
             public void lock() {
@@ -354,12 +234,12 @@ class LinkCore extends Service {
             );
         } else if (ACTION_SEND.equals(action)) {
             String kind = intent.getStringExtra(EXTRA_KIND);
-            if ("file".equals(kind)) sendFile(intent.getStringExtra(EXTRA_BODY));
-            else if ("files".equals(kind)) sendFiles(intent.getStringExtra(EXTRA_BODY));
-            else if ("link".equals(kind)) sendLink(intent.getStringExtra(EXTRA_BODY));
-            else if ("notify".equals(kind)) sendNotify(intent);
-            else if ("notify_dismiss".equals(kind)) sendDismiss(intent.getStringExtra("key"));
-            else if ("otp".equals(kind)) sendOtp(intent.getStringExtra(EXTRA_BODY));
+            if ("file".equals(kind)) desk.sendFile(intent.getStringExtra(EXTRA_BODY));
+            else if ("files".equals(kind)) desk.sendFiles(intent.getStringExtra(EXTRA_BODY));
+            else if ("link".equals(kind)) desk.sendLink(intent.getStringExtra(EXTRA_BODY));
+            else if ("notify".equals(kind)) desk.sendNotify(intent);
+            else if ("notify_dismiss".equals(kind)) desk.sendDismiss(intent.getStringExtra("key"));
+            else if ("otp".equals(kind)) desk.sendOtp(intent.getStringExtra(EXTRA_BODY));
             else if ("sms_in".equals(kind) && five != null) {
                 five.smsIn(safe(intent.getStringExtra("address")) + "\n" + safe(intent.getStringExtra(EXTRA_BODY)));
             }
@@ -376,7 +256,7 @@ class LinkCore extends Service {
             else if ("lock-refresh".equals(kind) && leave != null) leave.start();
             else send(kind, intent.getStringExtra(EXTRA_BODY));
         } else if (ACTION_STOP_RING.equals(action)) {
-            stopRing();
+            desk.stopRing();
             send("find_stop", "");
         } else if (ACTION_CONFIRM.equals(action)) {
             new Thread(this::confirmSas, "bridgelink-confirm").start();
@@ -431,7 +311,7 @@ class LinkCore extends Service {
     @Override
     public void onDestroy() {
         if (five != null) five.onUnlinked();
-        stopRing();
+        desk.stopRing();
         if (leave != null) leave.stop();
         if (networkCallback != null) {
             ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -451,12 +331,10 @@ class LinkCore extends Service {
             batteryWatch = null;
         }
         main.removeCallbacksAndMessages(null);
-        awayAuth.stop();
         linkState.stop();
         generation.incrementAndGet();
         if (running == this) running = null;
         closeSocket();
-        if (six != null) six.stopRelay();
         if (browser != null) browser.stop();
         outbox.close();
         super.onDestroy();
@@ -491,7 +369,7 @@ class LinkCore extends Service {
 
     private void runConnect(Attempt mine, String address, int port, String code) {
         if (mine.closed || generation.get() != mine.gen) return;
-        if (!onRelay) markUnpaired();
+        markUnpaired();
         SharedPreferences prefs = Prefs.open(this);
         String savedToken = prefs.getString("token", "");
         String pinned = prefs.getString("fp", "");
@@ -591,8 +469,7 @@ class LinkCore extends Service {
             mine.close();
             if (attempt == mine) {
                 attempt = null;
-                boolean relayStill = onRelay && six != null && six.relayLive();
-                if (!app.bridgelink.android.protocol.RelayRetry.leaveIt(relayStill)) markUnpaired();
+                markUnpaired();
                 String next = mine.hopTo;
                 if (next != null && !next.isEmpty()) {
                     main.post(() -> openAttempt(next, port, code));
@@ -602,20 +479,11 @@ class LinkCore extends Service {
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (linkState.afterClose(userStopped, tokenSaved) && !address.isEmpty()) {
                     long delay = linkState.delayMs();
-                    if (linkState.attempt >= 2 && six != null && !six.relayLive()) {
-                        six.tryRelay();
-                        publish("Wi-Fi missed the Mac. Trying away from home, and still retrying Wi-Fi.", null);
-                    } else {
-                        publish("Reconnecting…", null);
-                    }
+                    publish("Reconnecting…", null);
                     if (BrowseAgain.shouldBrowse(linkState.attempt)) browseSaved();
                     main.postDelayed(() -> connect(address, port, code), delay);
                 } else if (!userStopped && linkState.phase != LinkState.Phase.FATAL) {
-                    if (six != null && !six.relayLive() && six.tryRelay()) {
-                        publish("Wi-Fi missed the Mac. Trying the away relay.", null);
-                    } else {
-                        publish("Disconnected", null);
-                    }
+                    publish("Disconnected", null);
                 }
             }
         }
@@ -662,262 +530,10 @@ class LinkCore extends Service {
     }
 
     private void onLine(String line) {
-        try {
-            Envelope message = Envelope.parse(line);
-            if (!message.id.isEmpty() && !seen.firstTime(message.id)) return;
-            String body = message.body();
-            switch (message.type) {
-                case "paired" -> {
-                    paired = true;
-                    onRelay = false;
-                    replyOnRelay = false;
-                    relayAuthed = false;
-                    relayAttempt = 0;
-                    main.removeCallbacks(rejoinTick);
-                    awayAuth.stop();
-                    if (six != null) six.stopRelay();
-                    linkState.paired();
-                    String issued = message.text("token");
-                    if (issued.length() >= 16) {
-                        SharedPreferences prefs = Prefs.open(this);
-                        SharedPreferences.Editor editor = prefs.edit().putString("token", issued);
-                        String fp = sessionFp == null || sessionFp.isEmpty() ? prefs.getString("fp", "") : sessionFp;
-                        if (fp != null && !fp.isEmpty()) editor.putString("fp", fp);
-                        String device = message.text("deviceId");
-                        if (!device.isEmpty()) editor.putString("deviceId", device);
-                        String macs = prefs.getString("macs", "[]");
-                        editor.putString("macs", MacList.add(macs, "Mac", lastHost, lastPort, fp, device));
-                        if (fp != null && !fp.isEmpty()) {
-                            editor.putString("macTokens", MacTokens.put(prefs.getString("macTokens", ""), fp, issued));
-                        }
-                        editor.putString("host", lastHost);
-                        editor.remove("pendingFp").remove("pin").commit();
-                        if (prefs.getString("token", "").length() < 16) {
-                            markUnpaired();
-                            linkState.failFatal(Prefs.WARNING);
-                            publish(Prefs.WARNING, null);
-                            return;
-                        }
-                    }
-                    publish("Paired with the Mac", "Mac accepted the phone");
-                    main.removeCallbacks(heartbeat);
-                    main.postDelayed(heartbeat, 20_000);
-                    sendBattery();
-                    if (five != null) five.onPaired();
-                    if (six != null && attempt != null && attempt.channel != null) six.stopRelay();
-                }
-                case "sas" -> {
-                    String commit = message.text("commit");
-                    if (commit.isEmpty() || sasPhoneNonce.isEmpty()) {
-                        linkState.failFatal("The Mac code did not match. Connect again.");
-                        publish(linkState.fatal, null);
-                        generation.incrementAndGet();
-                        closeSocket();
-                    } else {
-                        macCommit = commit;
-                        JsonObject reveal = new JsonObject();
-                        reveal.addProperty("nonce", sasPhoneNonce);
-                        writeEnvelope(Envelope.make("sas_reveal", "android", reveal));
-                        publish("Checking the match code…", null);
-                    }
-                }
-                case "sas_reveal" -> {
-                    String revealed = message.text("nonce");
-                    if (!Sas.revealMatches(macCommit, revealed)) {
-                        linkState.failFatal("The Mac code did not match. Connect again.");
-                        publish(linkState.fatal, null);
-                        generation.incrementAndGet();
-                        closeSocket();
-                    } else {
-                        matchCode = Sas.code(sessionFp, sasPhoneNonce, revealed);
-                        publish("Match code " + matchCode + ". Tap Codes match on the phone and the Mac.", null);
-                    }
-                }
-                case "pong" -> lastRx = System.currentTimeMillis();
-                case "ping" -> {
-                    if (onRelay) {
-                        relayAuthed = false;
-                        awayAuth.macJoined();
-                    }
-                    try {
-                        writeEnvelope(Envelope.make("pong", "android", new JsonObject()));
-                    } catch (Exception ignored) {
-                    }
-                }
-                case "relay_ok" -> {
-                    relayAuthed = true;
-                    awayAuth.ok();
-                    if (onRelay) {
-                        paired = true;
-                        if (five != null) five.onLinked();
-                        publish("Away (relay). The relay cannot read the link.", null);
-                        main.removeCallbacks(heartbeat);
-                        main.postDelayed(heartbeat, 1_000);
-                    }
-                }
-                case "battery" -> {
-                    if ("mac".equals(message.text("label"))) {
-                        noteMacBattery(message.text("level"), "1".equals(message.text("charging")));
-                    }
-                }
-                case "forget" -> {
-                    SharedPreferences prefs = Prefs.open(this);
-                    String fp = prefs.getString("fp", "");
-                    if (fp == null || fp.isEmpty()) fp = sessionFp == null ? "" : sessionFp;
-                    String tokens = app.bridgelink.android.protocol.MacSwitch.forget(prefs.getString("macTokens", ""), fp);
-                    String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
-                    prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId")
-                            .putString("macTokens", tokens)
-                            .putString("macs", macs).apply();
-                    linkState.failFatal("The Mac forgot this phone");
-                    publish("The Mac forgot this phone", null);
-                    generation.incrementAndGet();
-                    closeSocket();
-                }
-                case "error" -> {
-                    String code = message.code();
-                    if (onRelay && app.bridgelink.android.protocol.RelayAuth.forgotten(code)) {
-                        relayAuthed = false;
-                        awayAuth.forgot();
-                        onRelay = false;
-                        replyOnRelay = false;
-                        markUnpaired();
-                        if (six != null) six.stopRelay();
-                        publish("This phone is not paired with that Mac.", null);
-                    } else if ("busy".equals(code)) {
-                        linkState.holdUntil = SecondPhone.until(System.currentTimeMillis());
-                        publish("Another phone is connected. This phone will wait 5 minutes.", null);
-                        closeSocket();
-                    } else {
-                    LinkFailure.Kind kind = LinkFailure.fromCode(code);
-                    boolean fatal = LinkState.isFatalCode(code);
-                    String shown = fatal ? LinkFailure.message(kind) : "The Mac rejected that message.";
-                    if (fatal) {
-                        linkState.failFatal(shown);
-                        if (kind == LinkFailure.Kind.TOKEN_REJECTED || kind == LinkFailure.Kind.WRONG_CODE) {
-                            Prefs.open(this).edit().remove("token").apply();
-                        }
-                        generation.incrementAndGet();
-                        closeSocket();
-                    }
-                    publish(shown, null);
-                    }
-                }
-                case "text" -> {
-                    publish("Note from the Mac", body);
-                    alert("Note from the Mac", body);
-                }
-                case "clipboard" -> {
-                    if (!acceptClipboard()) break;
-                    copy(body);
-                    publish("Clipboard updated from the Mac", null);
-                    alert("Clipboard from the Mac", "Clipboard updated");
-                }
-                case "clipboard_image" -> acceptClipboardImage(message.text("data"));
-                case "notify_reply" -> {
-                    boolean sent = NotifyMirror.reply(message.text("key"), message.text("body"));
-                    publish(sent ? "Sent a reply" : "That notification does not accept a reply", null);
-                }
-                case "notify_dismiss" -> {
-                    NotifyMirror.dismiss(message.text("key"));
-                    publish("Dismissed a notification", null);
-                }
-                case "dnd" -> applyMacDnd("1".equals(message.text("on")));
-                case "ring" -> {
-                    publish("Mac is ringing this phone", null);
-                    startRing("1".equals(message.text("flash")), !"0".equals(message.text("vibrate")));
-                }
-                case "find_stop" -> {
-                    stopRing();
-                    publish("Ring stopped", null);
-                }
-                case "link" -> openLink(message.text("url"));
-                case "file_begin" -> {
-                    String id = message.text("id");
-                    long from = longText(message, "from");
-                    if ("folder".equals(message.text("dest")) && five != null
-                            && five.takeFolderFile(id, message.text("path"), longText(message, "size"))) {
-                        JsonObject reply = new JsonObject();
-                        reply.addProperty("id", id);
-                        reply.addProperty("offset", "0");
-                        writeEnvelope(Envelope.make("file_have", "android", reply));
-                        publish("Receiving a shared file", null);
-                    } else {
-                    String status = files.begin(id, message.text("name"), longText(message, "size"), Math.max(0, from));
-                    JsonObject reply = new JsonObject();
-                    reply.addProperty("id", id);
-                    reply.addProperty("offset", Long.toString(files.offered(id)));
-                    writeEnvelope(Envelope.make("file_have", "android", reply));
-                    if (status != null) publish(status, null);
-                    }
-                }
-                case "file_have" -> fileHave.put(message.text("id"), longText(message, "offset"));
-                case "file_chunk" -> {
-                    if (five != null && five.hasFolderFile(message.text("id"))) {
-                        String status = five.chunkFolderFile(message.text("id"), longText(message, "offset"), message.text("data"));
-                        if (status != null) publish(status, null);
-                    } else {
-                    String status = files.chunk(message.text("id"), longText(message, "offset"), message.text("data"));
-                    if (status != null) publish(status, null);
-                    }
-                }
-                case "file_end" -> {
-                    if (five != null && five.hasFolderFile(message.text("id"))) {
-                        publish(five.finishFolderFile(message.text("id"), message.text("sha256")), null);
-                    } else {
-                    String saved = files.finish(message.text("id"), message.text("sha256"));
-                    publish(saved, null);
-                    if (saved != null && saved.startsWith("Saved")) {
-                        askFile(files.lastName(), files.lastUri());
-                        if (five != null) five.fire("file_in", saved);
-                    }
-                    }
-                }
-                case "file_cancel" -> {
-                    if (five != null && five.hasFolderFile(message.text("id"))) five.dropFolderFile(message.text("id"));
-                    files.cancel(message.text("id"));
-                    publish("File cancelled", null);
-                }
-                case "media" -> {
-                    MediaControl.Result result = MediaControl.fromMac(this, message.text("action"), message.text("volume"));
-                    publish(result.status, null);
-                    if (result.reply != null) writeEnvelope(Envelope.make("media_now", "android", result.reply));
-                }
-                case "media_now" -> publish(StageFour.nowLine(
-                        message.text("title"), message.text("artist"), "1".equals(message.text("playing"))), null);
-                case "lock_setup" -> {
-                    int[] setup = StageFour.parseSetup(message.text("body"));
-                    if (setup == null) {
-                        publish("Lock settings were not understood", null);
-                    } else {
-                        LeaveWatch.saveSetup(this, setup);
-                        if (leave != null) leave.start();
-                        publish(setup[0] == 1 ? "Lock when you leave is on" : "Lock when you leave is off", null);
-                    }
-                }
-                default -> {
-                    if (five != null && five.handle(message)) break;
-                    if (six != null && six.handle(message)) break;
-                    JsonObject payload = new JsonObject();
-                    payload.addProperty("code", "unsupported_type");
-                    payload.addProperty("body", "This phone does not handle " + message.type);
-                    writeEnvelope(Envelope.make("error", "android", payload));
-                }
-            }
-        } catch (Exception error) {
-            LinkFailure.Kind kind = LinkFailure.classify(error);
-            if (kind == LinkFailure.Kind.VERSION_MISMATCH) {
-                linkState.failFatal(LinkFailure.message(kind));
-                publish(LinkFailure.message(kind), null);
-                generation.incrementAndGet();
-                closeSocket();
-                return;
-            }
-            publish("Bad message from the Mac", null);
-        }
+        inbox.onLine(line);
     }
 
-    private void markUnpaired() {
+    void markUnpaired() {
         paired = false;
         if (five != null) five.onUnlinked();
     }
@@ -934,11 +550,8 @@ class LinkCore extends Service {
         String fp = prefs.getString("fp", "");
         if (fp == null || fp.isEmpty()) fp = sessionFp == null ? "" : sessionFp;
         String macs = MacList.removeHost(prefs.getString("macs", "[]"), lastHost);
-        String device = prefs.getString("deviceId", "");
-        String book = app.bridgelink.android.protocol.RelaySecrets.drop(prefs.getString("relayBook", ""), device);
         String tokens = app.bridgelink.android.protocol.MacSwitch.forget(prefs.getString("macTokens", ""), fp);
         prefs.edit().remove("token").remove("fp").remove("pendingFp").remove("deviceId").remove("pin")
-                .remove("relaySecret").putString("relayBook", book)
                 .putString("macTokens", tokens)
                 .putString("macs", macs).commit();
         linkState.stop();
@@ -973,7 +586,7 @@ class LinkCore extends Service {
                 JsonObject payload = new JsonObject();
                 String text = body == null ? "" : body;
                 if ("clipboard".equals(kind)) {
-                    sendClipboardText(text);
+                    desk.sendClipboardText(text);
                     return;
                 }
                 if ("media".equals(kind)) {
@@ -1030,242 +643,19 @@ class LinkCore extends Service {
         });
     }
 
-    private void sendNotify(Intent intent) {
-        outbox.submit(() -> {
-            if (!paired) return;
-            if (!Features.enabled(Prefs.open(this).getString("flags", ""), "notify", false)) return;
-            try {
-                JsonObject payload = new JsonObject();
-                payload.addProperty("title", safe(intent.getStringExtra(EXTRA_BODY)));
-                payload.addProperty("app", safe(intent.getStringExtra("app")));
-                payload.addProperty("key", safe(intent.getStringExtra("key")));
-                payload.addProperty("reply", safe(intent.getStringExtra("reply")));
-                payload.addProperty("body", safe(intent.getStringExtra("detail")));
-                writeEnvelope(Envelope.make("notify", "android", payload));
-                if (five != null) five.fire("notify", safe(intent.getStringExtra("app")));
-                if ("1".equals(intent.getStringExtra("otp"))
-                        && Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) {
-                    String code = Features.otp(safe(intent.getStringExtra(EXTRA_BODY)) + "\n" + safe(intent.getStringExtra("detail")));
-                    if (code != null && otpFresh(code)) {
-                        JsonObject otp = new JsonObject();
-                        otp.addProperty("body", code);
-                        writeEnvelope(Envelope.make("otp", "android", otp));
-                    }
-                }
-                publish("Mirrored a notification", null);
-            } catch (Exception error) {
-                publish("Could not mirror a notification", null);
-            }
-        });
-    }
 
     private static String safe(String value) {
         return value == null ? "" : value;
     }
 
-    private void sendFile(String source) {
-        sendFiles(source);
-    }
 
-    private void sendFiles(String source) {
-        fileCancel.set(false);
-        new Thread(() -> {
-            if (!paired || files == null) {
-                publish("Connect and pair before sending", null);
-                return;
-            }
-            try {
-                files.sendMany(source, fileOut());
-                publish("Sent the file", null);
-            } catch (Exception error) {
-                String message = error.getMessage() == null ? "Could not send the file" : error.getMessage();
-                publish(message, null);
-            }
-        }, "bridgelink-file").start();
-    }
-
-    private String lastOtp = "";
-    private long lastOtpAt;
-    private long lastProgressAt;
-
-    private synchronized boolean otpFresh(String code) {
-        long now = System.currentTimeMillis();
-        if (!app.bridgelink.android.protocol.OtpGate.fresh(lastOtp, lastOtpAt, code, now)) return false;
-        lastOtp = code;
-        lastOtpAt = now;
-        return true;
-    }
-
-    private FileBridge.Out fileOut() {
-        return new FileBridge.Out() {
-            @Override
-            public void frame(String type, JsonObject payload) throws Exception {
-                writeEnvelope(Envelope.make(type, "android", payload));
-            }
-
-            @Override
-            public long have(String id) {
-                return waitHave(id);
-            }
-
-            @Override
-            public void progress(String name, int percent) {
-                long now = System.currentTimeMillis();
-                if (!app.bridgelink.android.protocol.ProgressPace.show(lastProgressAt, now, percent)) return;
-                lastProgressAt = now;
-                publish("Sending " + name + " — " + percent + "%", null);
-            }
-
-            @Override
-            public boolean cancelled() {
-                return fileCancel.get();
-            }
-        };
-    }
-
-    private int lastBattery = -1;
-    private boolean lastCharging;
-    private boolean sawBattery;
-
-    private void sendNowPlaying() {
-        outbox.submit(() -> {
-            if (!paired) return;
-            try {
-                JsonObject now = MediaControl.snapshot(this);
-                String key = now.get("title").getAsString() + "|" + now.get("playing").getAsString() + "|" + now.get("volume").getAsString();
-                if (key.equals(lastNow)) return;
-                lastNow = key;
-                writeEnvelope(Envelope.make("media_now", "android", now));
-            } catch (Exception ignored) {
-            }
-        });
-    }
-
-    private boolean passwordClip(ClipboardManager clipboard) {
-        if (clipboard == null || Build.VERSION.SDK_INT < 33) return false;
-        ClipDescription description = clipboard.getPrimaryClipDescription();
-        if (description == null || description.getExtras() == null) return false;
-        boolean marked = description.getExtras().getBoolean(ClipDescription.EXTRA_IS_SENSITIVE);
-        return StageRules.skipPasswordClip(false, false, marked);
-    }
-
-    private static String clipboardText(ClipboardManager clipboard) {
-        if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.getPrimaryClip() == null) return "";
-        ClipData clip = clipboard.getPrimaryClip();
-        if (clip.getItemCount() == 0 || clip.getItemAt(0).getText() == null) return "";
-        return clip.getItemAt(0).getText().toString();
-    }
-
-    private void sendBattery() {
-        try {
-            Intent sticky = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-            if (sticky == null) return;
-            int level = sticky.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
-            int scale = sticky.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
-            int status = sticky.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
-            int percent = scale <= 0 ? level : (int) (level * 100f / scale);
-            boolean charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING
-                    || status == android.os.BatteryManager.BATTERY_STATUS_FULL;
-            if (!Features.batteryChanged(lastBattery, lastCharging, sawBattery, percent, charging)) {
-                maybeSendDnd();
-                return;
-            }
-            sawBattery = true;
-            lastBattery = percent;
-            lastCharging = charging;
-            if (leave != null) leave.setCharging(charging);
-            if (five != null) five.noteBattery(percent, charging);
-            outbox.submit(() -> {
-                if (!paired) return;
-                try {
-                    JsonObject payload = new JsonObject();
-                    payload.addProperty("level", Integer.toString(percent));
-                    payload.addProperty("charging", charging ? "1" : "0");
-                    payload.addProperty("label", "phone");
-                    writeEnvelope(Envelope.make("battery", "android", payload));
-                    maybeSendDnd();
-                } catch (Exception ignored) {
-                }
-            });
-        } catch (Exception ignored) {
-        }
-    }
-
-    private long waitHave(String id) {
-        long end = System.currentTimeMillis() + 800;
-        while (System.currentTimeMillis() < end) {
-            Long value = fileHave.remove(id);
-            if (value != null) return Math.max(0, value);
-            try {
-                Thread.sleep(40);
-            } catch (InterruptedException error) {
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
-        Long value = fileHave.remove(id);
-        return value == null ? 0 : Math.max(0, value);
-    }
-
-    private void sendLink(String raw) {
-        new Thread(() -> {
-            if (!paired || files == null) {
-                publish("Connect and pair before sending", null);
-                return;
-            }
-            try {
-                files.sendLink(raw, (type, payload) -> writeEnvelope(Envelope.make(type, "android", payload)));
-                publish("Sent the link", null);
-            } catch (Exception error) {
-                publish(error.getMessage() == null ? "Could not send the link" : error.getMessage(), null);
-            }
-        }, "bridgelink-link").start();
-    }
-
-    private void openLink(String raw) {
-        String url = Transfers.acceptUrl(raw);
-        if (url == null) {
-            publish("Refused a link that is not http or https", null);
-            return;
-        }
-        boolean always = "1".equals(Prefs.open(this).getString("linksAlways", "0"));
-        PowerManager power = (PowerManager) getSystemService(POWER_SERVICE);
-        boolean screenOn = power != null && power.isInteractive();
-        if (!StageRules.openLinkNow(screenOn, always)) {
-            askLink(url);
-            return;
-        }
-        try {
-            Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(view);
-            publish("Opened a link from the Mac", null);
-        } catch (Exception error) {
-            publish("Could not open that link", null);
-        }
-    }
-
-    private static long longText(Envelope message, String key) {
-        try {
-            return Long.parseLong(message.text(key));
-        } catch (Exception error) {
-            return -1;
-        }
-    }
-
-    private void writeEnvelope(Envelope envelope) throws Exception {
+    void writeEnvelope(Envelope envelope) throws Exception {
         writeRaw(Frame.encode(Frame.JSON, envelope.toJsonString().getBytes(StandardCharsets.UTF_8)));
     }
 
     void writeRaw(byte[] framed) throws Exception {
         Attempt current = attempt;
-        boolean wifiUp = current != null && current.channel != null && !current.closed;
-        boolean relayUp = six != null && six.relayLive();
-        if (app.bridgelink.android.protocol.StageSix.useRelay(replyOnRelay, wifiUp, relayUp)) {
-            if (six.relaySend(framed)) return;
-            throw new IOException("not connected");
-        }
-        if (wifiUp) {
+        if (current != null && current.channel != null && !current.closed) {
             current.channel.write(framed);
             return;
         }
@@ -1317,441 +707,13 @@ class LinkCore extends Service {
         if (live != null && line != null) live.publish(line, null);
     }
 
-    private void closeSocket() {
+    void closeSocket() {
         Attempt current = attempt;
         if (current != null) current.close();
     }
 
-    private void noteMacBattery(String levelText, boolean charging) {
-        int level;
-        try {
-            level = Integer.parseInt(levelText);
-        } catch (Exception error) {
-            publish("Mac battery " + levelText + "%", null);
-            return;
-        }
-        if (StageRules.fullBattery(level, macFullAlerted)) {
-            macFullAlerted = true;
-            alert("Mac is fully charged", "The Mac battery is at 100%.");
-        }
-        if (level < 100) macFullAlerted = false;
-        if (Features.lowBattery(level, charging, macLowAlerted)) {
-            macLowAlerted = true;
-            alert("Mac battery is low", "The Mac battery is at " + level + "%.");
-        }
-        if (level > 15 || charging) macLowAlerted = false;
-        publish("Mac battery " + level + "%", null);
-    }
 
-    private void maybeSendDnd() {
-        boolean dnd = manager().getCurrentInterruptionFilter() != NotificationManager.INTERRUPTION_FILTER_ALL;
-        if (sawDnd && dnd == lastDnd) return;
-        sawDnd = true;
-        lastDnd = dnd;
-        if (!Features.enabled(Prefs.open(this).getString("flags", ""), "dnd", false)) return;
-        outbox.submit(() -> {
-            if (!paired) return;
-            try {
-                JsonObject payload = new JsonObject();
-                payload.addProperty("on", dnd ? "1" : "0");
-                payload.addProperty("label", "phone");
-                writeEnvelope(Envelope.make("dnd", "android", payload));
-            } catch (Exception ignored) {
-            }
-        });
-    }
-
-    private void applyMacDnd(boolean on) {
-        if (!Features.enabled(Prefs.open(this).getString("flags", ""), "dnd", false)) {
-            publish(on ? "Mac is in Do Not Disturb" : "Mac left Do Not Disturb", null);
-            return;
-        }
-        try {
-            if (manager().isNotificationPolicyAccessGranted()) {
-                manager().setInterruptionFilter(on
-                        ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                        : NotificationManager.INTERRUPTION_FILTER_ALL);
-            }
-        } catch (Exception ignored) {
-        }
-        publish(on ? "Mac is in Do Not Disturb" : "Mac left Do Not Disturb", null);
-    }
-
-    private boolean acceptClipboard() {
-        return Features.enabled(Prefs.open(this).getString("flags", ""), "clipboard", true);
-    }
-
-    private void watchClipboard() {
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        if (clipboard == null) return;
-        clipboard.addPrimaryClipChangedListener(() -> {
-            if (passwordClip(clipboard)) return;
-            ClipStore.addText(this, clipboardText(clipboard));
-            if (!paired) return;
-            if (!Features.enabled(Prefs.open(this).getString("flags", ""), "clipboard", false)) return;
-            sendClipboardNow(false);
-        });
-    }
-
-    private void sendClipboardText(String value) {
-        outbox.submit(() -> {
-            if (!paired) {
-                publish("Connect and pair before sending", null);
-                return;
-            }
-            if (value == null || value.isEmpty()) {
-                publish("Clipboard was empty", null);
-                return;
-            }
-            if (Features.looksSensitive(value)) {
-                publish("Skipped sensitive clipboard", null);
-                return;
-            }
-            if (Features.isEcho(lastEcho, value)) {
-                publish("Skipped a clipboard echo", null);
-                return;
-            }
-            try {
-                JsonObject payload = new JsonObject();
-                payload.addProperty("body", value);
-                writeEnvelope(Envelope.make("clipboard", "android", payload));
-                ClipStore.addText(this, value);
-                publish("Sent clipboard", null);
-            } catch (Exception error) {
-                publish("Send failed. Try again.", null);
-            }
-        });
-    }
-
-    private void sendClipboardNow(boolean manual) {
-        outbox.submit(() -> {
-            if (!paired) {
-                if (manual) publish("Connect and pair before sending", null);
-                return;
-            }
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.getPrimaryClip() == null) {
-                if (manual) publish("Clipboard was empty", null);
-                return;
-            }
-            ClipData clip = clipboard.getPrimaryClip();
-            if (passwordClip(clipboard)) {
-                if (manual) publish("Skipped a password-manager clipboard", null);
-                return;
-            }
-            CharSequence text = clip.getItemCount() > 0 ? clip.getItemAt(0).getText() : null;
-            String value = text == null ? "" : text.toString();
-            boolean image = clip.getItemCount() > 0 && clip.getItemAt(0).getUri() != null && value.isEmpty();
-            String kind = StageRules.clipKind(!value.isEmpty(), image, Features.looksSensitive(value));
-            if ("skip".equals(kind)) {
-                publish("Skipped sensitive clipboard", null);
-                return;
-            }
-            if ("text".equals(kind)) {
-                if (Features.isEcho(lastEcho, value)) {
-                    if (manual) publish("Skipped a clipboard echo", null);
-                    return;
-                }
-                try {
-                    JsonObject payload = new JsonObject();
-                    payload.addProperty("body", value);
-                    writeEnvelope(Envelope.make("clipboard", "android", payload));
-                    ClipStore.addText(this, value);
-                    publish("Sent clipboard", null);
-                } catch (Exception error) {
-                    publish("Send failed. Try again.", null);
-                }
-                return;
-            }
-            if ("image".equals(kind)) {
-                sendClipboardImage(clip.getItemAt(0).getUri());
-                return;
-            }
-            if (manual) publish("Clipboard was empty", null);
-        });
-    }
-
-    private static byte[] readCap(java.io.InputStream in, int cap) throws java.io.IOException {
-        byte[] buffer = new byte[8192];
-        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-        int count;
-        while (out.size() <= cap && (count = in.read(buffer)) >= 0) {
-            if (count > 0) out.write(buffer, 0, count);
-        }
-        return out.toByteArray();
-    }
-
-    private void sendClipboardImage(Uri uri) {
-        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
-            if (in == null) {
-                publish("Could not read the clipboard image", null);
-                return;
-            }
-            byte[] raw = readCap(in, StageRules.IMAGE_CAP + 1);
-            if (!StageRules.imageFits(raw.length)) {
-                publish("That clipboard image is too big", null);
-                return;
-            }
-            String key = Features.echoKey(java.util.Base64.getEncoder().encodeToString(raw));
-            if (key.equals(lastEcho)) return;
-            lastEcho = key;
-            JsonObject payload = new JsonObject();
-            payload.addProperty("data", java.util.Base64.getEncoder().encodeToString(raw));
-            writeEnvelope(Envelope.make("clipboard_image", "android", payload));
-            publish("Sent a clipboard image", null);
-        } catch (Exception error) {
-            publish("Could not send the clipboard image", null);
-        }
-    }
-
-    private void acceptClipboardImage(String data) {
-        if (!acceptClipboard()) return;
-        byte[] raw;
-        try {
-            raw = java.util.Base64.getDecoder().decode(data == null ? "" : data);
-        } catch (IllegalArgumentException error) {
-            publish("Skipped a clipboard image", null);
-            return;
-        }
-        if (!StageRules.imageFits(raw.length)) {
-            publish("Skipped a clipboard image", null);
-            return;
-        }
-        try {
-            java.io.File dir = new java.io.File(getCacheDir(), "clips");
-            if (!dir.isDirectory() && !dir.mkdirs()) return;
-            java.io.File file = new java.io.File(dir, "clip.png");
-            java.nio.file.Files.write(file.toPath(), raw);
-            Uri uri = androidx.core.content.FileProvider.getUriForFile(this, "app.bridgelink.android.files", file);
-            lastEcho = Features.echoKey(data);
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newUri(getContentResolver(), "BridgeLink", uri));
-            }
-            publish("Clipboard image updated", null);
-        } catch (Exception error) {
-            publish("Could not save the clipboard image", null);
-        }
-    }
-
-    private void sendOtp(String code) {
-        outbox.submit(() -> {
-            if (!paired || code == null || code.isEmpty()) return;
-            if (!otpFresh(code)) return;
-            if (!Features.enabled(Prefs.open(this).getString("flags", ""), "otp", false)) return;
-            try {
-                JsonObject payload = new JsonObject();
-                payload.addProperty("body", code);
-                writeEnvelope(Envelope.make("otp", "android", payload));
-                if (five != null) five.fire("sms_code", code);
-                publish("Copied a code to the Mac", null);
-            } catch (Exception error) {
-                publish("Could not copy the code", null);
-            }
-        });
-    }
-
-    private void sendDismiss(String key) {
-        outbox.submit(() -> {
-            if (!paired || key == null || key.isEmpty()) return;
-            try {
-                JsonObject payload = new JsonObject();
-                payload.addProperty("key", key);
-                writeEnvelope(Envelope.make("notify_dismiss", "android", payload));
-            } catch (Exception ignored) {
-            }
-        });
-    }
-
-    private void copy(String text) {
-        lastEcho = Features.echoKey(text == null ? "" : text);
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        if (clipboard != null) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("BridgeLink", text));
-        }
-        if (five != null) five.fire("clip", "");
-    }
-
-    private void startRing(boolean flash, boolean vibrate) {
-        stopRing();
-        AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
-        if (audio != null) {
-            savedAlarmVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM);
-            try {
-                audio.setStreamVolume(AudioManager.STREAM_ALARM, audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
-            } catch (RuntimeException ignored) {
-            }
-        }
-        try {
-            Uri alarm = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-            MediaPlayer next = new MediaPlayer();
-            next.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build());
-            next.setDataSource(this, alarm);
-            next.setLooping(true);
-            next.prepare();
-            next.start();
-            player = next;
-        } catch (Exception ignored) {
-            vibrate = true;
-        }
-        if (vibrate) {
-            Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            if (vibrator != null) vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 500, 400}, 0));
-        }
-        if (flash) blinkTorch();
-        Intent stop = new Intent(this, LinkService.class);
-        stop.setAction(ACTION_STOP_RING);
-        PendingIntent pending = PendingIntent.getService(this, 2, stop, PendingIntent.FLAG_IMMUTABLE);
-        Notification ring = new Notification.Builder(this, RING_CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle("BridgeLink is ringing")
-                .setContentText("The Mac asked this phone to ring")
-                .setOngoing(true)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause, "Stop", pending).build())
-                .build();
-        manager().notify(RING_ID, ring);
-        ringStop = this::stopRing;
-        main.postDelayed(ringStop, 120_000);
-    }
-
-    private void stopRing() {
-        if (ringStop != null) main.removeCallbacks(ringStop);
-        ringStop = null;
-        if (player != null) {
-            try {
-                player.stop();
-            } catch (Exception ignored) {
-            }
-            player.release();
-            player = null;
-        }
-        AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
-        if (audio != null && savedAlarmVolume >= 0) {
-            try {
-                audio.setStreamVolume(AudioManager.STREAM_ALARM, savedAlarmVolume, 0);
-            } catch (RuntimeException ignored) {
-            }
-            savedAlarmVolume = -1;
-        }
-        Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-        if (vibrator != null) vibrator.cancel();
-        manager().cancel(RING_ID);
-        if (flashBlink != null) main.removeCallbacks(flashBlink);
-        flashBlink = null;
-        setTorch(false);
-    }
-
-    private void blinkTorch() {
-        flashBlink = new Runnable() {
-            @Override
-            public void run() {
-                torchOn = !torchOn;
-                setTorch(torchOn);
-                main.postDelayed(this, 400);
-            }
-        };
-        main.post(flashBlink);
-    }
-
-    private void setTorch(boolean on) {
-        try {
-            CameraManager cameras = (CameraManager) getSystemService(CAMERA_SERVICE);
-            if (cameras == null) return;
-            if (torchId.isEmpty()) {
-                String[] ids = cameras.getCameraIdList();
-                if (ids.length == 0) return;
-                torchId = ids[0];
-            }
-            cameras.setTorchMode(torchId, on);
-            torchOn = on;
-        } catch (Exception ignored) {
-            torchOn = false;
-        }
-    }
-
-    private void askFile(String name, android.net.Uri uri) {
-        String title = StageRules.fileTitle(name);
-        int id = StageRules.fileNoteId(fileNoteIds.incrementAndGet());
-        Notification.Builder builder = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle(title)
-                .setContentText("Saved in Downloads. It was not opened.")
-                .setAutoCancel(true);
-        Intent show = new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS);
-        show.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        builder.addAction(new Notification.Action.Builder(null, "Show in Downloads",
-                PendingIntent.getActivity(this, id, show, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)).build());
-        if (uri != null && StageRules.canOfferOpen(name, fileMime(uri))) {
-            Intent open = new Intent(Intent.ACTION_VIEW, uri);
-            open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            int flags = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
-            PendingIntent pending = PendingIntent.getActivity(this, id + 50_000, open, flags);
-            builder.setContentIntent(pending);
-            builder.addAction(new Notification.Action.Builder(null, "Open", pending).build());
-        }
-        manager().notify(id, builder.build());
-        publish(title, null);
-    }
-
-    /** The file type stored with the download, when MediaStore has one. */
-    private String fileMime(android.net.Uri uri) {
-        try (android.database.Cursor cursor = getContentResolver().query(
-                uri,
-                new String[]{android.provider.MediaStore.MediaColumns.MIME_TYPE},
-                null,
-                null,
-                null)) {
-            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
-                String mime = cursor.getString(0);
-                if (mime != null && !mime.isEmpty()) return mime;
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            String mime = getContentResolver().getType(uri);
-            return mime == null ? "" : mime;
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
-
-    private void askLink(String url) {
-        publish("Link from the Mac is waiting", null);
-        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Notification note = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle("Link from the Mac")
-                .setContentText("Tap Open. The link was not opened by itself.")
-                .setAutoCancel(true)
-                .addAction(new Notification.Action.Builder(null, "Open",
-                        PendingIntent.getActivity(this, 43, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT)).build())
-                .build();
-        manager().notify(43, note);
-    }
-
-    private void alert(String title, String body) {
-        Notification note = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setStyle(new Notification.BigTextStyle().bigText(body))
-                .setVisibility(Notification.VISIBILITY_PRIVATE)
-                .setPublicVersion(new Notification.Builder(this, CHANNEL)
-                        .setSmallIcon(R.drawable.ic_stat)
-                        .setContentTitle(title)
-                        .setContentText("Open BridgeLink")
-                        .build())
-                .setAutoCancel(true)
-                .build();
-        manager().notify(StageRules.alertId(alertIds.incrementAndGet()), note);
-    }
-
-    private void publish(String status, String line) {
+    void publish(String status, String line) {
         if (status != null) {
             manager().notify(NOTE_ID, note("BridgeLink", status));
         }
@@ -1788,7 +750,7 @@ class LinkCore extends Service {
                 .build();
     }
 
-    private NotificationManager manager() {
+    NotificationManager manager() {
         return (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
     }
 
@@ -1810,7 +772,7 @@ class LinkCore extends Service {
                 int chosen = port;
                 String chosenHost = host;
                 main.post(() -> {
-                    boolean wifiLinked = paired && !onRelay;
+                    boolean wifiLinked = paired;
                     if (!LinkState.networkShouldConnect(linkState.phase, wifiLinked)) return;
                     connect(chosenHost, chosen, "");
                 });

@@ -11,7 +11,7 @@ import org.junit.runner.RunWith;
 
 import app.bridgelink.android.protocol.StageSix;
 
-/** Runs on the emulator. Mirror, control, camera, and relay rules must match the phone build. */
+/** Runs on the emulator. Mirror, control, and camera rules must match the phone build. */
 @RunWith(AndroidJUnit4.class)
 public class StageSixDeviceTest {
     @Test
@@ -23,7 +23,6 @@ public class StageSixDeviceTest {
         assertTrue(StageSix.CAM_NOTE.contains("Zoom"));
         assertFalse(StageSix.cameraExtension(false));
         assertTrue(StageSix.stopWhenClosed(false));
-        assertTrue(StageSix.relayUrl("wss://relay.example.com/room"));
         assertFalse(StageSix.flashOn("front", true));
         assertEquals("back", StageSix.control("back", 0, 0, 0, 0, "").kind);
     }

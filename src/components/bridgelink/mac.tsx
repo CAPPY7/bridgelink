@@ -6,7 +6,7 @@ import { Btn, ClockLabel, Empty, Field, KeyWall, Pill, Progress, SLIDES, ago, fo
 import { PairMark } from "./phone";
 
 const PANES: { id: MacPane; label: string }[] = [
-  { id: "inbox", label: "Inbox" },
+  { id: "inbox", label: "Alerts" },
   { id: "clips", label: "Clips" },
   { id: "messages", label: "Messages" },
   { id: "mirror", label: "Mirror" },
@@ -46,7 +46,7 @@ function MenuBar({ clock }: { clock: number }) {
       <button className="font-medium" onClick={() => setMenu(!open)} aria-expanded={open} aria-label="BridgeLink menu">
         BridgeLink
       </button>
-      <span className="text-subtle">{path === "lan" ? "LAN" : path === "manual" ? "Host" : "Relay"}</span>
+      <span className="text-subtle">{path === "lan" ? "LAN" : "Host"}</span>
       <span className="ml-auto flex items-center gap-3 tabular-nums">
         <span className={low ? "text-warn" : "text-muted"}>
           Phone {battery}%{charging ? " +" : ""}
@@ -398,12 +398,18 @@ function InboxPane() {
   const copy = useBridge((s) => s.copyText);
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const items = notices.filter((n) => !blocked.includes(n.app) && `${n.app} ${n.title} ${n.body}`.toLowerCase().includes(q.toLowerCase()));
+  const items = notices.filter(
+    (n) =>
+      n.source !== "sms" &&
+      n.source !== "system" &&
+      !blocked.includes(n.app) &&
+      `${n.app} ${n.title} ${n.body}`.toLowerCase().includes(q.toLowerCase()),
+  );
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-medium">Inbox</h2>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search Mac inbox" className="h-11 w-full rounded-sm border border-line bg-inset px-3 text-sm" />
-      {items.length === 0 && <Empty title="Inbox is clear" body="Mirrored alerts show here unless the app is blocked." />}
+      <h2 className="text-lg font-medium">Alerts</h2>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search alerts" className="h-11 w-full rounded-sm border border-line bg-inset px-3 text-sm" />
+      {items.length === 0 && <Empty title="No alerts" body="Mirrored alerts show here unless the app is blocked. Texts and files stay in their own places." />}
       <ul className="space-y-2">
         {items.map((n) => (
           <li key={n.id} className="rounded-lg border border-line px-3 py-3">
@@ -592,8 +598,8 @@ function MirrorPane() {
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {(["home", "send", "inbox", "remote"] as const).map((id) => (
-            <button key={id} className="h-11 rounded-sm border border-line text-sm capitalize" onClick={() => setScreen(id)}>
-              {id}
+            <button key={id} className="h-11 rounded-sm border border-line text-sm" onClick={() => setScreen(id)}>
+              {id === "inbox" ? "Alerts" : id[0].toUpperCase() + id.slice(1)}
             </button>
           ))}
         </div>
@@ -700,9 +706,9 @@ function MacSettings() {
       <p className="font-mono text-xs text-muted">Phone {formatFingerprint(s.seenAndroidFp)}</p>
       <p className="font-mono text-xs text-muted">Mac {formatFingerprint(s.pinnedMacFp)}</p>
       <div className="flex flex-wrap gap-2">
-        {(["lan", "manual", "relay"] as const).map((p) => (
+        {(["lan", "manual"] as const).map((p) => (
           <Btn key={p} variant={s.path === p ? "primary" : "quiet"} onClick={() => s.setPath(p)}>
-            {p === "lan" ? "Local" : p === "manual" ? "Saved host" : "Relay"}
+            {p === "lan" ? "Local" : "Saved host"}
           </Btn>
         ))}
       </div>

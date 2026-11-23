@@ -214,8 +214,6 @@ class MainActivity : AppCompatActivity(), PhoneActions {
     override fun stopShare() = six.stopShare()
     override fun startCamera() = six.startCamera()
     override fun stopCamera() = six.stopCamera()
-    override fun saveRelay() = six.saveRelay()
-    override fun useRelay() = six.useRelay()
     override fun controlSteps() = six.controlSteps()
     override fun checkUpdate() = polish.checkUpdate()
     override fun finishSetup() = polish.finishSetup()

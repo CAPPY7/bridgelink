@@ -16,19 +16,6 @@ enum ClipFile {
     }
 }
 
-enum InboxFile {
-    static func url() -> URL { store("inbox.txt") }
-
-    static func load() -> [StageFour.Item] {
-        guard let raw = try? String(contentsOf: url(), encoding: .utf8) else { return [] }
-        return StageFour.decodeInbox(raw)
-    }
-
-    static func save(_ items: [StageFour.Item]) {
-        try? StageFour.encodeInbox(items).write(to: url(), atomically: true, encoding: .utf8)
-    }
-}
-
 private func store(_ name: String) -> URL {
     let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         ?? URL(fileURLWithPath: NSTemporaryDirectory())
@@ -40,7 +27,7 @@ private func store(_ name: String) -> URL {
 extension LinkModel {
     func loadEasy() {
         clips = ClipFile.load()
-        inbox = InboxFile.load()
+        dropInboxStore()
         refreshBeacon()
         loadFive()
     }
@@ -50,10 +37,9 @@ extension LinkModel {
         ClipFile.save(clips)
     }
 
-    func rememberInbox(kind: String, title: String, detail: String) {
-        let hidden = Features.sensitiveText(detail)
-        inbox = StageFour.addInbox(inbox, kind, title, detail, hidden, nowMs())
-        InboxFile.save(inbox)
+    func dropInboxStore() {
+        let url = store("inbox.txt")
+        try? FileManager.default.removeItem(at: url)
     }
 
     func pinClip(_ id: String) {
@@ -80,7 +66,7 @@ extension LinkModel {
         guard let linkGoneAt else { return }
         let gone = Int64(Date().timeIntervalSince(linkGoneAt) * 1000)
         let delay = Int64(StageFour.delaySeconds(lockDelay)) * 1000
-        let linkUp = live != nil || away?.isLive == true
+        let linkUp = live != nil
         if !MacLeave.shouldLock(lockOn, atDesk, linkUp, gone, delay) {
             if linkUp || !lockOn || atDesk { clearLeaveLock() }
             return

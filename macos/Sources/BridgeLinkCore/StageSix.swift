@@ -1,13 +1,12 @@
 import Foundation
 
-/// Rules for screen mirror, phone control, the camera window, and the away relay. Matches Android.
+/// Rules for screen mirror, phone control, and the camera window. Matches Android.
 public enum StageSix {
     public static let chunk = 24 * 1024
     public static let norm = 10_000
     public static let mirrorSteps = "On the phone, tap Mirror, then Share screen. Android asks once. Closing the Mac window stops the picture."
     public static let controlSteps = "Turn on BridgeLink under Accessibility. On Android 13 and newer, open App info, the menu, and Allow restricted settings, then turn the service on. Back, Home, and Recents work after that. The Mac never unlocks the phone."
     public static let camNote = "The free app shows the phone camera inside a BridgeLink window. You can share that window in a call. A camera that appears in Zoom, Meet, or FaceTime needs a paid Apple Developer ID, so that extension stays off until those secrets exist."
-    public static let relaySteps = "Away from home uses a free relay. Pair once on the same Wi-Fi so both sides share a key. The relay only forwards locked frames. It cannot read them."
 
     public struct Picture: Equatable {
         public let width: Int
@@ -157,69 +156,6 @@ public enum StageSix {
         case "high": return 75
         default: return 55
         }
-    }
-
-    public static func relayUrl(_ url: String) -> Bool { relayParts(url) != nil }
-
-    public static func relayParts(_ url: String) -> (host: String, port: String, path: String)? {
-        let raw = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !raw.hasPrefix("wss://") || raw.count > 200 { return nil }
-        if raw.contains(" ") || raw.contains("@") || raw.contains("\\") { return nil }
-        let rest = String(raw.dropFirst(6))
-        if rest.isEmpty || rest.hasPrefix("/") || rest.hasPrefix(".") { return nil }
-        let hostport: String
-        var path = "/"
-        if let slash = rest.firstIndex(of: "/") {
-            hostport = String(rest[..<slash])
-            path = String(rest[slash...])
-            if path.isEmpty { path = "/" }
-        } else {
-            hostport = rest
-        }
-        if hostport.isEmpty || hostport.hasPrefix("[") { return nil }
-        var host = hostport
-        var port = 443
-        if let colon = hostport.lastIndex(of: ":"), hostport.firstIndex(of: ":") == colon, colon > hostport.startIndex {
-            host = String(hostport[..<colon])
-            guard let parsed = Int(hostport[hostport.index(after: colon)...]), parsed >= 1, parsed <= 65535 else { return nil }
-            port = parsed
-        }
-        if host.isEmpty || !host.contains(".") { return nil }
-        let lower = host.lowercased()
-        if lower == "localhost" || lower.hasPrefix("127.") { return nil }
-        return (host, String(port), path)
-    }
-
-    public static func room(_ secret: String) -> String { Features.roomId(secret) }
-
-    public static func ticket(_ secret: String, _ role: String) -> String {
-        if secret.count < 16 { return "" }
-        let who = role == "mac" ? "mac" : "phone"
-        return String(Features.echoKey(secret + "\n" + who).prefix(32))
-    }
-
-    /// A late reply still uses the away relay when Wi-Fi is down.
-    public static func useRelay(reply: Bool, wifiUp: Bool, relayUp: Bool) -> Bool {
-        return relayUp && (reply || !wifiUp)
-    }
-
-    public static func relayHello(_ secret: String, _ role: String, _ epoch: Int64) -> String {
-        if secret.count < 16 { return "" }
-        let key = Features.echoKey(secret + "\nrelay-ticket")
-        let who = role == "mac" ? "mac" : "phone"
-        let mac = String(Features.echoKey(key + "\n" + who + "\n" + String(epoch)).prefix(32))
-        return "\(who) \(epoch) \(mac) \(key)"
-    }
-
-    public static func sealedLooksOpaque(plain: Data, sealed: Data) -> Bool {
-        if plain.isEmpty || sealed.count < plain.count + 16 { return false }
-        let a = [UInt8](plain)
-        let b = [UInt8](sealed)
-        if a.count > b.count { return false }
-        for i in 0...(b.count - a.count) {
-            if Array(b[i..<(i + a.count)]) == a { return false }
-        }
-        return true
     }
 
     public static func cameraExtension(_ appleSecrets: Bool) -> Bool { appleSecrets }

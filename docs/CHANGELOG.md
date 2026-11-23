@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The phone link file is split. Connecting stays in one place. Clipboard, alerts, files, ringing, and battery stay in another. Incoming messages stay in a third. Nothing about how the link works was changed. NOT TESTED on a device.
+- The unified inbox is removed. Notifications, texts, and files stay in their own places. The saved inbox file is deleted the next time the Mac app opens. NOT TESTED on a device.
+- The away relay is removed. The phone and the Mac link only on Wi-Fi. An old relay message is ignored. NOT TESTED on a device.
+
 ## 1.0.1
 
 - Away from home keeps its room after a sleep, closes only after 10 quiet minutes, and says "Away link down" if it drops. It says paired only after the Mac accepts the phone.
