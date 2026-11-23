@@ -67,6 +67,7 @@ public final class CallWatch {
     }
 
     /** Android 12 and newer refuse a callback that listens for nothing. */
+    @androidx.annotation.RequiresApi(31)
     private static final class Ring extends TelephonyCallback implements TelephonyCallback.CallStateListener {
         @Override
         public void onCallStateChanged(int state) {
