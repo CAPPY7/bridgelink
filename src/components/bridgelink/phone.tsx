@@ -597,7 +597,6 @@ const PAGES: { id: SystemPage; label: string; body: string }[] = [
   { id: "scan", label: "Scan to Mac", body: "Clean a page and send it" },
   { id: "mirror", label: "Screen mirror", body: "Approve capture for this session" },
   { id: "camera", label: "Camera", body: "Preview on the Mac" },
-  { id: "automations", label: "Automations", body: "Small rules you can actually run" },
   { id: "settings", label: "Settings", body: "Link, keys, history, diagnostics" },
 ];
 
@@ -632,7 +631,6 @@ function SystemScreen() {
       {page === "scan" && <ScanPage />}
       {page === "mirror" && <MirrorPage />}
       {page === "camera" && <CameraPage />}
-      {page === "automations" && <RulesPage />}
       {page === "settings" && <SettingsPage />}
     </div>
   );
@@ -983,78 +981,7 @@ function CameraPage() {
   );
 }
 
-function RulesPage() {
-  const s = useBridge();
-  const [name, setName] = useState("Evening note");
-  const [trigger, setTrigger] = useState<"wifi" | "charging" | "time" | "bluetooth">("time");
-  const [triggerValue, setTriggerValue] = useState("18:00");
-  const [action, setAction] = useState<"notify" | "lock" | "sync" | "send">("notify");
-  const [actionValue, setActionValue] = useState("It is 18:00");
-  if (!s.features.automations) {
-    return (
-      <div className="space-y-3">
-        <h2 className="text-lg font-medium">Automations are off</h2>
-        <p className="text-sm text-muted">Rules run only after you enable them. Triggers are Wi-Fi, charging, time, and headphones.</p>
-        <Btn variant="primary" onClick={() => s.setFeature("automations", true)}>
-          Enable automations
-        </Btn>
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-medium">Automations</h2>
-      <ul className="space-y-2">
-        {s.rules.map((r) => (
-          <li key={r.id} className="rounded-lg border border-line px-3 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">{r.name}</p>
-              <input type="checkbox" checked={r.enabled} onChange={(e) => s.toggleRule(r.id, e.target.checked)} aria-label={`Enable ${r.name}`} />
-            </div>
-            <p className="mt-1 text-sm text-muted">
-              When {r.trigger} is {r.triggerValue} → {r.action}
-            </p>
-            <button className="mt-2 text-xs text-subtle" onClick={() => s.removeRule(r.id)}>
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
-      <form
-        className="space-y-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          s.addRule({ name, enabled: true, trigger, triggerValue, action, actionValue });
-        }}
-      >
-        <Field label="Name" value={name} onChange={setName} />
-        <label className="block text-sm text-muted">
-          Trigger
-          <select className="mt-1 h-11 w-full rounded-sm border border-line bg-inset px-3 text-fg" value={trigger} onChange={(e) => setTrigger(e.target.value as typeof trigger)}>
-            <option value="wifi">Wi-Fi name</option>
-            <option value="charging">Charging starts</option>
-            <option value="time">Time</option>
-            <option value="bluetooth">Headphones</option>
-          </select>
-        </label>
-        <Field label="Trigger value" value={triggerValue} onChange={setTriggerValue} placeholder="Home, start, 18:00, Headphones" />
-        <label className="block text-sm text-muted">
-          Action
-          <select className="mt-1 h-11 w-full rounded-sm border border-line bg-inset px-3 text-fg" value={action} onChange={(e) => setAction(e.target.value as typeof action)}>
-            <option value="notify">Notify</option>
-            <option value="lock">Lock Mac</option>
-            <option value="sync">Sync a photo</option>
-            <option value="send">Send text</option>
-          </select>
-        </label>
-        <Field label="Action detail" value={actionValue} onChange={setActionValue} />
-        <Btn variant="primary" type="submit" className="w-full">
-          Add rule
-        </Btn>
-      </form>
-    </div>
-  );
-}
+
 
 function SettingsPage() {
   const s = useBridge();

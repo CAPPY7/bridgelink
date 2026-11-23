@@ -7,7 +7,7 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 - Stage 2 design is in v0.9.0.
 - Stage 3 half-done features are in v0.10.0.
 - Stage 4 easy features are in v0.11.0. Media control works both ways. The Mac can lock when the phone leaves, and it never unlocks. Clipboard history keeps 100 items and skips secrets. A phone scan is saved on the Mac and opened.
-- Stage 5 medium features are in v0.12.0. Texts, a shared folder, automations, and the phone trackpad, keyboard, and slides.
+- Stage 5 medium features are in v0.12.0. Texts, a shared folder, and the phone trackpad, keyboard, and slides.
 - Stage 6 hard features are in v0.13.0. Screen mirror, control while mirroring, and the phone camera inside BridgeLink. The remote path from that stage was removed in Part B.
 - Stage 7 polish is in the 1.0.1 code. First-run setup on both apps, Check for update, Reset BridgeLink, and the docs for macOS 13–15 and Android 8–15. It was never published as v1.0.0.
 
@@ -23,8 +23,9 @@ N6. Partly. Shared-folder send and receive moved from PhoneFive into PhoneFolder
 N8. Partly. An update file name keeps only letters, digits, dots, and dashes. Anything else, including a path trick, is saved as BridgeLink-update.dmg. NOT TESTED on a device. CI is not green on this commit yet.
 N9. Partly. The owner setup note now says Check for update downloads the disk image, checks the hash, and opens it. NOT TESTED on a device.
 N10. Partly. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is not green on this commit yet.
-Next: Part B. Remove automations.
+Next: Part B.
 B2. Partly. The demo calls the alerts list alerts. Incoming messages are in LinkReceive. The old list file and the old share file are deleted once. NOT TESTED on a device. CI is not green on this commit yet.
+B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. NOT TESTED on a device. CI is not green on this commit yet.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.
@@ -116,7 +117,7 @@ B2. Partly. The demo calls the alerts list alerts. Incoming messages are in Link
 - H11. The broken share extension is not shipped. Finder Services, Dock drop, and the drop zone remain.
 - H12. A second phone is told to wait. It does not disconnect the phone that is already paired.
 - H13. Each saved Mac keeps its own key. Switch to this saved Mac uses that key.
-- H14. Phone automations copy, alert, or ask the Mac to ring. Home Wi-Fi needs the network name.
+- H14. Phone when-this-then-that rules copy, alert, or ask the Mac to ring. Home Wi-Fi needs the network name.
 - H15. A release checks the version, the tag, and the APK signature, and writes SHA256SUMS.
 - H16 partly. First-run, Check for update, and Reset are in. Sparkle is not linked, so the update opens the release page.
 - M1. After two misses the phone looks for the saved Mac on Wi-Fi.
@@ -153,7 +154,7 @@ B2. Partly. The demo calls the alerts list alerts. Incoming messages are in Link
 - W5. The phone uses the away-relay send rule. It is not only a test.
 - W8. The progress note no longer says v1.0.0 was released. The releases are v0.12.0 and v1.0.1.
 - X7. Clipboard history is off until it is turned on. Clear history wipes it. Copies older than 24 hours are dropped. The file is sealed.
-- N11. The Home Wi-Fi automation is removed. It could not see the network name.
+- N11. The Home Wi-Fi trigger is removed. It could not see the network name.
 - N11b. Precise location is only for Android 11 and older, for leave-lock Bluetooth. Newer phones do not get it.
 - L7. The accessibility service no longer asks for click and focus events. It keeps gestures and window content for mirror taps.
 - L8. The Mac Bluetooth beacon starts only when leave-lock is on.

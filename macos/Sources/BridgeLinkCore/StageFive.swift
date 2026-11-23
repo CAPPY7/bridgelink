@@ -1,16 +1,13 @@
 import Foundation
 
-/// Rules for texts, the shared folder, automations, and the phone trackpad. Matches the Android class.
+/// Rules for texts, the shared folder, and the phone trackpad. Matches the Android class.
 public enum StageFive {
     public static let smsCap = 80
-    public static let ruleCap = 8
     public static let folderCap = 200
     public static let part = 24 * 1024
     public static let folderFileCap: Int64 = 32 * 1024 * 1024
     /// One wait after a folder change. A newer change replaces the old wait.
     public static let folderQuietMs: Int64 = 60_000
-    public static let events = ["connect", "battery_low", "sms_code", "file_in", "clip", "notify", "leave"]
-    public static let actions = ["open_app", "alert", "start_sync", "copy_code", "ring", "pause_sync", "note", "none"]
     public static let smsSteps = """
     1. Open Settings.
     2. Tap Apps, then BridgeLink.
@@ -61,34 +58,6 @@ public enum StageFive {
             self.incoming = incoming
             self.sim = sim
             self.at = at
-        }
-    }
-
-    public struct Rule: Equatable, Identifiable {
-        public let id: String
-        public let when: String
-        public let thenAction: String
-        public let extra: String
-        public let enabled: Bool
-
-        public init(id: String, when: String, thenAction: String, extra: String, enabled: Bool) {
-            self.id = id
-            self.when = when
-            self.thenAction = thenAction
-            self.extra = extra
-            self.enabled = enabled
-        }
-    }
-
-    public struct Fire: Equatable {
-        public let thenAction: String
-        public let extra: String
-        public let detail: String
-
-        public init(thenAction: String, extra: String, detail: String) {
-            self.thenAction = thenAction
-            self.extra = extra
-            self.detail = detail
         }
     }
 
@@ -155,113 +124,6 @@ public enum StageFive {
             items.append(Sms(id: unescape(parts[0]), address: unescape(parts[1]), body: unescape(parts[5]), incoming: parts[2] == "1", sim: sim, at: at))
         }
         return items
-    }
-
-    public static func knownEvent(_ event: String) -> Bool { events.contains(event) }
-    public static func knownAction(_ action: String) -> Bool { actions.contains(action) }
-
-    public static func eventLabel(_ event: String) -> String {
-        switch event {
-        case "connect": return "Phone connects"
-        case "battery_low": return "Phone battery under 20%"
-        case "home_wifi": return "Phone joins home Wi-Fi"
-        case "sms_code": return "Text has a code"
-        case "file_in": return "A file arrives"
-        case "clip": return "Clipboard arrives"
-        case "notify": return "A notification arrives"
-        case "leave": return "Phone leaves the Mac"
-        default: return event
-        }
-    }
-
-    public static func actionLabel(_ action: String) -> String {
-        switch action {
-        case "open_app": return "Open an app"
-        case "alert": return "Show an alert"
-        case "start_sync": return "Start shared folder sync"
-        case "copy_code": return "Copy the code"
-        case "ring": return "Ring the phone"
-        case "pause_sync": return "Pause shared folder sync"
-        case "note": return "Show a note"
-        case "none": return "Do nothing"
-        default: return action
-        }
-    }
-
-    public static func addRule(_ existing: [Rule], _ when: String, _ thenAction: String, _ extra: String) -> [Rule] {
-        var next = existing
-        if !knownEvent(when) || !knownAction(thenAction) || next.count >= ruleCap { return next }
-        var clean = extra.trimmingCharacters(in: .whitespacesAndNewlines)
-        if clean.count > 80 { clean = String(clean.prefix(80)) }
-        var n = next.count + 1
-        var id = "\(when)-\(thenAction)-\(n)"
-        while next.contains(where: { $0.id == id }) {
-            n += 1
-            id = "\(when)-\(thenAction)-\(n)"
-        }
-        next.append(Rule(id: id, when: when, thenAction: thenAction, extra: clean, enabled: true))
-        return next
-    }
-
-    public static func toggle(_ existing: [Rule], _ id: String, _ on: Bool) -> [Rule] {
-        existing.map { rule in
-            rule.id == id ? Rule(id: rule.id, when: rule.when, thenAction: rule.thenAction, extra: rule.extra, enabled: on) : rule
-        }
-    }
-
-    public static func delete(_ existing: [Rule], _ id: String) -> [Rule] {
-        existing.filter { $0.id != id }
-    }
-
-    public static func fire(_ rules: [Rule], _ event: String, _ detail: String) -> [Fire] {
-        if !knownEvent(event) { return [] }
-        return rules.compactMap { rule in
-            if !rule.enabled || rule.when != event { return nil }
-            if event == "home_wifi" && !homeWifi(detail, rule.extra) { return nil }
-            if event == "sms_code" && detail.isEmpty { return nil }
-            return Fire(thenAction: rule.thenAction, extra: rule.extra, detail: detail)
-        }
-    }
-
-    public static func encodeRules(_ rules: [Rule]) -> String {
-        rules.map { "\(escape($0.id))\t\($0.enabled ? "1" : "0")\t\($0.when)\t\($0.thenAction)\t\(escape($0.extra))" }
-            .joined(separator: "\n")
-    }
-
-    public static func decodeRules(_ raw: String) -> [Rule] {
-        if raw.isEmpty { return [] }
-        var rules: [Rule] = []
-        for line in raw.split(separator: "\n", omittingEmptySubsequences: false) {
-            if line.isEmpty || rules.count >= ruleCap { continue }
-            let parts = line.split(separator: "\t", maxSplits: 4, omittingEmptySubsequences: false).map(String.init)
-            if parts.count < 5 || !knownEvent(parts[2]) || !knownAction(parts[3]) { continue }
-            rules.append(Rule(id: unescape(parts[0]), when: parts[2], thenAction: parts[3], extra: unescape(parts[4]), enabled: parts[1] == "1"))
-        }
-        return rules
-    }
-
-    public static func batteryLow(_ level: Int, _ charging: Bool) -> Bool {
-        level >= 0 && level < 20 && !charging
-    }
-
-    public static func homeWifi(_ ssid: String, _ wanted: String) -> Bool {
-        var name = ssid.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.isEmpty || name.lowercased() == "<unknown ssid>" || name.lowercased() == "unknown" { return false }
-        if name.hasPrefix("\""), name.hasSuffix("\""), name.count >= 2 {
-            name = String(name.dropFirst().dropLast())
-        }
-        if name.isEmpty { return false }
-        let want = wanted.trimmingCharacters(in: .whitespacesAndNewlines)
-        if want.isEmpty { return false }
-        return name.lowercased() == want.lowercased()
-    }
-
-    public static func appName(_ raw: String) -> String? {
-        var name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.hasSuffix(".app") { name = String(name.dropLast(4)).trimmingCharacters(in: .whitespaces) }
-        if name.isEmpty || name.count > 80 { return nil }
-        if name.contains("/") || name.contains("\\") || name.contains("..") || name.contains(":") { return nil }
-        return name
     }
 
     public static func decide(paused: Bool, localExists: Bool, localSha: String, remoteDeleted: Bool, remoteSha: String) -> Choice {

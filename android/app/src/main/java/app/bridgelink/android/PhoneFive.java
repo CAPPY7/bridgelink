@@ -1,11 +1,6 @@
 package app.bridgelink.android;
 
 import android.Manifest;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -30,7 +25,7 @@ import app.bridgelink.android.protocol.Features;
 import app.bridgelink.android.protocol.StageFive;
 import app.bridgelink.android.protocol.StageRules;
 
-/** Texts, shared folder, automations, and trackpad messages. The socket stays in LinkService. */
+/** Texts, shared folder, and trackpad messages. The socket stays in LinkService. */
 public final class PhoneFive {
     public interface Out {
         void frame(String type, JsonObject payload) throws Exception;
@@ -54,8 +49,6 @@ public final class PhoneFive {
     private final Context context;
     private final Out out;
     private final PhoneFolder folder;
-    private boolean batteryFired;
-    private List<StageFive.Rule> rules = new ArrayList<>();
 
     public PhoneFive(Context context, Out out) {
         this.context = context.getApplicationContext();
@@ -70,21 +63,14 @@ public final class PhoneFive {
             public void setFlag(String name, boolean on) {
                 PhoneFive.this.setFlag(name, on);
             }
-
-            @Override
-            public void fire(String event, String detail) {
-                PhoneFive.this.fire(event, detail);
-            }
         });
-        rules = StageFive.decodeRules(Prefs.open(this.context).getString("autoRules", ""));
+        Prefs.open(this.context).edit().remove("autoRules").apply();
     }
 
     public void onPaired() {
         onLinked();
         pushSms();
-        pushRules(false);
         folder.pushIndex();
-        fire("connect", "");
     }
 
     /** The folder watch follows the link. */
@@ -106,7 +92,6 @@ public final class PhoneFive {
             case "folder_part" -> folder.onPart(message);
             case "folder_delete" -> folder.onDelete(message.text("path"), message.text("sha"));
             case "folder_pause" -> folder.setPaused("1".equals(message.text("on")), true);
-            case "auto_rules" -> replaceRules(message.text("body"), true);
             case "input" -> setFlag("input", "1".equals(message.text("on")));
             case "folder" -> folder.setSwitch("1".equals(message.text("on")));
             default -> {
@@ -129,7 +114,6 @@ public final class PhoneFive {
                 case "folder_sync" -> folder.syncNow();
                 case "folder_pause" -> folder.setPaused("1".equals(body), false);
                 case "folder_root" -> folder.reloadFolder();
-                case "auto" -> edit(body);
                 case "input_on" -> {
                     setFlag("input", !"0".equals(body));
                     JsonObject payload = new JsonObject();
@@ -170,48 +154,6 @@ public final class PhoneFive {
             out.status("New text message");
         } catch (Exception error) {
             out.status("Could not show the new text on the Mac");
-        }
-    }
-
-    public void noteBattery(int level, boolean charging) {
-        if (StageFive.batteryLow(level, charging)) {
-            if (!batteryFired) {
-                batteryFired = true;
-                fire("battery_low", Integer.toString(level));
-            }
-        } else {
-            batteryFired = false;
-        }
-    }
-
-    public void fire(String event, String detail) {
-        if (!flag("auto")) return;
-        for (StageFive.Fire item : StageFive.fire(rules, event, detail)) apply(item);
-    }
-
-    private void apply(StageFive.Fire item) {
-        switch (item.thenAction) {
-            case "start_sync" -> folder.setPaused(false, false);
-            case "pause_sync" -> folder.setPaused(true, false);
-            case "copy_code" -> copyCode(item.detail.isEmpty() ? item.extra : item.detail);
-            case "alert", "note" -> showAuto(item.extra.isEmpty() ? item.detail : item.extra, item.thenAction);
-            case "open_app" -> {
-                String name = StageFive.appName(item.extra);
-                if (name == null) {
-                    out.status("That app name was not allowed");
-                } else {
-                    try {
-                        JsonObject payload = new JsonObject();
-                        payload.addProperty("name", name);
-                        out.frame("open_app", payload);
-                    } catch (Exception error) {
-                        out.status("Could not ask the Mac to open the app");
-                    }
-                }
-            }
-            case "ring" -> ringMac();
-            default -> {
-            }
         }
     }
 
@@ -312,93 +254,6 @@ public final class PhoneFive {
         return StageFive.encodeSms(items);
     }
 
-
-    private void edit(String body) {
-        String text = body == null ? "" : body;
-        String[] parts = text.split("\t", 4);
-        String op = parts.length == 0 ? "" : parts[0];
-        if ("add".equals(op) && parts.length >= 3) {
-            String extra = parts.length >= 4 ? parts[3] : "";
-            rules = StageFive.addRule(rules, parts[1], parts[2], extra);
-        } else if ("toggle".equals(op) && parts.length >= 2) {
-            boolean on = true;
-            for (StageFive.Rule rule : rules) if (rule.id.equals(parts[1])) on = !rule.enabled;
-            rules = StageFive.toggle(rules, parts[1], on);
-        } else if ("delete".equals(op) && parts.length >= 2) {
-            rules = StageFive.delete(rules, parts[1]);
-        } else {
-            out.status("That automation was not understood.");
-            return;
-        }
-        setFlag("auto", true);
-        saveRules();
-        pushRules(false);
-        out.status(rules.isEmpty() ? "No automations yet" : "Saved an automation");
-    }
-
-    private void replaceRules(String body, boolean fromPeer) {
-        List<StageFive.Rule> next = StageFive.decodeRules(body);
-        if (StageFive.encodeRules(next).equals(StageFive.encodeRules(rules))) return;
-        rules = next;
-        saveRules();
-        if (!rules.isEmpty()) setFlag("auto", true);
-        out.status("Automations updated");
-        if (!fromPeer) pushRules(false);
-    }
-
-    private void pushRules(boolean force) {
-        try {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("body", StageFive.encodeRules(rules));
-            out.frame("auto_rules", payload);
-            if (force) out.status("Automations updated");
-        } catch (Exception ignored) {
-        }
-    }
-
-    private void saveRules() {
-        Prefs.open(context).edit().putString("autoRules", StageFive.encodeRules(rules)).apply();
-    }
-
-    private void copyCode(String text) {
-        if (text == null || text.isEmpty()) {
-            out.status("No code to copy");
-            return;
-        }
-        ClipboardManager board = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (board != null) board.setPrimaryClip(ClipData.newPlainText("BridgeLink", text));
-        out.status("Copied a code");
-    }
-
-    private void showAuto(String text, String action) {
-        String line = text == null || text.isEmpty() ? StageFive.actionLabel(action) : text;
-        out.status(line);
-        try {
-            NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (manager == null) return;
-            if (Build.VERSION.SDK_INT >= 26) {
-                manager.createNotificationChannel(new NotificationChannel("bridgelink.auto", "Automations", NotificationManager.IMPORTANCE_DEFAULT));
-            }
-            Notification note = new Notification.Builder(context, "bridgelink.auto")
-                    .setSmallIcon(android.R.drawable.ic_dialog_info)
-                    .setContentTitle("BridgeLink")
-                    .setContentText(line)
-                    .build();
-            manager.notify(70, note);
-        } catch (Exception ignored) {
-        }
-    }
-
-    private void ringMac() {
-        try {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("label", "automation");
-            out.frame("find_mac", payload);
-            out.status("Asked the Mac to ring");
-        } catch (Exception error) {
-            out.status("Could not ask the Mac to ring");
-        }
-    }
 
     private void sendPointer(String body) throws Exception {
         if (!flag("input")) {

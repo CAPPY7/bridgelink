@@ -36,7 +36,6 @@ final class PhoneFolder {
     interface Host {
         boolean flag(String name);
         void setFlag(String name, boolean on);
-        void fire(String event, String detail);
     }
 
     private final Context context;
@@ -56,11 +55,13 @@ final class PhoneFolder {
         thread.setDaemon(true);
         return thread;
     });
-    private final Runnable watchTick = () -> {
+    private final Runnable watchTick = this::onWatchTick;
+
+    private void onWatchTick() {
         if (!StageFive.folderWatchDue(linked, host.flag("folder"), paused, watchDue, System.currentTimeMillis())) return;
         watchDue = 0;
         pushIndex();
-    };
+    }
 
     PhoneFolder(Context context, PhoneFive.Out out, Host host) {
         this.context = context;
@@ -148,7 +149,6 @@ final class PhoneFolder {
         if (status != null) out.status(status);
         else if (parseLong(message.text("offset")) + decodeLen(message.text("data")) >= parseLong(message.text("size"))) {
             out.status("Shared folder updated");
-            host.fire("file_in", message.text("path"));
         }
     }
 

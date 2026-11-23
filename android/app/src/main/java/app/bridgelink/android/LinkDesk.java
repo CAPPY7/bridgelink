@@ -68,7 +68,6 @@ final class LinkDesk {
                 payload.addProperty("reply", safe(intent.getStringExtra("reply")));
                 payload.addProperty("body", safe(intent.getStringExtra("detail")));
                 core.writeEnvelope(Envelope.make("notify", "android", payload));
-                if (core.five != null) core.five.fire("notify", safe(intent.getStringExtra("app")));
                 if ("1".equals(intent.getStringExtra("otp"))
                         && Features.enabled(Prefs.open(core).getString("flags", ""), "otp", false)) {
                     String code = Features.otp(safe(intent.getStringExtra(LinkCore.EXTRA_BODY)) + "\n" + safe(intent.getStringExtra("detail")));
@@ -192,7 +191,6 @@ final class LinkDesk {
             lastBattery = percent;
             lastCharging = charging;
             if (core.leave != null) core.leave.setCharging(charging);
-            if (core.five != null) core.five.noteBattery(percent, charging);
             core.outbox.submit(() -> {
                 if (!core.paired) return;
                 try {
@@ -484,7 +482,6 @@ final class LinkDesk {
                 JsonObject payload = new JsonObject();
                 payload.addProperty("body", code);
                 core.writeEnvelope(Envelope.make("otp", "android", payload));
-                if (core.five != null) core.five.fire("sms_code", code);
                 core.publish("Copied a code to the Mac", null);
             } catch (Exception error) {
                 core.publish("Could not copy the code", null);
@@ -510,7 +507,6 @@ final class LinkDesk {
         if (clipboard != null) {
             clipboard.setPrimaryClip(ClipData.newPlainText("BridgeLink", text));
         }
-        if (core.five != null) core.five.fire("clip", "");
     }
 
     void startRing(boolean flash, boolean vibrate) {

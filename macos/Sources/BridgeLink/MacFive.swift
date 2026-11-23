@@ -565,8 +565,7 @@ final class FolderFlags: @unchecked Sendable {
 
 extension LinkModel {
     func loadFive() {
-        let raw = UserDefaults.standard.string(forKey: "autoRules") ?? ""
-        rules = StageFive.decodeRules(raw)
+        UserDefaults.standard.removeObject(forKey: "autoRules")
         folderPaused = UserDefaults.standard.bool(forKey: "folderPaused")
         folderPath = sharedBox.root().path
         if let saved = try? String(contentsOf: messagesURL(), encoding: .utf8) {
@@ -676,75 +675,11 @@ extension LinkModel {
         }
     }
 
-    func addAutomation() {
-        let before = rules.count
-        rules = StageFive.addRule(rules, ruleWhen, ruleThen, ruleExtra)
-        if rules.count == before {
-            note("That automation was not added. Eight is the limit, and the names must match.")
-            return
-        }
-        ruleExtra = ""
-        saveRules(sendPeer: true)
-        note("Saved an automation")
-    }
-
-    func toggleRule(_ id: String) {
-        let on = !(rules.first { $0.id == id }?.enabled ?? false)
-        rules = StageFive.toggle(rules, id, on)
-        saveRules(sendPeer: true)
-    }
-
-    func deleteRule(_ id: String) {
-        rules = StageFive.delete(rules, id)
-        saveRules(sendPeer: true)
-    }
-
     func startFive() {
         folderOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "folder", fallback: false)
         trackpadOn = Features.enabled(UserDefaults.standard.string(forKey: "flags") ?? "", "input", fallback: false)
         askSms()
         pushFolder()
-        send(type: "auto_rules", payload: ["body": StageFive.encodeRules(rules)], on: live)
-        fireAuto("connect", "")
-    }
-
-    func fireAuto(_ event: String, _ detail: String) {
-        let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
-        if !Features.enabled(flags, "auto", fallback: false) && !rules.contains(where: { $0.enabled }) { return }
-        for item in StageFive.fire(rules, event, detail) {
-            switch item.thenAction {
-            case "open_app":
-                if let name = StageFive.appName(item.extra) {
-                    let url = URL(fileURLWithPath: "/Applications/\(name).app")
-                    if FileManager.default.fileExists(atPath: url.path) {
-                        NSWorkspace.shared.open(url)
-                        note("Opened \(name)")
-                    } else {
-                        note("Could not find \(name) in Applications")
-                    }
-                } else {
-                    note("That app name was not allowed")
-                }
-            case "alert":
-                notify(item.extra.isEmpty ? "BridgeLink" : item.extra, "Automation")
-                note(item.extra.isEmpty ? "Automation" : item.extra)
-            case "note":
-                note(item.extra.isEmpty ? "Automation" : item.extra)
-            case "start_sync":
-                setFolderPaused(false)
-            case "pause_sync":
-                setFolderPaused(true)
-            case "copy_code":
-                if !item.detail.isEmpty {
-                    copyConcealed(item.detail)
-                    note("Copied a code")
-                }
-            case "ring":
-                ring()
-            default:
-                break
-            }
-        }
     }
 
     func handleFive(_ envelope: ParsedEnvelope, _: NWConnection) -> Bool {
@@ -769,7 +704,6 @@ extension LinkModel {
             let preview = item.body.count > 80 ? String(item.body.prefix(80)) : item.body
             notify("Text from \(item.address)", preview)
             note("New text message")
-            if let code = Features.otp(item.body) { fireAuto("sms_code", code) }
             return true
         case "folder_index":
             let indexBody = envelope.text("body")
@@ -894,31 +828,6 @@ extension LinkModel {
             note(folderOn ? "Shared folder is on" : "Shared folder is off")
             if folderOn && !folderPaused { pushFolder() }
             return true
-        case "open_app":
-            if let name = StageFive.appName(envelope.text("name")) {
-                let url = URL(fileURLWithPath: "/Applications/\(name).app")
-                if FileManager.default.fileExists(atPath: url.path) {
-                    NSWorkspace.shared.open(url)
-                    note("Opened \(name)")
-                } else {
-                    note("Could not find \(name) in Applications")
-                }
-            } else {
-                note("That app name was not allowed")
-            }
-            return true
-        case "auto_rules":
-            let next = StageFive.decodeRules(envelope.text("body"))
-            if StageFive.encodeRules(next) != StageFive.encodeRules(rules) {
-                rules = next
-                UserDefaults.standard.set(StageFive.encodeRules(rules), forKey: "autoRules")
-                if rules.contains(where: \.enabled) {
-                    let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
-                    UserDefaults.standard.set(StageRules.setFlag(flags, "auto", true), forKey: "flags")
-                }
-                note("Automations updated")
-            }
-            return true
         case "input":
             trackpadOn = envelope.text("on") == "1"
             let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
@@ -948,14 +857,6 @@ extension LinkModel {
         default:
             return false
         }
-    }
-
-    private func saveRules(sendPeer: Bool) {
-        let body = StageFive.encodeRules(rules)
-        UserDefaults.standard.set(body, forKey: "autoRules")
-        let flags = UserDefaults.standard.string(forKey: "flags") ?? ""
-        UserDefaults.standard.set(StageRules.setFlag(flags, "auto", true), forKey: "flags")
-        if sendPeer { send(type: "auto_rules", payload: ["body": body], on: live) }
     }
 
     private func messagesURL() -> URL {

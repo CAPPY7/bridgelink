@@ -32,8 +32,6 @@ struct DeskDetail: View {
             MirrorPane()
         case .webcam:
             WebcamPane()
-        case .automations:
-            AutomationsPane()
         case .devices: devices
         case .settings: settings
         }

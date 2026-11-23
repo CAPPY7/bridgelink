@@ -97,37 +97,6 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
         BigButton(if (model.lockOn) "Turn leave-lock off" else "Turn leave-lock on", "lock-toggle", actions::toggleLock)
         BigButton(if (model.atDesk) "I left the desk" else "I am at my desk", "at-desk", actions::toggleDesk, tonal = true)
         BigButton("Save lock settings", "lock-save", actions::saveLock, tonal = true)
-        Text("Automations", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "When and then use short names. When: connect, battery_low, sms_code, file_in, clip, notify, leave. Then: open_app, alert, start_sync, copy_code, ring, pause_sync, note, none. Eight rules at most.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        OutlinedTextField(
-            value = model.ruleWhen,
-            onValueChange = { model.ruleWhen = it },
-            modifier = Modifier.fillMaxWidth().testTag("rule-when"),
-            label = { Text("When") },
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = model.ruleThen,
-            onValueChange = { model.ruleThen = it },
-            modifier = Modifier.fillMaxWidth().testTag("rule-then"),
-            label = { Text("Then") },
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = model.ruleExtra,
-            onValueChange = { model.ruleExtra = it },
-            modifier = Modifier.fillMaxWidth().testTag("rule-extra"),
-            label = { Text("Extra, such as an app name or home Wi-Fi name") },
-            singleLine = true,
-        )
-        BigButton("Add automation", "rule-add", actions::addRule)
-        model.rules.forEach { rule ->
-            Text((if (rule.enabled) "On. " else "Off. ") + rule.whenLabel + " → " + rule.thenLabel)
-            BigButton("Toggle " + rule.whenLabel, "rule-" + rule.id, { actions.toggleRule(rule.id) }, tonal = true)
-        }
         if (model.version.isNotEmpty()) {
             Text("BridgeLink " + model.version, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

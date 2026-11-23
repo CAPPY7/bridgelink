@@ -8,11 +8,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import app.bridgelink.android.protocol.Features
 import app.bridgelink.android.protocol.StageFive
-import app.bridgelink.android.ui.RuleRow
 import app.bridgelink.android.ui.SmsRow
 import java.io.File
 
-/** Screen actions for texts, the shared folder, automations, and the trackpad. */
+/** Screen actions for texts, the shared folder, and the trackpad. */
 class FiveWork(private val activity: MainActivity) {
     private val model get() = activity.model
 
@@ -26,9 +25,6 @@ class FiveWork(private val activity: MainActivity) {
         model.trackpadOn = Features.enabled(flags, "input", false)
         model.simCount = PhoneFive.simCount(activity)
         model.messages = readSms()
-        model.rules = StageFive.decodeRules(prefs.getString("autoRules", "")).map { rule ->
-            RuleRow(rule.id, StageFive.eventLabel(rule.`when`), StageFive.actionLabel(rule.thenAction), rule.enabled)
-        }
     }
 
     fun enableSms() {
@@ -117,25 +113,6 @@ class FiveWork(private val activity: MainActivity) {
         val next = !model.folderPaused
         model.folderPaused = next
         send("folder_pause", if (next) "1" else "0")
-    }
-
-    fun addRule() {
-        val whenName = model.ruleWhen.trim()
-        val thenName = model.ruleThen.trim()
-        if (!StageFive.knownEvent(whenName) || !StageFive.knownAction(thenName)) {
-            model.status = "When must be one of: connect, battery_low, sms_code, file_in, clip, notify, leave. Then must be one of: open_app, alert, start_sync, copy_code, ring, pause_sync, note, none."
-            return
-        }
-        send("auto", "add\t$whenName\t$thenName\t${model.ruleExtra}")
-        model.ruleExtra = ""
-    }
-
-    fun toggleRule(id: String) {
-        send("auto", "toggle\t$id")
-    }
-
-    fun deleteRule(id: String) {
-        send("auto", "delete\t$id")
     }
 
     fun pointer(kind: String, x: Int, y: Int, text: String) {

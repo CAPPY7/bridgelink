@@ -50,10 +50,6 @@ class PhoneModel {
     var folderOn by mutableStateOf(false)
     var folderPaused by mutableStateOf(false)
     var folderLabel by mutableStateOf("Documents/BridgeLink Shared")
-    var rules by mutableStateOf(listOf<RuleRow>())
-    var ruleWhen by mutableStateOf("connect")
-    var ruleThen by mutableStateOf("alert")
-    var ruleExtra by mutableStateOf("")
     var typeText by mutableStateOf("")
     var trackpadOn by mutableStateOf(false)
     var dragMode by mutableStateOf(false)
@@ -77,8 +73,6 @@ class PhoneModel {
 data class ClipRow(val id: String, val text: String, val pinned: Boolean)
 
 data class SmsRow(val id: String, val address: String, val body: String, val incoming: Boolean)
-
-data class RuleRow(val id: String, val whenLabel: String, val thenLabel: String, val enabled: Boolean)
 
 /** Buttons on the screen. MainActivity does the real work. */
 interface PhoneActions {
@@ -125,9 +119,6 @@ interface PhoneActions {
     fun syncFolder()
     fun chooseFolder()
     fun pauseFolder()
-    fun addRule()
-    fun toggleRule(id: String)
-    fun deleteRule(id: String)
     fun pointer(kind: String, x: Int, y: Int, text: String)
     fun toggleTrackpad()
     fun shareScreen()

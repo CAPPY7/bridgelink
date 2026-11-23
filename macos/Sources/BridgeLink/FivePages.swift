@@ -1,5 +1,4 @@
 import SwiftUI
-import BridgeLinkCore
 
 struct MessagesPane: View {
     @EnvironmentObject private var model: LinkModel
@@ -49,40 +48,6 @@ struct SharedPane: View {
             HStack {
                 Button("Sync now") { model.pushFolder() }
                 Button("Show in Finder") { model.revealFolder() }
-            }
-        }
-    }
-}
-
-struct AutomationsPane: View {
-    @EnvironmentObject private var model: LinkModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("When something happens, BridgeLink does one thing. Eight rules at most.")
-                .foregroundStyle(.secondary)
-            Picker("When", selection: $model.ruleWhen) {
-                ForEach(StageFive.events, id: \.self) { Text(StageFive.eventLabel($0)).tag($0) }
-            }
-            Picker("Then", selection: $model.ruleThen) {
-                ForEach(StageFive.actions, id: \.self) { Text(StageFive.actionLabel($0)).tag($0) }
-            }
-            TextField("Extra, such as Notes or your home Wi-Fi name", text: $model.ruleExtra).textFieldStyle(.roundedBorder)
-            Button("Add automation") { model.addAutomation() }
-            if model.rules.isEmpty {
-                EmptyNote(symbol: "wand.and.stars", title: "No automations yet.", line: "Add one above. For example, when the phone connects, show an alert.")
-            } else {
-                ForEach(model.rules) { rule in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(StageFive.eventLabel(rule.when) + " → " + StageFive.actionLabel(rule.thenAction))
-                            if !rule.extra.isEmpty { Text(rule.extra).foregroundStyle(.secondary) }
-                        }
-                        Spacer()
-                        Button(rule.enabled ? "On" : "Off") { model.toggleRule(rule.id) }
-                        Button("Delete") { model.deleteRule(rule.id) }
-                    }
-                }
             }
         }
     }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum DeskTab: String, CaseIterable, Identifiable {
-    case home, notifications, messages, files, clipboard, shared, mirror, webcam, automations, devices, settings
+    case home, notifications, messages, files, clipboard, shared, mirror, webcam, devices, settings
 
     var id: String { rawValue }
 
@@ -15,7 +15,6 @@ enum DeskTab: String, CaseIterable, Identifiable {
         case .shared: return "Shared Folder"
         case .mirror: return "Mirror"
         case .webcam: return "Webcam"
-        case .automations: return "Automations"
         case .devices: return "Devices"
         case .settings: return "Settings"
         }
@@ -31,7 +30,6 @@ enum DeskTab: String, CaseIterable, Identifiable {
         case .shared: return "externaldrive"
         case .mirror: return "rectangle.on.rectangle"
         case .webcam: return "video"
-        case .automations: return "wand.and.stars"
         case .devices: return "iphone"
         case .settings: return "gearshape"
         }

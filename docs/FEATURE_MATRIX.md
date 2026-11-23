@@ -24,7 +24,7 @@ Status words are only: Not started, Building, Built – NOT TESTED on a device, 
 | 18 | Combined list | Removed | — | — | — | — |
 | 19 | Clipboard history | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M19 |
 | 20 | Scan to Mac | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M20 |
-| 21 | Automations | Built – NOT TESTED on a device | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M21 |
+| 21 | When-this-then-that rules | Removed | — | — | — | — |
 | 22 | Quick drop | Built – NOT TESTED on a device | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M22 |
 | 23 | Pairing | Built – NOT TESTED on a device | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testMiddlemanCannotReuseAMatchCode | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M23 |
 | 24 | Encrypted local link (TLS, pinned key) | Built – NOT TESTED on a device | ProtocolTest.proofHidesThePin | CoreTests.testProofDevicesAndPendingCap | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M24 |

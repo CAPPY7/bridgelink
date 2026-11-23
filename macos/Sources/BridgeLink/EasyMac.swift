@@ -200,7 +200,6 @@ extension LinkModel {
                     let line = MacLock.lock()
                     await MainActor.run {
                         self?.note(line)
-                        self?.fireAuto("leave", "")
                     }
                 }
             } else {

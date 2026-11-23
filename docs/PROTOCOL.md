@@ -96,7 +96,6 @@ A sender waits up to one second for `file_have`. It skips that many bytes and co
 | folder_part | `path`, `offset`, `size`, `mtime`, `sha`, `data` base64 | Either side |
 | folder_delete | `path`, `sha` | Either side, only if that copy is unchanged |
 | folder_pause | `on` | Either side |
-| auto_rules | `body` up to 8 rules | Either side |
 | input | `on` | Either side |
 | pointer | `kind`, `x`, `y`, `text` | Phone |
 | wifi | `ssid` | Phone |
@@ -113,7 +112,7 @@ A shared path cannot start with a slash, contain `..`, or leave the folder. If b
 | cam_start | `facing`, `zoom`, `flash`, `mic` | Mac |
 | cam_stop | empty | Either side |
 
-Old message names from the removed remote path are ignored. They are not sent.
+Old message names from the removed remote path are ignored. They are not sent. The old rule messages are ignored and never sent.
 
 Picture and camera bytes use binary frames (type 2), not JSON. A binary payload is a 4 byte stream, 1 flag byte, 2 byte part, 2 byte part count, then bytes. Stream 1 is H.264. Flag 1 is a key frame. Flag 2 is a parameter set. Stream 2 is a JPEG. Stream 3 is 16-bit mic audio.
 

@@ -678,21 +678,6 @@ public class ProtocolTest {
         assertEquals("notes/a (BridgeLink conflict).txt", StageFive.conflictName("notes/a.txt"));
         assertFalse(StageFive.partOk("../x", 0, 1, 1));
         assertTrue(StageFive.partOk("a.txt", 0, 4, 4));
-        java.util.List<StageFive.Rule> rules = StageFive.addRule(List.of(), "connect", "alert", "Hi");
-        assertEquals("alert", StageFive.fire(rules, "connect", "").get(0).thenAction);
-        assertTrue(StageFive.fire(StageFive.toggle(rules, rules.get(0).id, false), "connect", "").isEmpty());
-        java.util.List<StageFive.Rule> many = List.of();
-        for (int i = 0; i < 10; i++) many = StageFive.addRule(many, "connect", "note", "n" + i);
-        assertEquals(8, many.size());
-        assertTrue(StageFive.addRule(List.of(), "explode", "alert", "").isEmpty());
-        assertTrue(StageFive.batteryLow(19, false));
-        assertFalse(StageFive.batteryLow(19, true));
-        assertFalse(StageFive.batteryLow(20, false));
-        assertFalse(StageFive.homeWifi("Home", ""));
-        assertTrue(StageFive.homeWifi("Home", "home"));
-        assertFalse(StageFive.homeWifi("<unknown ssid>", ""));
-        assertEquals("Notes", StageFive.appName("Notes.app"));
-        assertNull(StageFive.appName("../Apps"));
         assertTrue(StageFive.SMS_STEPS.contains("Allow restricted settings"));
         assertTrue(StageFive.SMS_STEPS.contains("SMS"));
         assertTrue(StageFive.POINTER_STEPS.contains("Accessibility"));
@@ -838,7 +823,7 @@ public class ProtocolTest {
                 "file_begin", "file_chunk", "file_end", "file_have", "file_cancel",
                 "notify", "notify_reply", "notify_dismiss", "otp", "battery",
                 "find_mac", "find_stop", "media", "media_now", "lock", "lock_setup",
-                "dnd", "sms", "folder", "open_app", "pointer", "mirror_start", "mirror_stop",
+                "dnd", "sms", "folder", "pointer", "mirror_start", "mirror_stop",
                 "cam_start", "cam_stop", "control", "forget", "hello", "paired", "error"
         };
         assertEquals(FeatureMessages.TYPES.length, types.length);
@@ -879,6 +864,9 @@ public class ProtocolTest {
         String json = "{\"v\":1,\"id\":\"old1\",\"type\":\"relay_auth\",\"from\":\"android\",\"ts\":1000,\"payload\":{\"body\":\"x\"}}";
         Envelope envelope = Envelope.parse(json);
         assertTrue(OldMessages.ignore(envelope.type));
+        assertTrue(OldMessages.ignore("auto"));
+        assertTrue(OldMessages.ignore("auto_rules"));
+        assertTrue(OldMessages.ignore("open_app"));
         assertFalse(FeatureMessages.known(envelope.type));
         Envelope fromOld = null;
         try {

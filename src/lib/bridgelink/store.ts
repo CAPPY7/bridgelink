@@ -36,7 +36,6 @@ export type FeatureKey =
   | "alerts"
   | "clipHistory"
   | "scan"
-  | "automations"
   | "quickdrop";
 
 export type ClipMethod = "tile" | "share" | "notification" | "bubble" | "accessibility";
@@ -49,7 +48,6 @@ export type SystemPage =
   | "clipboard"
   | "files"
   | "scan"
-  | "automations"
   | "mirror"
   | "camera"
   | "conditions";
@@ -61,7 +59,6 @@ export type MacPane =
   | "mirror"
   | "files"
   | "camera"
-  | "rules"
   | "settings"
   | "browser";
 export type RemoteMode = "trackpad" | "keyboard" | "slides";
@@ -108,15 +105,6 @@ export type Transfer = {
   createdAt: number;
 };
 export type PhoneFile = { id: string; folder: string; name: string; size: number; kind: string };
-export type Automation = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  trigger: "wifi" | "charging" | "time" | "bluetooth";
-  triggerValue: string;
-  action: "notify" | "lock" | "sync" | "send";
-  actionValue: string;
-};
 export type LogLine = { id: string; ts: number; level: "info" | "warn" | "error"; msg: string };
 export type Media = { title: string; artist: string; playing: boolean; volume: number; index: number };
 
@@ -175,7 +163,6 @@ function seed(): Pick<
   | "clips"
   | "transfers"
   | "files"
-  | "rules"
   | "media"
   | "phoneBattery"
   | "macBattery"
@@ -214,7 +201,6 @@ function seed(): Pick<
       alerts: true,
       clipHistory: true,
       scan: false,
-      automations: false,
       quickdrop: true,
     },
     permissions: {
@@ -298,26 +284,6 @@ function seed(): Pick<
       { id: "f2", folder: "DCIM", name: "IMG_2044.jpg", size: 1_800_000, kind: "image" },
       { id: "f3", folder: "Downloads", name: "Notes.txt", size: 1280, kind: "text" },
     ],
-    rules: [
-      {
-        id: "r1",
-        name: "Home Wi-Fi photo sync",
-        enabled: false,
-        trigger: "wifi",
-        triggerValue: "Home",
-        action: "sync",
-        actionValue: "Pictures",
-      },
-      {
-        id: "r2",
-        name: "Charging ping",
-        enabled: false,
-        trigger: "charging",
-        triggerValue: "start",
-        action: "notify",
-        actionValue: "Phone started charging",
-      },
-    ],
     media: { title: "Night Drive", artist: "Low Tide", playing: true, volume: 0.6, index: 0 },
     phoneBattery: 64,
     macBattery: 81,
@@ -377,8 +343,6 @@ export type BridgeState = {
   transfers: Transfer[];
   files: PhoneFile[];
   sharedFolders: string[];
-  rules: Automation[];
-  timeMarks: Record<string, string>;
   phoneClipboard: string;
   macClipboard: string;
   clipMethod: ClipMethod;
@@ -475,9 +439,6 @@ export type BridgeState = {
   sendSms: (threadId: string, body: string, from: "them" | "me") => void;
   setActiveThread: (id: string) => void;
   toggleFolder: (folder: string) => void;
-  addRule: (rule: Omit<Automation, "id">) => void;
-  toggleRule: (id: string, on: boolean) => void;
-  removeRule: (id: string) => void;
   setRetention: (days: number) => void;
   setHideSensitive: (on: boolean) => void;
   setDebug: (on: boolean) => void;
@@ -489,42 +450,6 @@ export type BridgeState = {
 
 function within(ts: number, days: number) {
   return now() - ts < days * 86_400_000;
-}
-
-function applyRule(get: () => BridgeState, rule: Automation) {
-  const s = get();
-  if (rule.action === "notify") {
-    s.pushNotice({
-      app: "Automations",
-      title: rule.name,
-      body: rule.actionValue || rule.name,
-      actions: ["Dismiss"],
-      source: "system",
-    });
-  } else if (rule.action === "lock") {
-    useBridge.setState({ macLocked: true, graceUntil: null });
-    s.log("info", "automation locked the Mac");
-  } else if (rule.action === "sync") {
-    const photo = s.files.find((f) => f.folder === "DCIM");
-    if (photo) {
-      void s.sendPayload("android", "file", photo.name, undefined, photo.size, 4);
-    }
-    s.log("info", "automation synced photos");
-  } else if (rule.action === "send") {
-    void s.sendPayload("android", "text", "Automation", rule.actionValue, rule.actionValue.length, 1);
-  }
-}
-
-function reactTo(prev: BridgeState, next: BridgeState) {
-  if (!next.features.automations || !next.paired) return;
-  for (const rule of next.rules) {
-    if (!rule.enabled) continue;
-    const hit =
-      (rule.trigger === "wifi" && prev.wifi !== next.wifi && next.wifi === rule.triggerValue) ||
-      (rule.trigger === "charging" && !prev.phoneCharging && next.phoneCharging && rule.triggerValue === "start") ||
-      (rule.trigger === "bluetooth" && !prev.headphones && next.headphones && (rule.triggerValue === "Headphones" || rule.triggerValue === "on"));
-    if (hit) applyRule(() => useBridge.getState(), rule);
-  }
 }
 
 export const useBridge = create<BridgeState>()(
@@ -565,7 +490,6 @@ export const useBridge = create<BridgeState>()(
       macLocked: false,
       ringing: false,
       sharedFolders: ["Documents"],
-      timeMarks: {},
       clipMethod: "tile",
       hideSensitive: true,
       retentionDays: 30,
@@ -1070,26 +994,20 @@ export const useBridge = create<BridgeState>()(
       },
 
       setPhoneCharging: (phoneCharging) => {
-        const prev = get();
         set((s) => ({
           phoneCharging,
           phones: s.phones.map((p) => (p.id === s.activePhoneId ? { ...p, charging: phoneCharging } : p)),
         }));
-        reactTo(prev, get());
       },
 
       setMacBattery: (n) => set({ macBattery: Math.max(1, Math.min(100, Math.round(n))) }),
 
       setWifi: (wifi) => {
-        const prev = get();
         set({ wifi });
-        reactTo(prev, get());
       },
 
       setHeadphones: (headphones) => {
-        const prev = get();
         set({ headphones });
-        reactTo(prev, get());
       },
 
       setPhoneNear: (phoneNear) => {
@@ -1119,15 +1037,6 @@ export const useBridge = create<BridgeState>()(
         if (s.features.proximity && s.paired && !s.phoneNear && s.graceUntil && now() > s.graceUntil && !s.macLocked) {
           set({ macLocked: true, graceUntil: null });
           get().log("info", "Mac locked because the phone left.");
-        }
-        if (!s.features.automations) return;
-        const hm = new Date().toTimeString().slice(0, 5);
-        const today = new Date().toDateString();
-        for (const rule of s.rules) {
-          if (!rule.enabled || rule.trigger !== "time" || rule.triggerValue !== hm) continue;
-          if (s.timeMarks[rule.id] === today) continue;
-          set((st) => ({ timeMarks: { ...st.timeMarks, [rule.id]: today } }));
-          applyRule(get, rule);
         }
       },
 
@@ -1286,10 +1195,6 @@ export const useBridge = create<BridgeState>()(
             : [...s.sharedFolders, folder],
         })),
 
-      addRule: (rule) => set((s) => ({ rules: [...s.rules, { ...rule, id: id() }] })),
-      toggleRule: (rid, enabled) =>
-        set((s) => ({ rules: s.rules.map((r) => (r.id === rid ? { ...r, enabled } : r)) })),
-      removeRule: (rid) => set((s) => ({ rules: s.rules.filter((r) => r.id !== rid) })),
       setRetention: (retentionDays) => set({ retentionDays }),
       setHideSensitive: (hideSensitive) => set({ hideSensitive }),
       setDebug: (debug) => set({ debug }),

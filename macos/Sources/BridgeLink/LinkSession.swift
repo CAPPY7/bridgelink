@@ -14,7 +14,7 @@ import UserNotifications
 extension LinkModel {
     func handle(_ data: Data, connection: NWConnection, id: UUID, pending: Bool) {
         guard let envelope = try? EnvelopeCodec.parse(data) else { return }
-        // Ignore old relay_* messages. They are never sent.
+        // Ignore old relay messages and old rule messages. They are never sent.
         if OldMessages.ignore(envelope.type) { return }
         lastRx = Date()
         if envelope.type == "hello" {
@@ -113,7 +113,6 @@ extension LinkModel {
                 return
             }
             applyClipboard(text)
-            fireAuto("clip", "")
         case "ping":
             send(type: "pong", payload: [:], on: connection)
         case "link":
@@ -213,7 +212,6 @@ extension LinkModel {
                     } else {
                         self?.notify("File from the phone", line)
                     }
-                    self?.fireAuto("file_in", line)
                 }
             }
         case "file_cancel":
@@ -247,13 +245,11 @@ extension LinkModel {
             )
             postNote(key: envelope.text("key"), title: shown.title, body: shown.body, reply: canReply)
             note("Notification from the phone")
-            fireAuto("notify", app)
         case "otp":
             let otpFlags = UserDefaults.standard.string(forKey: "flags") ?? ""
             guard Features.enabled(otpFlags, "otp", fallback: false) else { return }
             copyConcealed(envelope.text("body"))
             note("Copied a code. It will clear in a minute.")
-            fireAuto("sms_code", envelope.text("body"))
         case "battery":
             if envelope.text("label") == "mac" { break }
             let level = envelope.text("level")
@@ -269,14 +265,6 @@ extension LinkModel {
                 notify("Phone battery is low", "The phone battery is at \(level)%.")
             }
             if levelInt > 15 || charging { phoneLowAlerted = false }
-            if StageFive.batteryLow(levelInt, charging) {
-                if !batteryAuto {
-                    batteryAuto = true
-                    fireAuto("battery_low", level)
-                }
-            } else {
-                batteryAuto = false
-            }
             if level.isEmpty {
                 phoneBattery = ""
             } else {

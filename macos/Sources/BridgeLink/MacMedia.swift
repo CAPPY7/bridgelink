@@ -19,7 +19,7 @@ enum MacMedia {
             if MacShell.ok("/usr/bin/osascript", ["-e", "set volume output volume \(level)"]) {
                 return "Mac volume is \(level)"
             }
-            return "Could not set the volume. Allow BridgeLink under Automation."
+            return "Could not set the volume. Allow BridgeLink to control other apps."
         }
         let before = now()
         let key: Int

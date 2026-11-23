@@ -24,7 +24,7 @@ const FEATURES: { n: number; name: string; status: "Working" | "Partial" | "Remo
   { n: 18, name: "Combined list", status: "Removed", note: "Notifications, texts, and files stay in their own places. The combined list is gone." },
   { n: 19, name: "Clipboard history", status: "Working", note: "Last 100, pins, and a sensitive filter." },
   { n: 20, name: "Scan to Mac", status: "Partial", note: "Contrast cleanup and send. No on-device OCR." },
-  { n: 21, name: "Automations", status: "Working", note: "Wi-Fi, charging, time, and headphones can notify, lock, sync, or send." },
+  { n: 21, name: "When-this-then-that rules", status: "Removed", note: "Removed in phase 2." },
   { n: 22, name: "Quick drop", status: "Working", note: "The Mac drop zone targets the only paired phone." },
   { n: 23, name: "Pairing", status: "Working", note: "Six-digit PIN, two-minute expiry, forget, and pair again." },
   { n: 24, name: "Encrypted local link", status: "Working", note: "The local link uses TLS and a pinned key." },

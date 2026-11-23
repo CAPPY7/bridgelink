@@ -1,6 +1,6 @@
 package app.bridgelink.android.protocol;
 
-/** Ignore old relay_* messages. They are never sent. */
+/** Ignore old relay messages and old rule messages. They are never sent. */
 public final class OldMessages {
     private OldMessages() {}
 
@@ -15,6 +15,9 @@ public final class OldMessages {
                 || "relay_set".equals(type)
                 || "relay_use".equals(type)
                 || "relay_auth".equals(type)
-                || "relay_ok".equals(type);
+                || "relay_ok".equals(type)
+                || "auto".equals(type)
+                || "auto_rules".equals(type)
+                || "open_app".equals(type);
     }
 }

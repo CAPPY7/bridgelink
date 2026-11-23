@@ -24,7 +24,7 @@ import javax.crypto.spec.SecretKeySpec;
 public final class Features {
     public static final String[] NAMES = {
             "files", "links", "text", "clipboard", "find", "battery", "media",
-            "notify", "otp", "sms", "clips", "scan", "auto", "folder",
+            "notify", "otp", "sms", "clips", "scan", "folder",
             "input", "mirror", "control", "camera", "lock"
     };
 

@@ -5,23 +5,16 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Rules for texts, the shared folder, automations, and the phone trackpad.
+ * Rules for texts, the shared folder, and the phone trackpad.
  * No Android APIs, so the unit tests and the Mac port can match them.
  */
 public final class StageFive {
     public static final int SMS_CAP = 80;
-    public static final int RULE_CAP = 8;
     public static final int FOLDER_CAP = 200;
     public static final int PART = 24 * 1024;
     public static final long FOLDER_FILE_CAP = 32L * 1024 * 1024;
     /** One wait after a folder change. A newer change replaces the old wait. */
     public static final long FOLDER_QUIET_MS = 60_000L;
-    public static final String[] EVENTS = {
-            "connect", "battery_low", "sms_code", "file_in", "clip", "notify", "leave"
-    };
-    public static final String[] ACTIONS = {
-            "open_app", "alert", "start_sync", "copy_code", "ring", "pause_sync", "note", "none"
-    };
     public static final String SMS_STEPS =
             "1. Open Settings.\n"
                     + "2. Tap Apps, then BridgeLink.\n"
@@ -70,34 +63,6 @@ public final class StageFive {
             this.incoming = incoming;
             this.sim = sim;
             this.at = at;
-        }
-    }
-
-    public static final class Rule {
-        public final String id;
-        public final String when;
-        public final String thenAction;
-        public final String extra;
-        public final boolean enabled;
-
-        public Rule(String id, String when, String thenAction, String extra, boolean enabled) {
-            this.id = id;
-            this.when = when;
-            this.thenAction = thenAction;
-            this.extra = extra;
-            this.enabled = enabled;
-        }
-    }
-
-    public static final class Fire {
-        public final String thenAction;
-        public final String extra;
-        public final String detail;
-
-        public Fire(String thenAction, String extra, String detail) {
-            this.thenAction = thenAction;
-            this.extra = extra;
-            this.detail = detail;
         }
     }
 
@@ -185,150 +150,6 @@ public final class StageFive {
             items.add(new Sms(unescape(parts[0]), unescape(parts[1]), unescape(parts[5]), "1".equals(parts[2]), sim, at));
         }
         return items;
-    }
-
-    public static boolean knownEvent(String event) {
-        if (event == null) return false;
-        for (String item : EVENTS) if (item.equals(event)) return true;
-        return false;
-    }
-
-    public static boolean knownAction(String action) {
-        if (action == null) return false;
-        for (String item : ACTIONS) if (item.equals(action)) return true;
-        return false;
-    }
-
-    public static String eventLabel(String event) {
-        if (event == null) return "";
-        return switch (event) {
-            case "connect" -> "Phone connects";
-            case "battery_low" -> "Phone battery under 20%";
-            case "home_wifi" -> "Phone joins home Wi-Fi";
-            case "sms_code" -> "Text has a code";
-            case "file_in" -> "A file arrives";
-            case "clip" -> "Clipboard arrives";
-            case "notify" -> "A notification arrives";
-            case "leave" -> "Phone leaves the Mac";
-            default -> event;
-        };
-    }
-
-    public static String actionLabel(String action) {
-        if (action == null) return "";
-        return switch (action) {
-            case "open_app" -> "Open an app";
-            case "alert" -> "Show an alert";
-            case "start_sync" -> "Start shared folder sync";
-            case "copy_code" -> "Copy the code";
-            case "ring" -> "Ring the phone";
-            case "pause_sync" -> "Pause shared folder sync";
-            case "note" -> "Show a note";
-            case "none" -> "Do nothing";
-            default -> action;
-        };
-    }
-
-    public static List<Rule> addRule(List<Rule> existing, String when, String thenAction, String extra) {
-        ArrayList<Rule> next = copyRules(existing);
-        if (!knownEvent(when) || !knownAction(thenAction) || next.size() >= RULE_CAP) return next;
-        String clean = extra == null ? "" : extra.trim();
-        if (clean.length() > 80) clean = clean.substring(0, 80);
-        int n = next.size() + 1;
-        String id = when + "-" + thenAction + "-" + n;
-        while (hasRule(next, id)) {
-            n++;
-            id = when + "-" + thenAction + "-" + n;
-        }
-        next.add(new Rule(id, when, thenAction, clean, true));
-        return next;
-    }
-
-    public static List<Rule> toggle(List<Rule> existing, String id, boolean on) {
-        ArrayList<Rule> next = new ArrayList<>();
-        if (existing != null) {
-            for (Rule rule : existing) {
-                if (id != null && id.equals(rule.id)) {
-                    next.add(new Rule(rule.id, rule.when, rule.thenAction, rule.extra, on));
-                } else {
-                    next.add(rule);
-                }
-            }
-        }
-        return next;
-    }
-
-    public static List<Rule> delete(List<Rule> existing, String id) {
-        ArrayList<Rule> next = new ArrayList<>();
-        if (existing != null) {
-            for (Rule rule : existing) {
-                if (id == null || !id.equals(rule.id)) next.add(rule);
-            }
-        }
-        return next;
-    }
-
-    public static List<Fire> fire(List<Rule> rules, String event, String detail) {
-        ArrayList<Fire> next = new ArrayList<>();
-        if (rules == null || !knownEvent(event)) return next;
-        String shown = detail == null ? "" : detail;
-        for (Rule rule : rules) {
-            if (!rule.enabled || !event.equals(rule.when)) continue;
-            if ("home_wifi".equals(event) && !homeWifi(shown, rule.extra)) continue;
-            if ("sms_code".equals(event) && shown.isEmpty()) continue;
-            next.add(new Fire(rule.thenAction, rule.extra, shown));
-        }
-        return next;
-    }
-
-    public static String encodeRules(List<Rule> rules) {
-        StringBuilder out = new StringBuilder();
-        if (rules == null) return "";
-        for (Rule rule : rules) {
-            if (out.length() > 0) out.append('\n');
-            out.append(escape(rule.id)).append('\t')
-                    .append(rule.enabled ? '1' : '0').append('\t')
-                    .append(rule.when).append('\t')
-                    .append(rule.thenAction).append('\t')
-                    .append(escape(rule.extra));
-        }
-        return out.toString();
-    }
-
-    public static List<Rule> decodeRules(String raw) {
-        ArrayList<Rule> rules = new ArrayList<>();
-        if (raw == null || raw.isEmpty()) return rules;
-        for (String line : raw.split("\n", -1)) {
-            if (line.isEmpty() || rules.size() >= RULE_CAP) continue;
-            String[] parts = line.split("\t", 5);
-            if (parts.length < 5) continue;
-            if (!knownEvent(parts[2]) || !knownAction(parts[3])) continue;
-            rules.add(new Rule(unescape(parts[0]), parts[2], parts[3], unescape(parts[4]), "1".equals(parts[1])));
-        }
-        return rules;
-    }
-
-    public static boolean batteryLow(int level, boolean charging) {
-        return level >= 0 && level < 20 && !charging;
-    }
-
-    public static boolean homeWifi(String ssid, String wanted) {
-        if (ssid == null) return false;
-        String name = ssid.trim();
-        if (name.isEmpty() || "<unknown ssid>".equalsIgnoreCase(name) || "unknown".equalsIgnoreCase(name)) return false;
-        if (name.startsWith("\"") && name.endsWith("\"") && name.length() >= 2) name = name.substring(1, name.length() - 1);
-        if (name.isEmpty()) return false;
-        if (wanted == null || wanted.trim().isEmpty()) return false;
-        return name.equalsIgnoreCase(wanted.trim());
-    }
-
-    public static String appName(String raw) {
-        if (raw == null) return null;
-        String name = raw.trim();
-        if (name.endsWith(".app")) name = name.substring(0, name.length() - 4).trim();
-        if (name.isEmpty() || name.length() > 80) return null;
-        if (name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name.contains("..") || name.indexOf(':') >= 0) return null;
-        return name;
     }
 
     public static Choice decide(boolean paused, boolean localExists, String localSha, boolean remoteDeleted, String remoteSha) {
@@ -452,17 +273,6 @@ public final class StageFive {
         if ("next".equals(which)) return "right";
         if ("prev".equals(which) || "previous".equals(which)) return "left";
         return null;
-    }
-
-    private static boolean hasRule(List<Rule> rules, String id) {
-        for (Rule rule : rules) if (id.equals(rule.id)) return true;
-        return false;
-    }
-
-    private static ArrayList<Rule> copyRules(List<Rule> existing) {
-        ArrayList<Rule> next = new ArrayList<>();
-        if (existing != null) next.addAll(existing);
-        return next;
     }
 
     private static int clamp(int value) {

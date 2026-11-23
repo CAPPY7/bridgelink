@@ -204,7 +204,6 @@ final class LinkReceive {
                     core.publish(saved, null);
                     if (saved != null && saved.startsWith("Saved")) {
                         core.desk.askFile(core.files.lastName(), core.files.lastUri());
-                        if (core.five != null) core.five.fire("file_in", saved);
                     }
                     }
                 }

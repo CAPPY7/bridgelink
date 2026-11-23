@@ -96,14 +96,9 @@ final class LinkModel: ObservableObject {
     let largeWindow = SendWindow()
     var folderDebounce: DispatchWorkItem?
     @Published var folderPath = ""
-    @Published var rules: [StageFive.Rule] = []
     let six = SixHold()
-    @Published var ruleWhen = "connect"
-    @Published var ruleThen = "alert"
-    @Published var ruleExtra = ""
     @Published var trackpadOn = false
     var pointerExplained = false
-    var batteryAuto = false
     let sharedBox = SharedBox()
     let folderSink: FolderSink
     var beacon: LeaveBeacon?

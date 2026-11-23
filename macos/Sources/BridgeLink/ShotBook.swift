@@ -35,7 +35,6 @@ enum ShotBook {
         model.messages = [StageFive.Sms(id: "1", address: "+15551212", body: "On my way", incoming: true, sim: 0, at: 5)]
         model.folderOn = true
         model.folderPath = "BridgeLink Shared"
-        model.rules = [StageFive.Rule(id: "connect-alert-1", when: "connect", thenAction: "alert", extra: "Phone is here", enabled: true)]
         model.trackpadOn = true
         model.six.mirrorStatus = "Waiting for the phone to allow the screen."
         model.six.camStatus = "The phone camera shows here."

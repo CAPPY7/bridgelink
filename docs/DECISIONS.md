@@ -8,6 +8,8 @@ The unified inbox is removed. Notifications, texts, and received files are not c
 
 The away relay was removed. The phone and the Mac link only on the same Wi-Fi. An old relay message is ignored and is never sent. Saved relay settings are deleted on the next open. NOT TESTED on a device.
 
+Automations are removed. Old auto, auto_rules, and open_app messages are ignored and never sent. The saved autoRules setting is deleted once on launch. NOT TESTED on a device.
+
 The Mac app is sideloaded. There is no paid Apple Developer account. A self-signed certificate keeps the same signature across updates when the Mac signing secrets are set. Permissions can still be forgotten if a build is ad-hoc signed. The menu window explains the first open.
 
 A pairing link never connects by itself. A different Mac key drops the active token before any hello, and each Mac's token is sealed under its own fingerprint.

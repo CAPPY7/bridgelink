@@ -38,7 +38,6 @@ Light and dark follow the system. A screen that is not built yet says so.
 <img src="docs/screenshots/mac-shared.png" alt="Mac shared folder" width="320">
 <img src="docs/screenshots/mac-mirror.png" alt="Mac mirror" width="320">
 <img src="docs/screenshots/mac-webcam.png" alt="Mac webcam" width="320">
-<img src="docs/screenshots/mac-automations.png" alt="Mac automations" width="320">
 <img src="docs/screenshots/mac-devices.png" alt="Mac devices" width="320">
 <img src="docs/screenshots/mac-settings.png" alt="Mac settings" width="320">
 
@@ -74,7 +73,7 @@ What was tested: CI unit tests and the emulator pairing test. Nothing in this bu
 | 18 | Combined list | Removed. Notifications, texts, and files stay in their own places |
 | 19 | Clipboard history | Built – NOT TESTED on a device |
 | 20 | Scan to Mac | Built – NOT TESTED on a device |
-| 21 | Automations | Built – NOT TESTED on a device. Up to eight when-this-then-that rules |
+| 21 | When-this-then-that rules | Removed |
 | 22 | Quick drop | Built – NOT TESTED on a device. Quick Settings tile, menu-bar drop, and a floating drop zone |
 | 23 | Pairing | Built – NOT TESTED on a device. QR, several phones and Macs, rename, and forget |
 | 24 | Encrypted local link | Built – NOT TESTED on a device. TLS on the local link, with the Mac key pinned |

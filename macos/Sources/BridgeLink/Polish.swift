@@ -87,7 +87,6 @@ extension LinkModel {
         clips = []
         ClipFile.save([])
         dropOldListFile()
-        rules = []
         messages = []
         try? "".write(to: smsFile(), atomically: true, encoding: .utf8)
         try? Data("[]".utf8).write(to: historyURL(), options: .atomic)

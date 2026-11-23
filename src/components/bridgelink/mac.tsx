@@ -12,7 +12,6 @@ const PANES: { id: MacPane; label: string }[] = [
   { id: "mirror", label: "Mirror" },
   { id: "files", label: "Files" },
   { id: "camera", label: "Camera" },
-  { id: "rules", label: "Rules" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -160,7 +159,6 @@ function MacBody() {
         {pane === "mirror" && <MirrorPane />}
         {pane === "files" && <FilesPane />}
         {pane === "camera" && <CameraPane />}
-        {pane === "rules" && <RulesPane />}
         {pane === "settings" && <MacSettings />}
         {pane === "browser" && <BrowserPane />}
       </div>
@@ -665,30 +663,7 @@ function CameraPane() {
   );
 }
 
-function RulesPane() {
-  const rules = useBridge((s) => s.rules);
-  const on = useBridge((s) => s.features.automations);
-  const toggle = useBridge((s) => s.toggleRule);
-  return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-medium">Automations</h2>
-      {!on && <p className="text-sm text-muted">Automations are off on the phone.</p>}
-      <ul className="space-y-2">
-        {rules.map((r) => (
-          <li key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-3 text-sm">
-            <span>
-              <span className="block font-medium">{r.name}</span>
-              <span className="text-muted">
-                {r.trigger} · {r.triggerValue} → {r.action}
-              </span>
-            </span>
-            <input type="checkbox" checked={r.enabled && on} onChange={(e) => toggle(r.id, e.target.checked)} aria-label={r.name} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+
 
 function MacSettings() {
   const s = useBridge();

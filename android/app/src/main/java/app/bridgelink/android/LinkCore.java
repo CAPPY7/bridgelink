@@ -627,7 +627,6 @@ class LinkCore extends Service {
                     }
                     payload.addProperty("reason", "away");
                     writeEnvelope(Envelope.make("lock", "android", payload));
-                    if (five != null) five.fire("leave", "");
                     publish("Asked the Mac to lock", null);
                     return;
                 }
@@ -642,7 +641,7 @@ class LinkCore extends Service {
                     return;
                 }
                 if (five != null && ("pointer".equals(kind) || "sms_push".equals(kind) || "folder_sync".equals(kind)
-                        || "folder_pause".equals(kind) || "auto".equals(kind) || "wifi".equals(kind) || "input_on".equals(kind))) {
+                        || "folder_pause".equals(kind) || "wifi".equals(kind) || "input_on".equals(kind))) {
                     five.command(kind, text);
                     return;
                 }

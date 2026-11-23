@@ -1,13 +1,13 @@
 package app.bridgelink.android
 
 import android.graphics.Bitmap
-import android.os.ParcelFileDescriptor
 import android.util.Base64
 import android.util.Log
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
+import androidx.test.uiautomator.UiDevice
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
@@ -38,7 +38,6 @@ class DesignShotTest {
             model.trackpadOn = true
             model.folderOn = true
             model.messages = listOf(app.bridgelink.android.ui.SmsRow("1", "+15551212", "On my way", true))
-            model.rules = listOf(app.bridgelink.android.ui.RuleRow("connect-alert-1", "Phone connects", "Show an alert", true))
             model.nowPlaying = "Playing Sunny - Ada"
         }
         for (page in Page.entries) {
@@ -120,9 +119,6 @@ class DesignShotTest {
     }
 
     private fun shell(command: String): String {
-        val fd = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
-        return ParcelFileDescriptor.AutoCloseInputStream(fd).use { stream ->
-            stream.readBytes().toString(Charsets.UTF_8).trim()
-        }
+        return UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).executeShellCommand(command).trim()
     }
 }
