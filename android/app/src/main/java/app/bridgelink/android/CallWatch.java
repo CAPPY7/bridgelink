@@ -52,15 +52,26 @@ public final class CallWatch {
         if (manager == null) return;
         try {
             if (Build.VERSION.SDK_INT >= 31) {
-                modern = new TelephonyCallback() {};
+                modern = new Ring();
                 manager.registerTelephonyCallback(context.getMainExecutor(), modern);
             } else {
                 legacy = new PhoneStateListener();
                 manager.listen(legacy, PhoneStateListener.LISTEN_CALL_STATE);
             }
             registered = true;
-        } catch (SecurityException ignored) {
+        } catch (RuntimeException ignored) {
             registered = false;
+            modern = null;
+            legacy = null;
+        }
+    }
+
+    /** Android 12 and newer refuse a callback that listens for nothing. */
+    private static final class Ring extends TelephonyCallback implements TelephonyCallback.CallStateListener {
+        @Override
+        public void onCallStateChanged(int state) {
+            // The banner text comes from the call notification. This listener
+            // only stays registered while call alerts are on and the link is up.
         }
     }
 
