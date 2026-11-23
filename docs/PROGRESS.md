@@ -24,23 +24,24 @@ N8. Fixed. An update file name keeps only letters, digits, dots, and dashes. Any
 N9. Fixed. The owner setup note now says Check for update downloads the disk image, checks the hash, and opens it. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
 N10. Fixed. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
 Next: Part B.
-B2. Partly. The demo calls the alerts list alerts. Incoming messages are in LinkReceive. The old list file and the old share file are deleted once. NOT TESTED on a device. CI is not green on this commit yet.
-B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. The Mac still has the Apple events entitlement because media scripts need it. NOT TESTED on a device. CI is not green on this commit yet.
-C. Partly. Leave-lock stays off until you turn it on. A lock setup from the other side changes distance and wait only. NOT TESTED on a device. CI is not green on this commit yet.
+B1. Partly. The away path is gone from the apps. Old messages of that kind are ignored and never sent. The removal search still hits old progress notes that must stay, and one current architecture sentence. NOT TESTED on a device.
+B2. Fixed. The demo calls the alerts list alerts. Incoming messages are in LinkReceive. The old list file and the old share file are deleted once. The owner checklist does not use the old list word. NOT TESTED on a device.
+B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. The Mac still has the Apple events entitlement because media scripts need it, and that key name still matches the search. NOT TESTED on a device.
+C. Fixed. Leave-lock stays off until you turn it on. A lock setup from the other side changes distance and wait only. The feature list says off by default. NOT TESTED on a device.
 Next: Part D. New features, starting with call alerts.
-B4. Partly. No leftover string, icon, or permission belonged only to the removed features. Phone state stays. The Apple events entitlement stays for media scripts. NOT TESTED on a device. CI is not green on this commit yet.
-D1. Partly. A ringing call can show on the Mac with Decline. Call alerts stay off until you turn them on. NOT TESTED on a device. CI is not green on this commit yet.
-D2. Partly. Transfer history keeps old rows, searches, and stays off the main thread. NOT TESTED on a device. CI is not green on this commit yet.
-D3. Partly. The Mac can ask for phone photos, 30 at a time, only while the feature is on. NOT TESTED on a device. CI is not green on this commit yet.
-D4. Partly. Mirror bitrate follows the picture, medium is 24 frames a second, and a still picture is repeated. NOT TESTED on a device. CI is not green on this commit yet.
-D5. Partly. The menu-bar panel shows battery, signal, and the latest notification. There is no widget. NOT TESTED on a device. CI is not green on this commit yet.
-D6. Partly. Pause phone notifications follows the phone's reply. Missing access shows the Settings sentence. NOT TESTED on a device. CI is not green on this commit yet.
-D7. Partly. Text from a photo uses the bundled model and caps the words. NOT TESTED on a device. CI is not green on this commit yet.
-D8. Partly. Finder Send to phone accepts files and text. The setup window shows the steps. NOT TESTED on a device. CI is not green on this commit yet.
-E. Partly. Setup is one page at a time, with Skip, and Settings lists each permission. NOT TESTED on a device. CI is not green on this commit yet.
-F. Partly. Failures say what happened and what to do. A raw error is not shown. NOT TESTED on a device. CI is not green on this commit yet.
-G. Partly. The feature list says Built – NOT tested on a device, or Removed in phase 2. NOT TESTED on a device.
-H. Partly. The owner checklist is docs/OWNER_TEST.md. Nothing in it was run on a device.
+B4. Partly. No leftover string, icon, or permission belonged only to the removed features. Phone state stays. The B1 and B3 searches are not fully clean, for the reasons above. NOT TESTED on a device.
+D1. Fixed. A ringing call can show on the Mac with Decline. Call alerts stay off until you turn them on. A non-call notification is skipped. The listener is not used while the feature is off. NOT TESTED on a device.
+D2. Fixed. Transfer history keeps old rows, searches with escaped wildcards, skips secrets, and stays off the main thread. NOT TESTED on a device.
+D3. Fixed. The Mac can ask for phone photos, 30 at a time, newest first, only while the feature is on. The full photo uses the existing file check. NOT TESTED on a device.
+D4. Fixed. Mirror bitrate follows the picture, medium is 24 frames a second, a still picture is repeated, and the display listener is removed when the mirror stops. NOT TESTED on a device.
+D5. Fixed. The menu-bar panel shows battery, signal, and the latest notification. Signal bars are sent only when they change. There is no widget. NOT TESTED on a device.
+D6. Fixed. Pause phone notifications follows the phone's reply. Missing access shows the Settings sentence. NOT TESTED on a device.
+D7. Partly. Text from a photo uses the bundled model, runs off the main thread, and caps the words. The photo picker needs no storage permission. The APK size change was not measured, because no older APK was kept here. NOT TESTED on a device.
+D8. Fixed. Finder Send to phone accepts files and text. Services refresh when the app opens. The setup window and the user guide show the steps for macOS 13, 14, and 15. NOT TESTED on a device.
+E. Fixed. Setup is one page at a time, with Skip, and Settings lists each permission. The page list is tested for Android 8, 10, 12, 13, and 14. NOT TESTED on a device.
+F. Partly. Failures say what happened and what to do. A raw error is not shown. The sentences live in the phone failure table and the Mac failure table, not in one Android strings file. NOT TESTED on a device.
+G. Partly. The feature list says Built – NOT TESTED on a device, or Removed in phase 2. Old bug notes still contain the word self-tested, and those notes stay. NOT TESTED on a device.
+H. Fixed. The owner checklist is docs/OWNER_TEST.md. Every step says what you should see. Nothing in it was run on a device.
 Next: owner test. The checklist is docs/OWNER_TEST.md.
 
 ## Open problems
