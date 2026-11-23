@@ -13,16 +13,16 @@ v1.0.1 is the published fix build. There is no v1.0.0 release. The previous rele
 
 ## Next exact step
 N1. Fixed. The phone link files import MediaControl from the phone package. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45129681527 (android, mac, web, and emulator all passed). NOT TESTED on a device.
-N2. Partly. The old history notes say relay again. Those two renamed words are gone from docs, and docs/dev matches commit 9308299. NOT TESTED on a device. CI on this commit is not green yet.
-N5. Partly. A big shared file is accepted only when the folder is on, not paused, and linked. The check is in StageFive.folderAccept and FolderFlags.allows. NOT TESTED on a device. CI is not green on this commit yet.
+N2. Fixed. The old history notes say relay again. Those two renamed words are gone from docs, and docs/dev matches commit 9308299. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N5. Fixed. A big shared file is accepted only when the folder is on, not paused, and linked. The check is in StageFive.folderAccept and FolderFlags.allows. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
 Next: N3, drop a stale shared-folder ack before the same file is sent again.
-N3. Partly. A shared-folder ack is dropped before file_begin and after file_end or file_cancel. A stale ack from an older send is not used. NOT TESTED on a device. CI is not green on this commit yet.
-N4. Partly. Shared-folder begin, chunk, finish, and drop run on the folder queue. Notes hop back to the main thread. has() stays a locked read. NOT TESTED on a device. CI is not green on this commit yet.
-N7. Partly. A message whose sender is relay is refused and shown to nobody. NOT TESTED on a device. CI is not green on this commit yet.
-N6. Partly. Shared-folder send and receive moved from PhoneFive into PhoneFolder. No file under android/app/src/main is over 900 lines. Every old message type is still handled. NOT TESTED on a device. CI is not green on this commit yet.
-N8. Partly. An update file name keeps only letters, digits, dots, and dashes. Anything else, including a path trick, is saved as BridgeLink-update.dmg. NOT TESTED on a device. CI is not green on this commit yet.
-N9. Partly. The owner setup note now says Check for update downloads the disk image, checks the hash, and opens it. NOT TESTED on a device.
-N10. Partly. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is not green on this commit yet.
+N3. Fixed. A shared-folder ack is dropped before file_begin and after file_end or file_cancel. A stale ack from an older send is not used. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N4. Fixed. Shared-folder begin, chunk, finish, and drop run on the folder queue. Notes hop back to the main thread. has() stays a locked read. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N7. Fixed. A message whose sender is relay is refused and shown to nobody. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N6. Fixed. Shared-folder send and receive moved from PhoneFive into PhoneFolder. No file under android/app/src/main is over 900 lines. Every old message type is still handled. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N8. Fixed. An update file name keeps only letters, digits, dots, and dashes. Anything else, including a path trick, is saved as BridgeLink-update.dmg. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N9. Fixed. The owner setup note now says Check for update downloads the disk image, checks the hash, and opens it. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
+N10. Fixed. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is green: https://github.com/CAPPY7/bridgelink/actions/runs/45145441865
 Next: Part B.
 B2. Partly. The demo calls the alerts list alerts. Incoming messages are in LinkReceive. The old list file and the old share file are deleted once. NOT TESTED on a device. CI is not green on this commit yet.
 B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. The Mac still has the Apple events entitlement because media scripts need it. NOT TESTED on a device. CI is not green on this commit yet.
@@ -41,7 +41,7 @@ E. Partly. Setup is one page at a time, with Skip, and Settings lists each permi
 F. Partly. Failures say what happened and what to do. A raw error is not shown. NOT TESTED on a device. CI is not green on this commit yet.
 G. Partly. The feature list says Built – NOT tested on a device, or Removed in phase 2. NOT TESTED on a device.
 H. Partly. The owner checklist is docs/OWNER_TEST.md. Nothing in it was run on a device.
-Next: one push, then wait for android, mac, web, and emulator.
+Next: owner test. The checklist is docs/OWNER_TEST.md.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.
