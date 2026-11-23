@@ -116,6 +116,20 @@ Old message names from the removed remote path are ignored. They are not sent. T
 
 Picture and camera bytes use binary frames (type 2), not JSON. A binary payload is a 4 byte stream, 1 flag byte, 2 byte part, 2 byte part count, then bytes. Stream 1 is H.264. Flag 1 is a key frame. Flag 2 is a parameter set. Stream 2 is a JPEG. Stream 3 is 16-bit mic audio.
 
+## Types in phase 2
+
+| type | payload | Who sends it |
+|---|---|---|
+| call | `label`, `key`, `state` ringing or ended | Phone, when call alerts are on |
+| call_decline | `key` | Mac, when you press Decline |
+| photo_list | `offset` | Mac |
+| photo_page | `offset`, `count`, `ids`, `more` | Phone |
+| photo_thumb | `id`, `name`, `data` base64 JPEG | Phone |
+| photo_get | `id` | Mac. The full photo then uses file_begin |
+| signal | `bars` 0 to 4 | Phone, only when the bars change |
+
+A photo id is digits only. The phone answers photo_list only while phone photos are on. Text from a photo uses a normal clipboard message, not a new type.
+
 ## Pairing
 
 The Mac shows a QR code and a 6-digit PIN. The link inside the QR is:

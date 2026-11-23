@@ -68,16 +68,23 @@ What was tested: CI unit tests and the emulator pairing test. Nothing in this bu
 | 13 | Control the phone while mirroring | Built – NOT TESTED on a device. Click, drag, scroll, and type through the phone accessibility service. Back, Home, and Recents. The Mac never unlocks the phone |
 | 14 | Phone as webcam | Built – NOT TESTED on a device. Live camera inside BridgeLink, with front or back, zoom, flash, and mic. A Zoom or FaceTime camera needs a paid Apple Developer ID, so that extension stays off |
 | 15 | Shared folder | Built – NOT TESTED on a device. Both ways, conflict copies, pause. You can choose the phone folder. Files over 32 MB use the normal file send and land in the shared folder |
-| 16 | Lock the Mac when you leave | Built – NOT TESTED on a device |
-| 17 | Remote link | Removed. The phone and the Mac stay on the same Wi-Fi |
-| 18 | Combined list | Removed. Notifications, texts, and files stay in their own places |
+| 16 | Lock the Mac when you leave | Built – NOT TESTED on a device. Off by default |
+| 17 | Remote link | Removed in phase 2. The phone and the Mac stay on the same Wi-Fi |
+| 18 | Combined list | Removed in phase 2. Notifications, texts, and files stay in their own places |
 | 19 | Clipboard history | Built – NOT TESTED on a device |
 | 20 | Scan to Mac | Built – NOT TESTED on a device |
-| 21 | When-this-then-that rules | Removed |
+| 21 | When-this-then-that rules | Removed in phase 2 |
 | 22 | Quick drop | Built – NOT TESTED on a device. Quick Settings tile, menu-bar drop, and a floating drop zone |
 | 23 | Pairing | Built – NOT TESTED on a device. QR, several phones and Macs, rename, and forget |
-| 24 | Encrypted local link | Built – NOT TESTED on a device. TLS on the local link, with the Mac key pinned |
+| 24 | Encrypted local link (TLS, pinned key) | Built – NOT TESTED on a device. TLS on the local link, with the Mac key pinned |
 | 25 | Key pin | Built – NOT TESTED on a device. If the Mac key changed, forget it and scan again |
+| 26 | Call alerts | Built – NOT TESTED on a device. Off until you turn it on. Decline is on the Mac banner |
+| 27 | Transfer history | Built – NOT TESTED on a device. Search files, links, and notes on the phone |
+| 28 | Phone photos | Built – NOT TESTED on a device. Off until you turn it on. The Mac loads 30 at a time |
+| 29 | Menu-bar phone status | Built – NOT TESTED on a device. A menu-bar panel, not a widget. A widget does not load from a free sideload with no paid Apple team |
+| 30 | Pause phone notifications | Built – NOT TESTED on a device. The Mac switch follows the phone's reply |
+| 31 | Text from a photo | Built – NOT TESTED on a device. On the phone, no network. The model is inside the app |
+| 32 | Finder Send to phone | Built – NOT TESTED on a device. Files and text. The app must be in Applications |
 
 ## Build
 

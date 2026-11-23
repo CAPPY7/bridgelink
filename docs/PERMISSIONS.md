@@ -13,8 +13,11 @@ Each permission stays off until a feature needs it. BridgeLink does not change a
 | Ignore battery optimizations | Stop the vendor from killing the service | When you tap Keep me connected |
 | Nearby Bluetooth | Leave-lock watches the Mac signal | When you turn leave-lock on |
 | Precise location | Only Android 11 and older. Bluetooth scan on those phones needs it. Android 12 and newer do not get this permission | When you turn leave-lock on, on an old phone |
-| SMS and phone state | Read and send texts, and tell two SIMs apart | When you turn texts on |
-| Notification access | Mirror alerts, reply, and phone media controls | When you turn notification mirroring on |
+| SMS and phone state | Read and send texts, and tell two SIMs apart. Phone state also lets call alerts know the phone is ringing | When you turn texts on, or when you turn call alerts on |
+| Answer phone calls | Decline a call from the Mac when the call notification has no Decline button | When you turn call alerts on, Android 9 and newer |
+| Photos | Show recent photos on the Mac. Android 13 and newer use photo access. Older phones use storage up to Android 12. Android 14 can be only the photos you pick | When you turn phone photos on, or open the Mac Photos page |
+| Do Not Disturb access | Let the Mac pause phone notifications, and report the real state back | When you tap the pause switch or Sync Do Not Disturb. Already declared. If it is off, the phone shows the Settings step |
+| Notification access | Mirror alerts, call banners, reply, and phone media controls | When you turn notification mirroring on, or when you turn call alerts on |
 | Accessibility | Clicks in the Mac mirror window | When you turn phone control on. Android 13+ may need Allow restricted settings |
 | Screen share | The Mac mirror window | Every time you start a mirror. Android asks each time |
 | Full screen intent | Show the screen-share or camera question over the lock screen | Android 14 and newer can turn this off. The notification still waits if it is off |

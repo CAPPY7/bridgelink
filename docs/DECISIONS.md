@@ -267,3 +267,22 @@ The newest Compose BOM in November 2026 is 2026.11.01. It needs Kotlin 2.2, comp
 The demo page does not read the database, multiplayer, or app-data connectors. The app shell still mounts the auth provider, and the preview bridge still names an app-data type, so those files stay. The web test script lists only test files that exist.
 
 The default shared folder on Android 10 and newer stays the app's own Documents/BridgeLink Shared until you pick a folder. Looking up that folder does not insert a Documents row every time. The row is added once.
+
+After the removals, no string, icon, or permission belonged only to the away path, the combined list, or the rules. Phone state stays, because two SIMs and call alerts use it. The Mac Apple events entitlement stays, because media scripts use it. NOT TESTED on a device.
+
+Call alerts are off until you turn them on. The caller name comes from the call notification. There is no call log permission and no contacts permission. Decline tries that notification's own button first. Ending the call is asked only when you turn the feature on. NOT TESTED on a device.
+
+Transfer history adds columns on the existing table. Old rows stay and are treated as text. The search escapes percent signs. Secrets are not stored. Work stays on the history thread. NOT TESTED on a device.
+
+Phone photos are off until you turn them on. The phone answers a request. It does not scan in the background. Android 14 can show only the photos you picked. Full photos use the same file check as other files. NOT TESTED on a device.
+
+Screen mirror uses about 0.1 bit per pixel per frame, from 1 to 8 Mbps. Medium is 24 frames a second. High is 30. Low is 15. The encoder repeats a still picture. The Mac pane follows the picture shape. NOT TESTED on a device.
+
+Phone status is a menu-bar panel, not a widget. A WidgetKit extension needs an App Group and a paid team id. A free sideload does not get that, so no widget was added. Signal bars are sent only when they change, on the battery heartbeat. NOT TESTED on a device.
+
+Pause phone notifications follows the phone's reply. If Do Not Disturb access is missing, the phone shows one sentence and a Settings button. The Mac does not pretend the switch worked. This is separate from quieting Mac banners while the phone is in Do Not Disturb. NOT TESTED on a device.
+
+Text from a photo uses Google ML Kit text recognition with the bundled Latin model, not a Play services download. The library is free and is not Apache-2.0. It is under the ML Kit terms: https://developers.google.com/mlkit/terms . The recognizer archive is about 1.4 MB and the bundled model archive is about 18 MB before packaging. An APK size difference was not measured here, because this environment did not keep the previous APK. Recognition runs off the main thread. The photo picker needs no storage permission. NOT TESTED on a device.
+
+Finder Send to phone accepts files and text. Services are refreshed when the app opens. The steps are the same on macOS 13, 14, and 15. The app must be in Applications. NOT TESTED on a device.
+
