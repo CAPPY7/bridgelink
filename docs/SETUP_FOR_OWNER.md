@@ -33,7 +33,7 @@ Push a tag `v1.0.0`, or run the Release workflow and type that tag. The release 
 - BridgeLink-mac.zip
 - appcast.xml
 
-Check for update reads appcast.xml from the latest release. The Sparkle app framework is not linked. The button opens the release page instead of installing by itself. A Sparkle EdDSA key was not created here.
+Check for update reads appcast.xml from the latest release. The Sparkle app framework is not linked. The button downloads BridgeLink.dmg and SHA256SUMS, checks the hash, and opens the disk image. It does not install the update by itself. A Sparkle EdDSA key was not created here.
 
 ## 4. Remote path
 
