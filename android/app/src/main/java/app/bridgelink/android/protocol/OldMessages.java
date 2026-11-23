@@ -6,6 +6,10 @@ public final class OldMessages {
 
     public static final String[] SAVED = {"relaySecret", "relayBook", "relayUrl"};
 
+    public static boolean ignoreSender(String from) {
+        return "relay".equals(from);
+    }
+
     public static boolean ignore(String type) {
         return "relay_key".equals(type)
                 || "relay_set".equals(type)

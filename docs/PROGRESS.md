@@ -18,6 +18,7 @@ N5. Partly. A big shared file is accepted only when the folder is on, not paused
 Next: N3, drop a stale shared-folder ack before the same file is sent again.
 N3. Partly. A shared-folder ack is dropped before file_begin and after file_end or file_cancel. A stale ack from an older send is not used. NOT TESTED on a device. CI is not green on this commit yet.
 N4. Partly. Shared-folder begin, chunk, finish, and drop run on the folder queue. Notes hop back to the main thread. has() stays a locked read. NOT TESTED on a device. CI is not green on this commit yet.
+N7. Partly. A message whose sender is relay is refused and shown to nobody. NOT TESTED on a device. CI is not green on this commit yet.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

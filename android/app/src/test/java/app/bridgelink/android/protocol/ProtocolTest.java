@@ -21,6 +21,13 @@ import static org.junit.Assert.assertTrue;
 
 public class ProtocolTest {
     @Test
+    public void staleAckFromAnOlderSendIsNotUsed() {
+        assertEquals(-1L, FolderAck.resume(4096L, false));
+        assertEquals(-1L, FolderAck.resume(null, true));
+        assertEquals(0L, FolderAck.resume(0L, true));
+    }
+
+    @Test
     public void goldenTextEnvelope() throws Exception {
         Envelope envelope = Envelope.parse(fixture());
         assertEquals(1, envelope.v);
@@ -873,9 +880,15 @@ public class ProtocolTest {
         Envelope envelope = Envelope.parse(json);
         assertTrue(OldMessages.ignore(envelope.type));
         assertFalse(FeatureMessages.known(envelope.type));
-        Envelope fromOld = Envelope.parse(json.replace("\"android\"", "\"relay\""));
-        assertEquals("relay", fromOld.from);
-        assertTrue(OldMessages.ignore(fromOld.type));
+        Envelope fromOld = null;
+        try {
+            fromOld = Envelope.parse(json.replace("\"android\"", "\"relay\""));
+        } catch (IllegalArgumentException refused) {
+            assertEquals("Bad sender", refused.getMessage());
+        }
+        assertNull(fromOld);
+        assertTrue(OldMessages.ignoreSender("relay"));
+        assertFalse(OldMessages.ignoreSender("android"));
     }
 
     @Test
@@ -890,6 +903,10 @@ public class ProtocolTest {
         assertFalse(StageFive.folderUsesChunks(32L * 1024 * 1024));
         assertTrue(StageFive.folderUsesChunks(32L * 1024 * 1024 + 1));
         assertFalse(StageFive.folderUsesChunks(Transfers.MAX_BYTES + 1));
+        assertFalse(StageFive.folderAccept(false, true, false));
+        assertFalse(StageFive.folderAccept(true, false, false));
+        assertFalse(StageFive.folderAccept(true, true, true));
+        assertTrue(StageFive.folderAccept(true, true, false));
     }
 
     /** Name matches the Android 12 exception so the door can recognize it without the SDK class. */

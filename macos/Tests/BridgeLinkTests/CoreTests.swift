@@ -258,9 +258,9 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(OldMessages.ignore(env.type))
         XCTAssertFalse(FeatureMessages.types.contains(env.type))
         let oldFrom = json.replacingOccurrences(of: "\"android\"", with: "\"relay\"")
-        let parsed = try EnvelopeCodec.parse(Data(oldFrom.utf8))
-        XCTAssertEqual(parsed.from, "relay")
-        XCTAssertTrue(OldMessages.ignore(parsed.type))
+        XCTAssertThrowsError(try EnvelopeCodec.parse(Data(oldFrom.utf8)))
+        XCTAssertTrue(OldMessages.ignoreSender("relay"))
+        XCTAssertFalse(OldMessages.ignoreSender("android"))
     }
 
     private func fixtureDir() -> URL {
@@ -453,6 +453,10 @@ final class CoreTests: XCTestCase {
         XCTAssertFalse(StageFive.folderUsesChunks(32 * 1024 * 1024))
         XCTAssertTrue(StageFive.folderUsesChunks(32 * 1024 * 1024 + 1))
         XCTAssertFalse(StageFive.folderUsesChunks(Int64(Transfers.maxBytes) + 1))
+        XCTAssertFalse(StageFive.folderAccept(false, true, false))
+        XCTAssertFalse(StageFive.folderAccept(true, false, false))
+        XCTAssertFalse(StageFive.folderAccept(true, true, true))
+        XCTAssertTrue(StageFive.folderAccept(true, true, false))
         let sums = "abc123  BridgeLink.dmg\nabc123  other.txt\n"
         XCTAssertEqual(ReleaseCheck.checkSum(sums, "BridgeLink.dmg", "abc123"), .match)
         XCTAssertEqual(ReleaseCheck.checkSum(sums, "BridgeLink.dmg", "nope"), .mismatch)

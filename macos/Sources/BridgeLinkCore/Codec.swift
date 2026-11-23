@@ -33,12 +33,12 @@ public enum EnvelopeCodec {
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw CodecError.badJson
         }
-        // Ignore old relay_* messages. A sender named relay is still parsed, then dropped.
+        // A sender named relay is an old away path. It is refused here.
         guard let version = (object["v"] as? NSNumber)?.intValue, version == 1,
               let id = object["id"] as? String, !id.isEmpty,
               let type = object["type"] as? String, !type.isEmpty,
               let from = object["from"] as? String,
-              from == "android" || from == "mac" || from == "relay" else {
+              from == "android" || from == "mac" else {
             throw CodecError.badJson
         }
         guard let ts = (object["ts"] as? NSNumber)?.int64Value, ts >= 0 else {
