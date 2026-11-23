@@ -20,6 +20,7 @@ N3. Partly. A shared-folder ack is dropped before file_begin and after file_end 
 N4. Partly. Shared-folder begin, chunk, finish, and drop run on the folder queue. Notes hop back to the main thread. has() stays a locked read. NOT TESTED on a device. CI is not green on this commit yet.
 N7. Partly. A message whose sender is relay is refused and shown to nobody. NOT TESTED on a device. CI is not green on this commit yet.
 N6. Partly. Shared-folder send and receive moved from PhoneFive into PhoneFolder. No file under android/app/src/main is over 900 lines. Every old message type is still handled. NOT TESTED on a device. CI is not green on this commit yet.
+N8. Partly. An update file name keeps only letters, digits, dots, and dashes. Anything else, including a path trick, is saved as BridgeLink-update.dmg. NOT TESTED on a device. CI is not green on this commit yet.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

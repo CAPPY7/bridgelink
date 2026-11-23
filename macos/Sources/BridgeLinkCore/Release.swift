@@ -18,6 +18,15 @@ public enum ReleaseCheck {
         return 0
     }
 
+    /// A version from the network may only use letters, digits, dots, and dashes.
+    public static func updateFileName(_ remote: String) -> String {
+        let allowed = CharacterSet(charactersIn: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-")
+        if remote.isEmpty || remote.rangeOfCharacter(from: allowed.inverted) != nil {
+            return "BridgeLink-update.dmg"
+        }
+        return "BridgeLink-\(remote).dmg"
+    }
+
     public static func shortVersion(_ xml: String) -> String {
         let key = "sparkle:shortVersionString=\""
         guard let start = xml.range(of: key) else { return "" }

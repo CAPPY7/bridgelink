@@ -38,7 +38,7 @@ extension LinkModel {
             }
             let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
                 ?? URL(fileURLWithPath: NSTemporaryDirectory())
-            let dest = folder.appendingPathComponent("BridgeLink-\(remote).dmg")
+            let dest = folder.appendingPathComponent(ReleaseCheck.updateFileName(remote))
             do {
                 try dmg.write(to: dest, options: .atomic)
             } catch {

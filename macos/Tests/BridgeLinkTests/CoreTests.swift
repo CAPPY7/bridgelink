@@ -570,6 +570,9 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(ReleaseCheck.shortVersion("nope"), "")
         XCTAssertTrue(ReleaseCheck.tagMatches("v1.0.0", "1.0.0"))
         XCTAssertFalse(ReleaseCheck.tagMatches("v0.13.0", "1.0.0"))
+        XCTAssertEqual(ReleaseCheck.updateFileName("1.0.1"), "BridgeLink-1.0.1.dmg")
+        XCTAssertEqual(ReleaseCheck.updateFileName("../x"), "BridgeLink-update.dmg")
+        XCTAssertEqual(ReleaseCheck.updateFileName(""), "BridgeLink-update.dmg")
     }
 }
 
