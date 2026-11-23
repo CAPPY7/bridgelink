@@ -1,6 +1,7 @@
 import AppKit
 import BridgeLinkCore
 import Foundation
+import UserNotifications
 
 struct PhonePhoto: Identifiable, Equatable {
     var id: String

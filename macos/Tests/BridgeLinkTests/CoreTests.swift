@@ -576,6 +576,20 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(ReleaseCheck.updateFileName(""), "BridgeLink-update.dmg")
     }
 
+    func testPhaseTwoMessagesStayKnown() {
+        for type in ["call", "call_decline", "photo_list", "photo_page", "photo_thumb", "photo_get", "signal"] {
+            XCTAssertTrue(FeatureMessages.types.contains(type), type)
+        }
+        XCTAssertFalse(FeatureMessages.types.contains("history"))
+    }
+
+    func testFinderSendListsFilesAndText() {
+        XCTAssertTrue(FinderSend.fileTypes.contains("public.file-url"))
+        XCTAssertTrue(FinderSend.fileTypes.contains("public.plain-text"))
+        XCTAssertTrue(FinderSend.fileTypes.contains("public.url"))
+        XCTAssertEqual(FinderSend.itemType, "public.item")
+    }
+
     func testPlainFailuresAndSignal() {
         let kinds: [LinkKind] = [.keyChanged, .wrongCode, .tokenRejected, .versionMismatch, .timeout, .refused, .networkLost, .firewall]
         for kind in kinds {

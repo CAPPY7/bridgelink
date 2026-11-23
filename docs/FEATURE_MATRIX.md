@@ -19,24 +19,24 @@ Status words are only: Not started, Building, Built – NOT TESTED on a device, 
 | 13 | Control the phone | Built – NOT TESTED on a device | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M13 |
 | 14 | Phone as webcam | Built – NOT TESTED on a device | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M14 |
 | 15 | Shared folder | Built – NOT TESTED on a device | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M15 |
-| 16 | Lock the Mac when you leave | Built – NOT TESTED on a device, off by default | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
-| 17 | Remote link | Removed in phase 2 | — | — | — | — |
-| 18 | Combined list | Removed in phase 2 | — | — | — | — |
+| 16 | Lock the Mac when you leave (off by default) | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
+| 17 | Remote link. Removed in phase 2 | Removed | — | — | — | — |
+| 18 | Combined list. Removed in phase 2 | Removed | — | — | — | — |
 | 19 | Clipboard history | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M19 |
 | 20 | Scan to Mac | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M20 |
-| 21 | When-this-then-that rules | Removed in phase 2 | — | — | — | — |
+| 21 | When-this-then-that rules. Removed in phase 2 | Removed | — | — | — | — |
 | 22 | Quick drop | Built – NOT TESTED on a device | ProtocolTest.stageThreeRules | CoreTests.testStageThreeRules | StageThreeDeviceTest.stageThreeOnDevice | M22 |
 | 23 | Pairing | Built – NOT TESTED on a device | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testMiddlemanCannotReuseAMatchCode | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M23 |
 | 24 | Encrypted local link (TLS, pinned key) | Built – NOT TESTED on a device | ProtocolTest.proofHidesThePin | CoreTests.testProofDevicesAndPendingCap | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M24 |
 | 25 | Key pin | Built – NOT TESTED on a device | ProtocolTest.helloNeverSendsPinOrTokenToAnUnpinnedKey | CoreTests.testIdentityFingerprintStaysAndKeychainDoesNotGrow | PairingEmulatorTest.qrPairNoteForgetThenMatchCode | M25 |
-| 26 | Call alerts with Decline | Built – NOT tested on a device. Off by default | CallRulesTest | CoreTests.testPlainFailuresAndSignal | — | M26 |
-| 27 | Searchable transfer history | Built – NOT tested on a device | HistoryQueryTest | — | MigrationTest.versionTwoKeepsTheOldRow | M27 |
-| 28 | Phone photos on the Mac | Built – NOT tested on a device. Off by default | PhotoRulesTest | — | — | M28 |
-| 29 | Sharper screen mirror | Built – NOT tested on a device | PictureFitTest | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M29 |
-| 30 | Phone status in the menu bar | Built – NOT tested on a device. Menu-bar panel, not a widget, because a widget does not load from a free sideload | SignalRulesTest | CoreTests.testPlainFailuresAndSignal | — | M30 |
-| 31 | Pause phone notifications | Built – NOT tested on a device | DndFollowTest | CoreTests.testPlainFailuresAndSignal | — | M31 |
-| 32 | Text from a photo | Built – NOT tested on a device | TextCapTest | — | — | M32 |
-| 33 | Finder Send to phone | Built – NOT tested on a device | — | — | — | M33 |
+| 26 | Call alerts with Decline (off by default) | Built – NOT TESTED on a device | CallRulesTest.callNoticeBecomesANameAndKey | CoreTests.testPhaseTwoMessagesStayKnown | ProtocolTest.everyFeatureMessageRoundTrips | M26 |
+| 27 | Searchable transfer history | Built – NOT TESTED on a device | HistoryQueryTest.searchEscapesWildcardsAndSkipsSecrets | CoreTests.testPhaseTwoMessagesStayKnown | MigrationTest.versionTwoKeepsTheOldRow | M27 |
+| 28 | Phone photos on the Mac (off by default) | Built – NOT TESTED on a device | PhotoRulesTest.pagesAreNewestFirstWithNoOverlap | CoreTests.testPhaseTwoMessagesStayKnown | ProtocolTest.everyFeatureMessageRoundTrips | M28 |
+| 29 | Sharper screen mirror | Built – NOT TESTED on a device | PictureFitTest | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M29 |
+| 30 | Phone status in the menu bar (menu-bar panel, not a widget) | Built – NOT TESTED on a device | SignalRulesTest.signalIsSentOnlyWhenTheBarsChange | CoreTests.testPlainFailuresAndSignal | ProtocolTest.everyFeatureMessageRoundTrips | M30 |
+| 31 | Pause phone notifications | Built – NOT TESTED on a device | DndFollowTest.toggleFollowsThePhoneReplyNotTheGuess | CoreTests.testPlainFailuresAndSignal | ProtocolTest.everyFeatureMessageRoundTrips | M31 |
+| 32 | Text from a photo | Built – NOT TESTED on a device | TextCapTest.trimsAndCapsAtOneHundredThousand | CoreTests.testPhaseTwoMessagesStayKnown | ProtocolTest.everyFeatureMessageRoundTrips | M32 |
+| 33 | Finder Send to phone | Built – NOT TESTED on a device | ProtocolTest.everyFeatureMessageRoundTrips | CoreTests.testFinderSendListsFilesAndText | CoreTests.testPhaseTwoMessagesStayKnown | M33 |
 
 Link bugs fixed in 0.7.0, with tests:
 

@@ -153,7 +153,7 @@ extension LinkModel {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [stable])
     }
 
-    private func ensureNoteCategories() {
+    func ensureNoteCategories() {
         let open = UNNotificationAction(identifier: "open", title: "Open", options: [])
         let finder = UNNotificationAction(identifier: "finder", title: "Show in Finder", options: [])
         let file = UNNotificationCategory(identifier: "bridgelink.file", actions: [open, finder], intentIdentifiers: [], options: [])

@@ -423,6 +423,11 @@ public enum Features {
     }
 }
 
+public enum FinderSend {
+    public static let fileTypes = ["public.file-url", "public.plain-text", "public.url"]
+    public static let itemType = "public.item"
+}
+
 public enum LinkKind: Equatable {
     case keyChanged
     case wrongCode
