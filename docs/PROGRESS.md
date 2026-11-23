@@ -16,6 +16,7 @@ N1. Fixed. The phone link files import MediaControl from the phone package. CI i
 N2. Partly. The old history notes say relay again. Those two renamed words are gone from docs, and docs/dev matches commit 9308299. NOT TESTED on a device. CI on this commit is not green yet.
 N5. Partly. A big shared file is accepted only when the folder is on, not paused, and linked. The check is in StageFive.folderAccept and FolderFlags.allows. NOT TESTED on a device. CI is not green on this commit yet.
 Next: N3, drop a stale shared-folder ack before the same file is sent again.
+N3. Partly. A shared-folder ack is dropped before file_begin and after file_end or file_cancel. A stale ack from an older send is not used. NOT TESTED on a device. CI is not green on this commit yet.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

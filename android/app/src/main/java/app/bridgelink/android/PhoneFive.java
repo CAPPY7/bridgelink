@@ -57,6 +57,10 @@ public final class PhoneFive {
             return -1;
         }
 
+        /** Drop a stored offset so the next send of this id cannot reuse it. */
+        default void dropAck(String id) {
+        }
+
         default boolean linkedNow() {
             return true;
         }
@@ -465,6 +469,7 @@ public final class PhoneFive {
         begin.addProperty("dest", "folder");
         begin.addProperty("size", Long.toString(size));
         begin.addProperty("from", "0");
+        out.dropAck(id);
         out.frame("file_begin", begin);
         long skip = waitHave(id);
         if (skip < 0 || skip > size) skip = 0;
@@ -523,6 +528,7 @@ public final class PhoneFive {
         end.addProperty("id", id);
         end.addProperty("sha256", hex(digest.digest()));
         out.frame("file_end", end);
+        out.dropAck(id);
         out.status("Sent " + name);
     }
 
@@ -565,6 +571,7 @@ public final class PhoneFive {
             JsonObject cancel = new JsonObject();
             cancel.addProperty("id", id);
             out.frame("file_cancel", cancel);
+            out.dropAck(id);
         } catch (Exception ignored) {
         }
     }
@@ -585,6 +592,7 @@ public final class PhoneFive {
     }
 
     public boolean takeFolderFile(String id, String path, long size) {
+        if (!StageFive.folderAccept(linked, flag("folder"), paused)) return false;
         if (id == null || id.isEmpty() || !StageFive.folderUsesChunks(size)) return false;
         Transfers.Incoming incoming = Transfers.Incoming.begin(id, path, size);
         if (incoming == null) return false;

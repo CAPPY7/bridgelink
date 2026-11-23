@@ -165,13 +165,18 @@ final class LinkInbox {
                 case "file_begin" -> {
                     String id = message.text("id");
                     long from = longText(message, "from");
-                    if ("folder".equals(message.text("dest")) && core.five != null
-                            && core.five.takeFolderFile(id, message.text("path"), longText(message, "size"))) {
-                        JsonObject reply = new JsonObject();
-                        reply.addProperty("id", id);
-                        reply.addProperty("offset", "0");
-                        core.writeEnvelope(Envelope.make("file_have", "android", reply));
-                        core.publish("Receiving a shared file", null);
+                    if ("folder".equals(message.text("dest")) && core.five != null) {
+                        if (core.five.takeFolderFile(id, message.text("path"), longText(message, "size"))) {
+                            JsonObject reply = new JsonObject();
+                            reply.addProperty("id", id);
+                            reply.addProperty("offset", "0");
+                            core.writeEnvelope(Envelope.make("file_have", "android", reply));
+                            core.publish("Receiving a shared file", null);
+                        } else {
+                            JsonObject cancel = new JsonObject();
+                            cancel.addProperty("id", id);
+                            core.writeEnvelope(Envelope.make("file_cancel", "android", cancel));
+                        }
                     } else {
                     String status = core.files.begin(id, message.text("name"), longText(message, "size"), Math.max(0, from));
                     JsonObject reply = new JsonObject();
@@ -181,7 +186,7 @@ final class LinkInbox {
                     if (status != null) core.publish(status, null);
                     }
                 }
-                case "file_have" -> core.fileHave.put(message.text("id"), longText(message, "offset"));
+                case "file_have" -> core.acceptFileHave(message.text("id"), longText(message, "offset"));
                 case "file_chunk" -> {
                     if (core.five != null && core.five.hasFolderFile(message.text("id"))) {
                         String status = core.five.chunkFolderFile(message.text("id"), longText(message, "offset"), message.text("data"));
@@ -235,6 +240,7 @@ final class LinkInbox {
                 }
             }
         } catch (Exception error) {
+            if (error instanceof IllegalArgumentException && "Bad sender".equals(error.getMessage())) return;
             LinkFailure.Kind kind = LinkFailure.classify(error);
             if (kind == LinkFailure.Kind.VERSION_MISMATCH) {
                 core.linkState.failFatal(LinkFailure.message(kind));

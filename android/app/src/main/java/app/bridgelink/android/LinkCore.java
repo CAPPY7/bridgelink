@@ -53,6 +53,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -90,6 +91,7 @@ class LinkCore extends Service {
     final AtomicInteger generation = new AtomicInteger();
     final Dedup seen = new Dedup(500);
     final ConcurrentHashMap<String, Long> fileHave = new ConcurrentHashMap<>();
+    final Set<String> ackFresh = ConcurrentHashMap.newKeySet();
     final Handler main = new Handler(Looper.getMainLooper());
     private static final Object PARK = new Object();
     private static final ArrayDeque<Intent> parked = new ArrayDeque<>();
@@ -161,8 +163,12 @@ class LinkCore extends Service {
 
             @Override
             public long have(String id) {
-                Long value = fileHave.get(id);
-                return value == null ? -1 : value;
+                return app.bridgelink.android.protocol.FolderAck.resume(fileHave.get(id), ackFresh.contains(id));
+            }
+
+            @Override
+            public void dropAck(String id) {
+                dropFolderAck(id);
             }
 
             @Override
@@ -531,6 +537,18 @@ class LinkCore extends Service {
 
     private void onLine(String line) {
         inbox.onLine(line);
+    }
+
+    void dropFolderAck(String id) {
+        if (id == null || id.isEmpty()) return;
+        fileHave.remove(id);
+        ackFresh.remove(id);
+    }
+
+    void acceptFileHave(String id, long offset) {
+        if (id == null || id.isEmpty() || offset < 0) return;
+        fileHave.put(id, offset);
+        ackFresh.add(id);
     }
 
     void markUnpaired() {
