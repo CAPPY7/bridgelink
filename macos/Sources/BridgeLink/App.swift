@@ -105,7 +105,7 @@ final class LinkModel: ObservableObject {
     var pointerExplained = false
     var batteryAuto = false
     let sharedBox = SharedBox()
-    let folderSink = FolderSink()
+    let folderSink: FolderSink
     var beacon: LeaveBeacon?
     var linkGoneAt: Date?
     var leaveTimer: Timer?
@@ -157,6 +157,7 @@ final class LinkModel: ObservableObject {
     var gateStarted = Int64(Date().timeIntervalSince1970 * 1000)
 
     init() {
+        folderSink = FolderSink(flags: folderFlags)
         let token = PairingGate.newToken()
         pin = token
         gate = PairingGate(token: token, now: Int64(Date().timeIntervalSince1970 * 1000))

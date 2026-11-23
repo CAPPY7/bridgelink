@@ -404,14 +404,22 @@ final class SharedBox {
 
 /// A big shared file arrives as file_begin / file_chunk / file_end and is checked with the normal sha256.
 final class FolderSink {
+    private let flags: FolderFlags
     private let lock = NSLock()
     private var incoming: [String: IncomingFile] = [:]
     private var handles: [String: FileHandle] = [:]
     private var paths: [String: String] = [:]
     private var temps: [String: URL] = [:]
 
-    func begin(_ id: String, _ path: String, _ size: Int) -> Bool {
-        onFolderQueue { self.beginNow(id, path, size) }
+    init(flags: FolderFlags) {
+        self.flags = flags
+    }
+
+    func begin(_ id: String, _ path: String, _ size: Int, done: @escaping (Bool) -> Void) {
+        folderPartQueue.async { [weak self] in
+            let ok = self?.beginNow(id, path, size) ?? false
+            DispatchQueue.main.async { done(ok) }
+        }
     }
 
     func has(_ id: String) -> Bool {
@@ -420,19 +428,28 @@ final class FolderSink {
         return incoming[id] != nil
     }
 
-    func chunk(_ id: String, _ offset: Int, _ base64: String) -> String? {
-        onFolderQueue { self.chunkNow(id, offset, base64) }
+    func chunk(_ id: String, _ offset: Int, _ base64: String, done: @escaping (String?) -> Void) {
+        folderPartQueue.async { [weak self] in
+            let line = self?.chunkNow(id, offset, base64)
+            DispatchQueue.main.async { done(line) }
+        }
     }
 
-    func finish(_ id: String, _ sha: String, _ box: SharedBox) -> String {
-        onFolderQueue { self.finishNow(id, sha, box) }
+    func finish(_ id: String, _ sha: String, _ box: SharedBox, done: @escaping (String) -> Void) {
+        folderPartQueue.async { [weak self] in
+            let line = self?.finishNow(id, sha, box) ?? "A shared file did not match."
+            DispatchQueue.main.async { done(line) }
+        }
     }
 
     func drop(_ id: String) {
-        onFolderQueue { self.dropNow(id) }
+        folderPartQueue.async { [weak self] in
+            self?.dropNow(id)
+        }
     }
 
     private func beginNow(_ id: String, _ path: String, _ size: Int) -> Bool {
+        guard flags.allows() else { return false }
         guard StageFive.folderUsesChunks(Int64(size)), let file = IncomingFile(id: id, name: path, size: size) else { return false }
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-folder-\(id)")
         FileManager.default.createFile(atPath: tmp.path, contents: nil)
@@ -512,11 +529,6 @@ private let folderPartQueue: DispatchQueue = {
     return queue
 }()
 
-private func onFolderQueue<T>(_ body: () -> T) -> T {
-    if DispatchQueue.getSpecific(key: folderPartKey) != nil { return body() }
-    return folderPartQueue.sync(execute: body)
-}
-
 /// A copy of the folder switches that the folder queue can read without touching the window.
 final class FolderFlags: @unchecked Sendable {
     private let lock = NSLock()
@@ -540,7 +552,7 @@ final class FolderFlags: @unchecked Sendable {
     func allows() -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return on && !paused
+        return on && !paused && linked
     }
 
     /// Watch and push only while the link is up and the folder is on and not paused.

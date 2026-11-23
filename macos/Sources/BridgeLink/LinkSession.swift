@@ -154,10 +154,20 @@ extension LinkModel {
             }
         case "file_begin":
             let fileId = envelope.text("id")
-            if envelope.text("dest") == "folder",
-               folderSink.begin(fileId, envelope.text("path"), Int(envelope.text("size")) ?? -1) {
-                send(type: "file_have", payload: ["id": fileId, "offset": "0"], on: live)
-                note("Receiving a shared file")
+            if envelope.text("dest") == "folder" {
+                if !folderFlags.allows() {
+                    send(type: "file_cancel", payload: ["id": fileId], on: live)
+                    break
+                }
+                folderSink.begin(fileId, envelope.text("path"), Int(envelope.text("size")) ?? -1) { [weak self] ok in
+                    guard let self else { return }
+                    if ok {
+                        self.send(type: "file_have", payload: ["id": fileId, "offset": "0"], on: self.live)
+                        self.note("Receiving a shared file")
+                    } else {
+                        self.send(type: "file_cancel", payload: ["id": fileId], on: self.live)
+                    }
+                }
                 break
             }
             let from = Int(envelope.text("from")) ?? 0
@@ -172,12 +182,15 @@ extension LinkModel {
                 let fileId = envelope.text("id")
                 let offset = Int(envelope.text("offset")) ?? -1
                 let raw = envelope.text("data")
-                if let line = folderSink.chunk(fileId, offset, raw) {
-                    note(line)
-                } else {
-                    let added = Data(base64Encoded: raw)?.count ?? 0
-                    if offset >= 0 {
-                        send(type: "file_have", payload: ["id": fileId, "offset": String(offset + added)], on: live)
+                folderSink.chunk(fileId, offset, raw) { [weak self] line in
+                    guard let self else { return }
+                    if let line {
+                        self.note(line)
+                    } else {
+                        let added = Data(base64Encoded: raw)?.count ?? 0
+                        if offset >= 0 {
+                            self.send(type: "file_have", payload: ["id": fileId, "offset": String(offset + added)], on: self.live)
+                        }
                     }
                 }
                 break
@@ -187,7 +200,9 @@ extension LinkModel {
             }
         case "file_end":
             if folderSink.has(envelope.text("id")) {
-                note(folderSink.finish(envelope.text("id"), envelope.text("sha256"), sharedBox))
+                folderSink.finish(envelope.text("id"), envelope.text("sha256"), sharedBox) { [weak self] line in
+                    self?.note(line)
+                }
                 break
             }
             files.finish(id: envelope.text("id"), sha256: envelope.text("sha256")) { [weak self] line, url, opened in
