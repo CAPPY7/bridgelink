@@ -218,6 +218,7 @@ Pass / Fail / Notes:
 ### 4.1 Call alerts
 
 1. Turn call alerts on. Allow phone state, and Decline if Android asks.
+   You should see: the call-alerts switch stay on. Android asks only after that tap.
 2. Call this phone from another phone.
    You should see: a Mac banner that says Call from the name or number, or Incoming call.
 3. Tap Decline on the Mac.
@@ -286,6 +287,7 @@ Pass / Fail / Notes:
 ### 4.8 Finder Send to phone
 
 1. Put BridgeLink in Applications. Open it once.
+   You should see: the menu-bar icon, and a setup page that says Send to phone.
 2. In Finder, right-click a file. Choose Quick Actions or Services, then Send to phone.
    You should see: the file on the phone.
 3. If the item is missing, open Settings, Keyboard Shortcuts, and turn Send to phone on.
@@ -303,13 +305,14 @@ Pass / Fail / Notes:
 ## 6. Removed features
 
 1. Look through the phone and the Mac.
-   You should see: no Away from home, no combined inbox, and no when-this-then-that rules.
+   You should see: no away page, no combined list, and no when-this-then-that rules.
 
 Pass / Fail / Notes:
 
 ## 7. Battery
 
 1. Leave the phone and the Mac paired for one hour with the phone screen off. Do not mirror, and do not turn on leave-lock or call alerts unless you want to measure those too.
+   You should see: both apps stay linked while the phone screen is off.
 2. Open Android Settings, Battery, BridgeLink.
    You should see: the battery number Android shows. Write that number in the notes.
 
@@ -318,8 +321,10 @@ Pass / Fail / Notes:
 ## 8. What to send back
 
 1. Send the failed step numbers.
+   You should see: a short note with only those step numbers. If nothing failed, the note can say none.
 2. On the phone, tap Send diagnostics. Send that file.
    You should see: a text file with no messages, no photos, and no keys.
 3. Do not send screenshots of passwords, texts, or photos of people.
+   You should see: nothing private in what you send back.
 
 Pass / Fail / Notes:
