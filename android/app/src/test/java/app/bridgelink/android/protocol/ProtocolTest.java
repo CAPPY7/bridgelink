@@ -425,6 +425,14 @@ public class ProtocolTest {
         assertEquals("1,70,30,0", StageFour.formatSetup(true, 70, 30, false));
         assertEquals(95, StageFour.parseSetup("1,200,1,2")[1]);
         assertEquals(5, StageFour.parseSetup("1,200,1,2")[2]);
+        assertFalse(StageFour.lockStartsOn(null));
+        assertFalse(StageFour.lockStartsOn("0"));
+        assertTrue(StageFour.lockStartsOn("1"));
+        int[] kept = StageFour.keepOwnSwitch(0, 0, StageFour.parseSetup("1,80,12,1"));
+        assertEquals(0, kept[0]);
+        assertEquals(80, kept[1]);
+        assertEquals(12, kept[2]);
+        assertEquals(0, kept[3]);
         assertEquals("Playing Sunny - Ada", StageFour.nowLine("Sunny", "Ada", true));
         assertEquals("Nothing is playing", StageFour.nowLine(" ", "", false));
         assertEquals("scan.pdf", StageFour.fileTitle("Saved scan.pdf in Downloads/BridgeLink"));

@@ -224,9 +224,13 @@ final class LinkReceive {
                     if (setup == null) {
                         core.publish("Lock settings were not understood", null);
                     } else {
-                        LeaveWatch.saveSetup(core, setup);
-                        if (core.leave != null) core.leave.start();
-                        core.publish(setup[0] == 1 ? "Lock when you leave is on" : "Lock when you leave is off", null);
+                        android.content.SharedPreferences prefs = Prefs.open(core);
+                        int localOn = "1".equals(prefs.getString("lockOn", "0")) ? 1 : 0;
+                        int localDesk = "1".equals(prefs.getString("atDesk", "0")) ? 1 : 0;
+                        int[] kept = StageFour.keepOwnSwitch(localOn, localDesk, setup);
+                        LeaveWatch.saveSetup(core, kept);
+                        if (core.leave != null && localOn == 1) core.leave.start();
+                        core.publish("Updated the walk-away distance and wait. The switch stays as you set it.", null);
                     }
                 }
                 default -> {

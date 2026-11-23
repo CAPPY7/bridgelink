@@ -150,6 +150,21 @@ public final class StageFour {
         }
     }
 
+    /** A fresh install is off. Only the saved value "1" means on. */
+    public static boolean lockStartsOn(String stored) {
+        return "1".equals(stored);
+    }
+
+    /**
+     * A lock_setup from the other side may change distance and delay.
+     * It must not turn the feature on or change At my desk.
+     */
+    public static int[] keepOwnSwitch(int localOn, int localDesk, int[] remote) {
+        int far = remote != null && remote.length > 1 ? remote[1] : 70;
+        int delay = remote != null && remote.length > 2 ? remote[2] : 30;
+        return new int[] {localOn == 1 ? 1 : 0, far, delay, localDesk == 1 ? 1 : 0};
+    }
+
     public static String formatSetup(boolean on, int far, int delay, boolean desk) {
         return (on ? "1" : "0") + "," + farSteps(far) + "," + delaySeconds(delay) + "," + (desk ? "1" : "0");
     }

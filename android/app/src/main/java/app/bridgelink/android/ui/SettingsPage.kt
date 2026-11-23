@@ -94,6 +94,7 @@ fun SettingsPage(model: PhoneModel, actions: PhoneActions) {
             label = { Text("Wait this many seconds") },
             singleLine = true,
         )
+        Text("Off. Turn on to lock the Mac when your phone walks away.")
         BigButton(if (model.lockOn) "Turn leave-lock off" else "Turn leave-lock on", "lock-toggle", actions::toggleLock)
         BigButton(if (model.atDesk) "I left the desk" else "I am at my desk", "at-desk", actions::toggleDesk, tonal = true)
         BigButton("Save lock settings", "lock-save", actions::saveLock, tonal = true)

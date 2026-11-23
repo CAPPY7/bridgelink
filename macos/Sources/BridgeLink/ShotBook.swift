@@ -29,7 +29,7 @@ enum ShotBook {
         model.mirrorOn = true
         model.nowPlaying = "Playing Sunny - Ada"
         model.clips = StageFour.add([], "Grocery list", false, 5)
-        model.lockOn = true
+        model.lockOn = false
         model.lockFar = 70
         model.lockDelay = 30
         model.messages = [StageFive.Sms(id: "1", address: "+15551212", body: "On my way", incoming: true, sim: 0, at: 5)]

@@ -25,7 +25,9 @@ N9. Partly. The owner setup note now says Check for update downloads the disk im
 N10. Partly. The bug notes for the main thread and the long phone file now say Partly. The false zero self-audit line is gone. NOT TESTED on a device. CI is not green on this commit yet.
 Next: Part B.
 B2. Partly. The demo calls the alerts list alerts. Incoming messages are in LinkReceive. The old list file and the old share file are deleted once. NOT TESTED on a device. CI is not green on this commit yet.
-B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. NOT TESTED on a device. CI is not green on this commit yet.
+B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. The Mac still has the Apple events entitlement because media scripts need it. NOT TESTED on a device. CI is not green on this commit yet.
+C. Partly. Leave-lock stays off until you turn it on. A lock setup from the other side changes distance and wait only. NOT TESTED on a device. CI is not green on this commit yet.
+Next: Part D. New features, starting with call alerts.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

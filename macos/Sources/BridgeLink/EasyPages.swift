@@ -67,6 +67,8 @@ struct LockPane: View {
             Text("Lock the Mac when you leave").font(.headline)
             Text("The phone watches this Mac over Bluetooth. A weak signal for a while locks the screen. BridgeLink never unlocks the Mac. Charging the phone, or At my desk, skips the lock.")
                 .font(.callout).foregroundStyle(.secondary)
+            Text("Off. Turn on to lock the Mac when your phone walks away.")
+                .font(.callout).foregroundStyle(.secondary)
             Toggle("Lock when the phone leaves", isOn: Binding(get: { model.lockOn }, set: { model.setLock(on: $0) }))
             Toggle("I am at my desk", isOn: Binding(get: { model.atDesk }, set: { model.setDesk($0) }))
             Stepper("How far: \(model.lockFar) (40 close, 95 far)", value: Binding(get: { model.lockFar }, set: { model.lockFar = $0 }), in: 40...95)

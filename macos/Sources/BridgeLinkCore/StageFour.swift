@@ -90,6 +90,14 @@ public enum StageFour {
         return (onRaw == 0 ? 0 : 1, farSteps(farRaw), delaySeconds(delayRaw), deskRaw == 0 ? 0 : 1)
     }
 
+    /// A fresh install is off. Missing or false stays off.
+    public static func lockStartsOn(_ stored: Bool) -> Bool { stored }
+
+    /// A lock_setup from the other side may change distance and delay only.
+    public static func keepOwnSwitch(_ localOn: Bool, _ localDesk: Bool, _ remote: (on: Int, far: Int, delay: Int, desk: Int)) -> (on: Int, far: Int, delay: Int, desk: Int) {
+        (localOn ? 1 : 0, remote.far, remote.delay, localDesk ? 1 : 0)
+    }
+
     public static func formatSetup(on: Bool, far: Int, delay: Int, desk: Bool) -> String {
         "\(on ? 1 : 0),\(farSteps(far)),\(delaySeconds(delay)),\(desk ? 1 : 0)"
     }

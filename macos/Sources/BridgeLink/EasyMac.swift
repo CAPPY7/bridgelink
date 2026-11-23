@@ -211,16 +211,13 @@ extension LinkModel {
                 note("Lock settings were not understood")
                 return true
             }
-            lockOn = setup.on == 1
-            atDesk = setup.desk == 1
-            lockFar = setup.far
-            lockDelay = setup.delay
-            UserDefaults.standard.set(lockOn, forKey: "lockOn")
-            UserDefaults.standard.set(atDesk, forKey: "atDesk")
+            let kept = StageFour.keepOwnSwitch(lockOn, atDesk, setup)
+            lockFar = kept.far
+            lockDelay = kept.delay
             UserDefaults.standard.set(lockFar, forKey: "lockFar")
             UserDefaults.standard.set(lockDelay, forKey: "lockDelay")
             refreshBeacon()
-            note(lockOn ? "Lock when you leave is on" : "Lock when you leave is off")
+            note("Updated the walk-away distance and wait. The switch stays as you set it.")
             return true
         default:
             return false

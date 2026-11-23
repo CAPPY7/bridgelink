@@ -19,7 +19,7 @@ Status words are only: Not started, Building, Built – NOT TESTED on a device, 
 | 13 | Control the phone | Built – NOT TESTED on a device | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M13 |
 | 14 | Phone as webcam | Built – NOT TESTED on a device | ProtocolTest.stageSixRules | CoreTests.testStageSixRules | StageSixDeviceTest.stageSixOnDevice | M14 |
 | 15 | Shared folder | Built – NOT TESTED on a device | ProtocolTest.stageFiveRules | CoreTests.testStageFiveRules | StageFiveDeviceTest.stageFiveOnDevice | M15 |
-| 16 | Lock the Mac when you leave | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
+| 16 | Lock the Mac when you leave | Built – NOT TESTED on a device, off by default | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M16 |
 | 17 | Remote link | Removed | — | — | — | — |
 | 18 | Combined list | Removed | — | — | — | — |
 | 19 | Clipboard history | Built – NOT TESTED on a device | ProtocolTest.stageFourRules | CoreTests.testStageFourRules | StageFourDeviceTest.stageFourOnDevice | M19 |
