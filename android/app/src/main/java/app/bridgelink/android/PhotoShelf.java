@@ -68,17 +68,21 @@ public final class PhotoShelf {
                 MediaStore.Images.Media.DATE_ADDED,
                 MediaStore.Images.Media.DISPLAY_NAME
         };
+        int keep = offset + PhotoRules.PAGE + 1;
+        int seen = 0;
         try (Cursor cursor = resolver.query(collection, columns, null, null, MediaStore.Images.Media.DATE_ADDED + " DESC")) {
             if (cursor != null) {
                 int idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
                 int atCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED);
                 int nameCol = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME);
                 while (cursor.moveToNext()) {
+                    if (seen >= keep) break;
                     String id = Long.toString(cursor.getLong(idCol));
                     long at = cursor.getLong(atCol);
                     shots.add(new PhotoRules.Shot(id, at));
                     String name = nameCol < 0 ? "" : cursor.getString(nameCol);
                     names.add(name == null ? "" : name.replace('\n', ' '));
+                    seen++;
                 }
             }
         } catch (Exception ignored) {
@@ -87,7 +91,7 @@ public final class PhotoShelf {
         }
         List<PhotoRules.Shot> ordered = PhotoRules.newestFirst(shots);
         List<PhotoRules.Shot> page = PhotoRules.page(ordered, offset, PhotoRules.PAGE);
-        boolean more = offset + page.size() < ordered.size();
+        boolean more = ordered.size() > offset + page.size();
         sendPage(core, offset, page, more);
         for (PhotoRules.Shot shot : page) {
             sendThumb(core, resolver, shot.id, nameFor(shots, names, shot.id));
