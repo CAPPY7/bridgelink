@@ -28,6 +28,20 @@ B2. Partly. The demo calls the alerts list alerts. Incoming messages are in Link
 B3. Partly. When-this-then-that rules are removed. Old rule messages are ignored and never sent. The saved rules setting is deleted once on launch. The Mac still has the Apple events entitlement because media scripts need it. NOT TESTED on a device. CI is not green on this commit yet.
 C. Partly. Leave-lock stays off until you turn it on. A lock setup from the other side changes distance and wait only. NOT TESTED on a device. CI is not green on this commit yet.
 Next: Part D. New features, starting with call alerts.
+B4. Partly. No leftover string, icon, or permission belonged only to the removed features. Phone state stays. The Apple events entitlement stays for media scripts. NOT TESTED on a device. CI is not green on this commit yet.
+D1. Partly. A ringing call can show on the Mac with Decline. Call alerts stay off until you turn them on. NOT TESTED on a device. CI is not green on this commit yet.
+D2. Partly. Transfer history keeps old rows, searches, and stays off the main thread. NOT TESTED on a device. CI is not green on this commit yet.
+D3. Partly. The Mac can ask for phone photos, 30 at a time, only while the feature is on. NOT TESTED on a device. CI is not green on this commit yet.
+D4. Partly. Mirror bitrate follows the picture, medium is 24 frames a second, and a still picture is repeated. NOT TESTED on a device. CI is not green on this commit yet.
+D5. Partly. The menu-bar panel shows battery, signal, and the latest notification. There is no widget. NOT TESTED on a device. CI is not green on this commit yet.
+D6. Partly. Pause phone notifications follows the phone's reply. Missing access shows the Settings sentence. NOT TESTED on a device. CI is not green on this commit yet.
+D7. Partly. Text from a photo uses the bundled model and caps the words. NOT TESTED on a device. CI is not green on this commit yet.
+D8. Partly. Finder Send to phone accepts files and text. The setup window shows the steps. NOT TESTED on a device. CI is not green on this commit yet.
+E. Partly. Setup is one page at a time, with Skip, and Settings lists each permission. NOT TESTED on a device. CI is not green on this commit yet.
+F. Partly. Failures say what happened and what to do. A raw error is not shown. NOT TESTED on a device. CI is not green on this commit yet.
+G. Partly. The feature list says Built – NOT tested on a device, or Removed in phase 2. NOT TESTED on a device.
+H. Partly. The owner checklist is docs/OWNER_TEST.md. Nothing in it was run on a device.
+Next: one push, then wait for android, mac, web, and emulator.
 
 ## Open problems
 - The v0.13 audit is kept with the developer notes. Items not listed under Done below are still open.

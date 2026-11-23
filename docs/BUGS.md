@@ -167,3 +167,15 @@ R6. Already kept.
 D1. Docs still said self-tested before this pass. Fixed earlier: the status words say NOT TESTED on a device. NOT TESTED on a device.
 Phase 2 step 0 note: the old line that said the first self-audit found nothing was wrong. PhoneFive was still over 900 lines, folder disk work could wait on the Mac main thread, and a folder ack could be reused. Those are N3, N4, and N6. NOT TESTED on a device.
 B1. The remote path is removed. Old messages of that kind are ignored and never sent. The screens, settings, worker, and tests for it are gone. NOT TESTED on a device.
+P2-SA1-1. Class C12. AndroidManifest.xml. Answer phone calls, photo access, and storage through Android 12 are new and are asked only when you turn the matching feature on. Fixed: rows in PERMISSIONS.md. NOT TESTED on a device.
+P2-SA1-2. Class C1. PhotoShelf.java and HistoryDatabase.java. Photo queries and history writes are on background executors, not the main thread. Fixed: those executors. NOT TESTED on a device.
+P2-SA1-3. Class C6. README.md. New rows say Built – NOT tested on a device. Removed rows say Removed in phase 2. Fixed: the wording. NOT TESTED on a device.
+P2-SA1-4. Class C9. PhotoShelf.java. A photo id that is not digits is refused. Fixed: the digit check before a query or a send. NOT TESTED on a device.
+P2-SA1-5. Class C11. CallWatch.java. The ringing listener is removed when call alerts are off or the link is down. Fixed: syncCalls and stop. NOT TESTED on a device.
+Phase 2 self-audit pass 1: 5 found, 5 fixed. NOT TESTED on a device.
+P2-SA2-1. Class C7. NotifyMirror.java. A ringing call was ignored when notification mirroring was off. Fixed: the call is sent before that check. NOT TESTED on a device.
+P2-SA2-2. Class C3. CallWatch.java. An empty telephony callback is refused on Android 12 and newer. Fixed: the callback implements CallStateListener. NOT TESTED on a device.
+P2-SA2-3. Class C8. PhotoShelf.java. The photo list loaded every picture before taking 30. Fixed: the query stops after one extra row. NOT TESTED on a device.
+P2-SA2-4. Class C1. LinkDesk.java. Signal strength was read on the main-thread battery broadcast. Fixed: the read and the send run on the link outbox. NOT TESTED on a device.
+Phase 2 self-audit pass 2: 4 found, 4 fixed. NOT TESTED on a device.
+Phase 2 self-audit pass 3: 0 found, 0 fixed. NOT TESTED on a device.
