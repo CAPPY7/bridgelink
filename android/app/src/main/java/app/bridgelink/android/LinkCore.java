@@ -195,7 +195,7 @@ class LinkCore extends Service {
                 if (paired) desk.sendBattery();
             }
         };
-        registerReceiver(batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        ContextCompat.registerReceiver(this, batteryWatch, new IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED);
         desk.watchClipboard();
         leave = new LeaveWatch(this, new LeaveWatch.Sink() {
             @Override
@@ -718,6 +718,7 @@ class LinkCore extends Service {
                     try {
                         writeRaw(next);
                     } catch (Exception error) {
+                        media.clear();
                         publish("The picture could not be sent.", null);
                         break;
                     }
@@ -827,7 +828,8 @@ class LinkCore extends Service {
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String auth) {
+        public void checkClientTrusted(X509Certificate[] chain, String auth) throws CertificateException {
+            throw new CertificateException("This phone does not accept a client certificate.");
         }
 
         @Override

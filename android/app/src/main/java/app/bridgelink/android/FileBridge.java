@@ -18,12 +18,14 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.MessageDigest;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+import app.bridgelink.android.protocol.FileResume;
 import app.bridgelink.android.protocol.PlainFailure;
+import app.bridgelink.android.protocol.SafePath;
 import app.bridgelink.android.protocol.StageRules;
 import app.bridgelink.android.protocol.Transfers;
 
@@ -46,7 +48,7 @@ public final class FileBridge {
     }
 
     private final Context context;
-    private final Map<String, Slot> incoming = new HashMap<>();
+    private final Map<String, Slot> incoming = new ConcurrentHashMap<>();
     private Uri lastUri;
     private String lastName = "";
 
@@ -103,15 +105,13 @@ public final class FileBridge {
                 if (dir == null || (!dir.isDirectory() && !dir.mkdirs())) return "Could not store the file.";
                 String saved = incomingBook().getString(id, "");
                 File dest = saved.isEmpty() ? null : new File(saved);
-                if (dest == null || !dest.getCanonicalPath().startsWith(dir.getCanonicalPath())) {
+                if (dest == null || !SafePath.inside(dir, dest)) {
                     dest = uniqueFile(dir, transfer.name);
                 }
                 slot.file = dest;
                 slot.display = dest.getName();
                 long have = dest.isFile() ? dest.length() : 0;
-                if (from > size) from = 0;
-                if (have > size) have = 0;
-                if (have > 0) {
+                if (FileResume.allow(have, from, size)) {
                     try (InputStream prior = new FileInputStream(dest)) {
                         seed(transfer, prior, have);
                     }
@@ -293,8 +293,7 @@ public final class FileBridge {
             return new Stream(Transfers.sanitizeName(name), size, in, null);
         }
         File file = new File(source);
-        String cache = context.getCacheDir().getCanonicalPath();
-        if (!file.getCanonicalPath().startsWith(cache + File.separator)) {
+        if (!SafePath.inside(context.getCacheDir(), file)) {
             throw new PlainFailure("Refused a file outside the app cache.");
         }
         return new Stream(Transfers.sanitizeName(file.getName()), file.length(), new FileInputStream(file), null);

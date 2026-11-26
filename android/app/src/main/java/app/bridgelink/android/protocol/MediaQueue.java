@@ -78,6 +78,10 @@ public final class MediaQueue {
         return new Result(true, false);
     }
 
+    public synchronized void clear() {
+        for (int stream = 1; stream <= 3; stream++) lanes[stream] = new Lane();
+    }
+
     public synchronized byte[] poll() {
         for (int n = 0; n < 3; n++) {
             int stream = turn;

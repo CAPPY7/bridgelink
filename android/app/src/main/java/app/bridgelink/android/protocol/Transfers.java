@@ -20,14 +20,31 @@ public final class Transfers {
         else if (slash >= 0) name = "";
         name = name.trim();
         StringBuilder out = new StringBuilder();
-        for (int i = 0; i < name.length() && out.length() < 120; i++) {
-            char c = name.charAt(i);
-            if (c < 32 || c == '/' || c == '\\' || c == ':') out.append('_');
-            else out.append(c);
+        int i = 0;
+        while (i < name.length() && out.length() < 1024) {
+            int cp = name.codePointAt(i);
+            i += Character.charCount(cp);
+            if (cp < 32 || cp == '/' || cp == '\\' || cp == ':' || rtlOverride(cp)) out.append('_');
+            else out.appendCodePoint(cp);
         }
-        String cleaned = out.toString().trim();
+        return clipName(out.toString().trim());
+    }
+
+    static boolean rtlOverride(int cp) {
+        return (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069);
+    }
+
+    static String clipName(String cleaned) {
         if (cleaned.isEmpty() || ".".equals(cleaned) || "..".equals(cleaned)) return "file";
-        return cleaned;
+        if (cleaned.length() <= 120) return cleaned;
+        int dot = cleaned.lastIndexOf('.');
+        if (dot <= 0 || cleaned.length() - dot > 12) return cleaned.substring(0, 120);
+        String ext = cleaned.substring(dot);
+        String head = cleaned.substring(0, dot);
+        int keep = 120 - ext.length();
+        if (keep < 1) return cleaned.substring(0, 120);
+        if (head.length() > keep) head = head.substring(0, keep);
+        return head + ext;
     }
 
     /** Only http and https. Returns the trimmed URL, or null. */

@@ -216,11 +216,10 @@ public final class FolderFiles {
         if (safe == null) return null;
         File file = new File(root, safe);
         try {
-            String rootPath = root.getCanonicalPath();
+            if (!SafePath.inside(root, file)) return null;
             File parent = file.getParentFile();
+            if (parent != null && !SafePath.inside(root, parent)) return null;
             if (parent != null && !parent.isDirectory()) parent.mkdirs();
-            String filePath = file.getCanonicalPath();
-            if (!filePath.equals(rootPath) && !filePath.startsWith(rootPath + File.separator)) return null;
             return file;
         } catch (Exception error) {
             return null;

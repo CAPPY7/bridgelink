@@ -11,6 +11,8 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.IBinder;
 
+import app.bridgelink.android.protocol.ServiceStart;
+
 /** Holds the screen-share permission while the Mac window is open. */
 public final class MirrorService extends Service {
     public static final String ACTION_STOP = "app.bridgelink.android.MIRROR_STOP";
@@ -23,21 +25,32 @@ public final class MirrorService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Notification note = note();
-        if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(71, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
-        } else {
-            startForeground(71, note);
-        }
-        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            stop();
+        if (ServiceStart.stopFirst(intent == null ? null : intent.getAction(), ACTION_STOP)) {
+            stopQuiet();
             return START_NOT_STICKY;
         }
-        int code = intent == null ? 0 : intent.getIntExtra("code", 0);
         Intent data = intent == null ? null : dataOf(intent);
-        String quality = intent == null ? "medium" : intent.getStringExtra("quality");
+        if (!ServiceStart.hasPayload(data != null)) {
+            LinkService.postStatus("Screen share was not allowed.");
+            stopQuiet();
+            return START_NOT_STICKY;
+        }
+        try {
+            Notification note = note();
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(71, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            } else {
+                startForeground(71, note);
+            }
+        } catch (SecurityException error) {
+            LinkService.postStatus("Screen share was not allowed.");
+            stopQuiet();
+            return START_NOT_STICKY;
+        }
+        int code = intent.getIntExtra("code", 0);
+        String quality = intent.getStringExtra("quality");
         MediaProjectionManager manager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-        if (manager == null || data == null) {
+        if (manager == null) {
             LinkService.postStatus("Screen share was not allowed.");
             stop();
             return START_NOT_STICKY;
@@ -59,6 +72,16 @@ public final class MirrorService extends Service {
     public void onDestroy() {
         stop();
         super.onDestroy();
+    }
+
+    private void stopQuiet() {
+        if (cast != null) cast.stop();
+        cast = null;
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } catch (RuntimeException ignored) {
+        }
+        stopSelf();
     }
 
     private void stop() {

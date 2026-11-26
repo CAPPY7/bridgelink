@@ -73,6 +73,16 @@ public class MediaQueueTest {
         assertEquals(MediaQueue.CAP + 1, queue.size(1));
     }
 
+    @Test
+    public void aFailedSendDropsThePictureQueue() {
+        MediaQueue queue = new MediaQueue();
+        assertTrue(queue.offer(piece(1, 0, 0, 1), false).kept);
+        assertTrue(queue.size() > 0);
+        queue.clear();
+        assertEquals(0, queue.size());
+        assertEquals(null, queue.poll());
+    }
+
     private static byte[] piece(int stream, int flags, int part, int parts) {
         byte[] packed = StageSix.pack(stream, flags, part, parts, new byte[]{1, 2, 3});
         return Frame.encode(Frame.BINARY, packed);

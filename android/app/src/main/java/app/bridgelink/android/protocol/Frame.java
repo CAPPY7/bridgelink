@@ -1,6 +1,5 @@
 package app.bridgelink.android.protocol;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,29 +28,53 @@ public final class Frame {
     }
 
     public static final class Parser {
-        private final ByteArrayOutputStream pending = new ByteArrayOutputStream();
+        private byte[] buf = new byte[64];
+        private int read;
+        private int write;
 
         public List<Frame> push(byte[] chunk) throws Exception {
-            pending.write(chunk);
-            byte[] data = pending.toByteArray();
+            if (chunk != null && chunk.length > 0) {
+                grow(chunk.length);
+                System.arraycopy(chunk, 0, buf, write, chunk.length);
+                write += chunk.length;
+            }
             List<Frame> frames = new ArrayList<>();
-            int offset = 0;
-            while (data.length - offset >= 5) {
-                int type = data[offset] & 0xff;
-                int length = ByteBuffer.wrap(data, offset + 1, 4).getInt();
+            boolean completed = false;
+            while (write - read >= 5) {
+                int type = buf[read] & 0xff;
+                int length = ByteBuffer.wrap(buf, read + 1, 4).getInt();
                 if (length < 0 || length > MAX_BYTES) {
                     throw new IllegalArgumentException("Bad frame length");
                 }
-                if (data.length - offset < 5 + length) break;
+                if (write - read < 5 + length) break;
                 byte[] payload = new byte[length];
-                System.arraycopy(data, offset + 5, payload, 0, length);
+                System.arraycopy(buf, read + 5, payload, 0, length);
                 frames.add(new Frame(type, payload));
-                offset += 5 + length;
+                read += 5 + length;
+                completed = true;
             }
-            pending.reset();
-            if (offset < data.length) pending.write(data, offset, data.length - offset);
-            if (pending.size() > MAX_BYTES + 5) throw new IllegalArgumentException("Buffer cap");
+            if (completed) compact();
+            if (write - read > MAX_BYTES + 5) throw new IllegalArgumentException("Buffer cap");
             return frames;
+        }
+
+        private void grow(int extra) {
+            if (write + extra <= buf.length) return;
+            int used = write - read;
+            int need = used + extra;
+            byte[] next = new byte[Math.max(need, buf.length * 2)];
+            if (used > 0) System.arraycopy(buf, read, next, 0, used);
+            buf = next;
+            read = 0;
+            write = used;
+        }
+
+        private void compact() {
+            if (read == 0) return;
+            int used = write - read;
+            if (used > 0) System.arraycopy(buf, read, buf, 0, used);
+            read = 0;
+            write = used;
         }
     }
 }

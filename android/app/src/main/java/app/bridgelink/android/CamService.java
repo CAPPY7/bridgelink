@@ -5,9 +5,14 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+
+import androidx.core.content.ContextCompat;
+
+import app.bridgelink.android.protocol.ServiceStart;
 
 /** Keeps the phone camera on while the Mac window is open. */
 public final class CamService extends Service {
@@ -21,16 +26,29 @@ public final class CamService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        boolean mic = intent != null && intent.getBooleanExtra("mic", false);
-        if (Build.VERSION.SDK_INT >= 30) {
-            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA;
-            if (mic && Build.VERSION.SDK_INT >= 34) type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE;
-            startForeground(72, note(), type);
-        } else {
-            startForeground(72, note());
+        if (ServiceStart.stopFirst(intent == null ? null : intent.getAction(), ACTION_STOP)) {
+            stopQuiet();
+            return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            halt();
+        boolean mic = intent != null && intent.getBooleanExtra("mic", false);
+        boolean camera = ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean micGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        if (!ServiceStart.cameraReady(camera, mic, micGranted)) {
+            LinkService.postStatus("Allow the camera before the Mac can see it.");
+            stopQuiet();
+            return START_NOT_STICKY;
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= 30) {
+                int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA;
+                if (mic && Build.VERSION.SDK_INT >= 34) type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE;
+                startForeground(72, note(), type);
+            } else {
+                startForeground(72, note());
+            }
+        } catch (SecurityException error) {
+            LinkService.postStatus("Allow the camera before the Mac can see it.");
+            stopQuiet();
             return START_NOT_STICKY;
         }
         if (cast != null) cast.stop();
@@ -50,6 +68,16 @@ public final class CamService extends Service {
     public void onDestroy() {
         halt();
         super.onDestroy();
+    }
+
+    private void stopQuiet() {
+        if (cast != null) cast.stop();
+        cast = null;
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } catch (RuntimeException ignored) {
+        }
+        stopSelf();
     }
 
     private void halt() {
