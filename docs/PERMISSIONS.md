@@ -24,7 +24,7 @@ Each permission stays off until a feature needs it. BridgeLink does not change a
 | Camera and microphone | The camera inside BridgeLink, and a scan | When you open the camera or scan |
 | Files you pick | Send a file, or choose the shared folder | When you pick them. The choice is remembered. There is no broad storage permission |
 
-The document scanner uses Play services. If that is missing, pick a photo instead. The in-app QR scanner also uses Play services. Paste the link if it is missing.
+The document scanner uses Play services. If that is missing, pick a photo instead. The in-app QR scanner also uses Play services. Paste the link if it is missing. A scan file opens on the Mac only when Open scans automatically is on and the phone marked that file as a scan. That switch stays off until you turn it on.
 
 ## Mac, macOS 13, 14, and 15
 

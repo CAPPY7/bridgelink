@@ -179,3 +179,27 @@ P2-SA2-3. Class C8. PhotoShelf.java. The photo list loaded every picture before 
 P2-SA2-4. Class C1. LinkDesk.java. Signal strength was read on the main-thread battery broadcast. Fixed: the read and the send run on the link outbox. NOT TESTED on a device.
 Phase 2 self-audit pass 2: 4 found, 4 fixed. NOT TESTED on a device.
 Phase 2 self-audit pass 3: 0 found, 0 fixed. NOT TESTED on a device.
+
+## v1.1.1 audit
+
+A1. A shared path that only started with the folder name could escape into a sibling folder. Fixed: the path must equal the folder or start with the folder plus a separator. NOT TESTED on a device.
+A2. Incoming files used a plain map, and an old Android resume treated a short file as complete. Fixed: the map is concurrent, and a resume continues only when the counts match. NOT TESTED on a device.
+A3. A failed picture send retried immediately, and the battery receiver and client-certificate check were loose. Fixed: a failed picture clears the queue, the receiver is not exported, and a client certificate is refused. NOT TESTED on a device.
+A4. Screen share and the camera could crash if Stop arrived before the foreground notice, or if the permission was missing. Fixed: Stop and the permission are checked first, and a security error posts a status. NOT TESTED on a device.
+A5. A text intent with no messages could crash the loop. Fixed: a missing batch returns. NOT TESTED on a device.
+A6. A shared file created its parent folder before the path was checked. Fixed: the path is refused before any folder is made. NOT TESTED on a device.
+A7. A file name could hide its extension with a right-to-left mark, and a cut name dropped the extension. Fixed: those marks become underscores, and a short extension is kept. NOT TESTED on a device.
+A8. The frame parser copied the buffer on every chunk. Fixed: one buffer grows, and leftover bytes slide down only after a frame is done. NOT TESTED on a device.
+A9. The file provider exposed the whole tree with a dot path. Fixed: only Download, diagnostics, clips, outgoing, and share are listed. NOT TESTED on a device.
+M1. The Mac certificate password was on the command line, and a bad keychain item was forced into an identity. Fixed: the password is an environment value, the temp folder is private, and the item type is checked. NOT TESTED on a device.
+M2. A missing Open scans setting still opened scans, including files from an old phone. Fixed: the switch is off until you turn it on, and the file must be marked as a scan. NOT TESTED on a device.
+M3. A symlink could leave the shared folder, and a folder worker could wait forever. Fixed: both paths are resolved, and the wait stops after 30 seconds. NOT TESTED on a device.
+M4. Mac file names did not match the phone's name rules. Fixed: the same right-to-left and extension rules. NOT TESTED on a device.
+M5. A Mac script could stall because stderr filled the pipe. Fixed: stdout is read while the script runs, and stderr is discarded. The 3 second limit stays. NOT TESTED on a device.
+M6. Developer ID signing used no timestamp, and ad-hoc signing skipped the entitlements file. Fixed: a Developer ID gets a timestamp, a local self-signed build does not, and ad-hoc signing uses the entitlements. NOT TESTED on a device.
+W1. The release script pasted the typed tag into the shell. Fixed: the tag comes from the environment and must look like v1.2.3. NOT TESTED on a device.
+W2. Web tests read gitignored brand files and this repo's share card, so a clean clone failed. Fixed: missing brand docs are skipped, share-card tests use an empty temp folder, and the protocol test is part of npm test. NOT TESTED on a device.
+W3. The web build also migrated the database. Fixed: build only builds. The migrate command stays separate. NOT TESTED on a device.
+W4. Checks had no cancel rule, no time limit, and no caches, and they ran on every branch. Fixed: one run per ref, 30 minute limits on the phone, Mac, and web jobs, caches, and pushes only on main and version tags. NOT TESTED on a device.
+W5. The test certificate was covered by the p12 ignore rule. Fixed: that one test file is not ignored. NOT TESTED on a device.
+W6. Dependencies were not grouped. Fixed: weekly grouped minor updates for Gradle, npm, GitHub Actions, and Swift. Pinned action commits stay pinned. NOT TESTED on a device.

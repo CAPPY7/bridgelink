@@ -1,5 +1,7 @@
 # Progress
 
+v1.1.1 is the audit-fix build on top of the published v1.1.0. Nothing in 1.1.1 has been tried on a real phone or Mac. This pass did not wait for CI and did not publish a tag.
+
 v1.1.0 is the phase 2 build. v1.0.1 was the published fix build. There is no v1.0.0 release. Nothing in 1.1.0 has been tried on a real phone or Mac.
 
 ## Done in code
@@ -187,3 +189,6 @@ Next: owner test. The checklist is docs/OWNER_TEST.md.
 
 ## Battery
 The idle service does not poll in a tight loop. A connected phone sends one small heartbeat every 20 seconds. Battery is sent only when the level or the charger changes. The 40 millisecond wait exists only while a file send is asking how many bytes the other side already has, and it stops after 800 milliseconds. Screen mirror and the camera run only while those screens are open. This environment has no Android emulator, so a batterystats number was not measured. Do not treat a guessed milliamp figure as a result.
+
+## Audit fix 1.1.1
+A1–A9, M1–M6, and W1–W6 are Fixed in code. D1–D4 update the version to 1.1.1 (build 16) and the docs. NOT TESTED on a device. CI was not waited on. No tag was pushed. ProGuard rules and the pinned nitro build were left alone.

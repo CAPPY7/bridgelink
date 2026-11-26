@@ -1,6 +1,6 @@
 # User guide
 
-BridgeLink 1.0 links one or more Android phones to a Mac on the menu bar. The browser page is a simulation. It is not connected to your devices.
+BridgeLink 1.1.1 links one or more Android phones to a Mac on the menu bar. The browser page is a simulation. It is not connected to your devices.
 
 ## First open
 
@@ -26,6 +26,7 @@ On the Mac, the setup window also explains Finder. Right-click a file, then Quic
 - The menu bar shows phone battery, signal bars, and the latest notification title. It is a panel, not a home-screen widget.
 - Pause phone notifications is separate from quiet Mac banners while the phone is in Do Not Disturb.
 - Text from photo reads words on the phone and can send them to the Mac clipboard. It does not use the network.
+- A scan opens on the Mac only when Open scans automatically is on and the phone marked that file as a scan. The switch stays off until you turn it on.
 - The apps link only on the same Wi-Fi. There is no remote path.
 
 ## Updates and reset

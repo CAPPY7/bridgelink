@@ -94,6 +94,22 @@ A drag holds the Mac mouse button until the phone says the finger lifted. A tap,
 
 A hand-started release uses the commit of the typed tag. It waits up to 60 minutes for the checks of that commit. If the tag does not exist, it stops before building.
 
+A shared path is accepted only when it is the folder itself or starts with that folder plus a separator. The real path, after symlinks, must stay inside the same folder.
+
+Open scans automatically is off when the setting has never been saved. A file opens by itself only when that switch is on and the phone marked the file as a scan. An old phone that does not send the mark does not auto-open.
+
+A Mac folder worker waits at most 30 seconds for a send slot. After that it gives up, so one stuck send cannot hang the worker.
+
+The pkcs12 password is passed as the environment value BL_P12PASS. It is not put on the openssl command line.
+
+A release tag is read from the environment and must match v plus three numbers. The workflow does not paste the tag into the shell script.
+
+The web build does not migrate the database. That stays a separate command.
+
+File sharing lists only Download, diagnostics, clips, outgoing, and share. It does not list the whole tree.
+
+Developer ID signing uses a timestamp. A local self-signed build still uses no timestamp, because there is no paid Apple account.
+
 The Mac sends a folder as a zip. Its window says so. The phone does not send a folder, and its page does not claim that it does.
 
 The one-minute code check and the away sign-in flags take one lock, so two threads cannot send the same code or restart a stopped sign-in.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1
+
+- A shared-folder path cannot leave the folder, including a look-alike name or a symlink.
+- A half-written download is not treated as finished unless the byte counts match.
+- A picture that fails to send is dropped, instead of retrying in a tight loop.
+- Screen share and the camera check Stop and the permission before they post the foreground notice.
+- A text with no messages does not crash. File names drop right-to-left tricks and keep a short extension.
+- Open scans automatically stays off until you turn it on, and only a file the phone marks as a scan opens.
+- A Mac folder send gives up after 30 seconds instead of waiting forever.
+- A release tag must look like v1.2.3 and is passed in as an environment value, not pasted into the script.
+- Nothing in 1.1.1 was tried on a real phone or Mac. CI runs unit tests and the emulator pairing test.
+
 ## 1.1.0
 
 - Removed the away path, the combined list, and when-this-then-that rules.

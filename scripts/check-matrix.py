@@ -1,9 +1,11 @@
 """Fail if a finished feature has no real tests, or a named test is missing."""
 import pathlib
+import re
 import sys
 
 root = pathlib.Path(__file__).resolve().parents[1]
 text = (root / "docs/FEATURE_MATRIX.md").read_text()
+readme = (root / "README.md").read_text()
 rows = []
 for line in text.splitlines():
     if not line.startswith("|"):
@@ -14,10 +16,24 @@ for line in text.splitlines():
     rows.append(cells)
 
 errors = []
+feature_count = 33
 ids = {int(row[0]) for row in rows}
-missing = [str(number) for number in range(1, 26) if number not in ids]
+missing = [str(number) for number in range(1, feature_count + 1) if number not in ids]
 if missing:
     errors.append("missing feature rows: " + ", ".join(missing))
+heading = re.search(r"Status of the (\d+) features", readme)
+if not heading or int(heading.group(1)) != feature_count:
+    errors.append(f"README must say Status of the {feature_count} features")
+readme_ids = set()
+for line in readme.splitlines():
+    if not line.startswith("|"):
+        continue
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    if cells and cells[0].isdigit():
+        readme_ids.add(int(cells[0]))
+missing_readme = [str(number) for number in range(1, feature_count + 1) if number not in readme_ids]
+if missing_readme:
+    errors.append("README missing feature rows: " + ", ".join(missing_readme))
 
 allowed = (
     "not started",
@@ -59,7 +75,6 @@ for row in rows:
         if name not in blob:
             errors.append(f"feature {row[0]} lists missing test {name}")
 
-import re
 proto_path = root / "android/app/src/test/java/app/bridgelink/android/protocol/ProtocolTest.java"
 proto = proto_path.read_text()
 start = proto.find("void everyFeatureMessageRoundTrips()")

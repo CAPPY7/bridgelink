@@ -1,6 +1,6 @@
 # BridgeLink
 
-Installable link between an Android phone and a Mac menu-bar app. Version 1.0.
+Installable link between an Android phone and a Mac menu-bar app. Version 1.1.1.
 
 Downloads, after the release workflow runs: https://github.com/CAPPY7/bridgelink/releases/latest
 
@@ -45,7 +45,7 @@ Light and dark follow the system. A screen that is not built yet says so.
 
 See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
-## Status of the 25 features
+## Status of the 33 features
 
 Honest status of the **installable apps**. The demo is not counted. Status words are Not started, Building, Built – NOT TESTED on a device, or Final – owner tested. See [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md).
 
@@ -81,10 +81,11 @@ What was tested: CI unit tests and the emulator pairing test. Nothing in this bu
 | 26 | Call alerts | Built – NOT TESTED on a device. Off until you turn it on. Decline is on the Mac banner |
 | 27 | Transfer history | Built – NOT TESTED on a device. Search files, links, and notes on the phone |
 | 28 | Phone photos | Built – NOT TESTED on a device. Off until you turn it on. The Mac loads 30 at a time |
-| 29 | Menu-bar phone status | Built – NOT TESTED on a device. A menu-bar panel, not a widget. A widget does not load from a free sideload with no paid Apple team |
-| 30 | Pause phone notifications | Built – NOT TESTED on a device. The Mac switch follows the phone's reply |
-| 31 | Text from a photo | Built – NOT TESTED on a device. On the phone, no network. The model is inside the app |
-| 32 | Finder Send to phone | Built – NOT TESTED on a device. Files and text. The app must be in Applications |
+| 29 | Sharper screen mirror | Built – NOT TESTED on a device. Quality follows the picture. Medium is 24 frames a second |
+| 30 | Menu-bar phone status | Built – NOT TESTED on a device. A menu-bar panel, not a widget. A widget does not load from a free sideload with no paid Apple team |
+| 31 | Pause phone notifications | Built – NOT TESTED on a device. The Mac switch follows the phone's reply |
+| 32 | Text from a photo | Built – NOT TESTED on a device. On the phone, no network. The model is inside the app |
+| 33 | Finder Send to phone | Built – NOT TESTED on a device. Files and text. The app must be in Applications |
 
 ## Build
 

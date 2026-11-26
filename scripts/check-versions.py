@@ -9,6 +9,7 @@ gradle = (root / "android/app/build.gradle").read_text()
 plist = (root / "macos/Info.plist").read_text()
 package = (root / "package.json").read_text()
 about = "\n".join(path.read_text() for path in (root / "macos/Sources").rglob("*.swift"))
+readme = (root / "README.md").read_text()
 
 name = re.search(r'versionName "([^"]+)"', gradle).group(1)
 code = re.search(r'versionCode (\d+)', gradle).group(1)
@@ -23,6 +24,8 @@ if code != bundle:
     errors.append(f"version code mismatch android={code} mac={bundle}")
 if f"BridgeLink {name}" not in about:
     errors.append(f"Mac About sheet does not say BridgeLink {name}")
+if not re.search(rf"Version {re.escape(name)}(?:\s|\.|$)", readme):
+    errors.append(f"README does not say Version {name}")
 if len(sys.argv) > 1 and sys.argv[1] != "v" + name:
     errors.append(f"tag {sys.argv[1]} is not v{name}")
 if errors:
