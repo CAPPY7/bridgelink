@@ -1,6 +1,6 @@
 # Install the apps
 
-1.0.0 is the full desk: all 25 features, first-run setup, and Check for update. These are not Play Store or Mac App Store builds. The Mac app is sideloaded. No paid Apple account is required. The Android APK is signed with the project key when the GitHub secrets are set. The release workflow refuses to publish a debug APK.
+1.1.0 is the latest build: the desk, plus call alerts, transfer history, phone photos, a sharper mirror, a menu-bar status panel, pause phone notifications, text from a photo, and Finder Send to phone. The away path, the combined list, and when-this-then-that rules are gone. These are not Play Store or Mac App Store builds. The Mac app is sideloaded. No paid Apple account is required. The Android APK is signed with the project key when the GitHub secrets are set. The release workflow refuses to publish a debug APK. Nothing in 1.1.0 was tried on a real phone or Mac.
 
 ## Android
 

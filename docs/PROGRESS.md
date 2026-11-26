@@ -1,6 +1,6 @@
 # Progress
 
-v1.0.1 is the published fix build. There is no v1.0.0 release. The previous release was v0.12.0. Not every audit item is done. Nothing in 1.0.1 has been tried on a real phone or Mac.
+v1.1.0 is the phase 2 build. v1.0.1 was the published fix build. There is no v1.0.0 release. Nothing in 1.1.0 has been tried on a real phone or Mac.
 
 ## Done in code
 - Stage 1 bug fixes are in v0.8.0.

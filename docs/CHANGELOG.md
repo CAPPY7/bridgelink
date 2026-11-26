@@ -1,18 +1,14 @@
 # Changelog
 
-## Phase 2 (not released)
+## 1.1.0
 
 - Removed the away path, the combined list, and when-this-then-that rules.
 - Leave-lock stays off until you turn it on.
 - Added call alerts with Decline, transfer history, phone photos, a sharper mirror, a menu-bar status panel, pause phone notifications, text from a photo, and Finder Send to phone for files and text.
 - The phone setup walks through each permission. Skip is on every page.
-- Nothing here was tried on a real phone or Mac. CI runs unit tests and the emulator pairing test.
-
-## Unreleased
-
-- The phone link file is split. Connecting stays in one place. Clipboard, alerts, files, ringing, and battery stay in another. Incoming messages stay in a third. Nothing about how the link works was changed. NOT TESTED on a device.
-- The unified inbox is removed. Notifications, texts, and files stay in their own places. The saved inbox file is deleted the next time the Mac app opens. NOT TESTED on a device.
-- The away relay is removed. The phone and the Mac link only on Wi-Fi. An old relay message is ignored. NOT TESTED on a device.
+- Failures the user can see are plain sentences.
+- The phone link file is split. Connecting stays in one place. Clipboard, alerts, files, ringing, and battery stay in another. Incoming messages stay in a third.
+- Nothing in 1.1.0 was tried on a real phone or Mac. CI runs unit tests and the emulator pairing test.
 
 ## 1.0.1
 
