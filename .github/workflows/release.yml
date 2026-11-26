@@ -81,7 +81,15 @@ jobs:
           APKSIGNER="$(find "$SDK/build-tools" -name apksigner | sort | tail -1)"
           if [ -z "$APKSIGNER" ]; then echo "apksigner is missing"; exit 1; fi
           "$APKSIGNER" verify --print-certs "$GITHUB_WORKSPACE/BridgeLink-android.apk" > "$RUNNER_TEMP/apk-certs.txt"
-          GOT=$(awk -F': ' '/SHA-256 digest/{print tolower($2); exit}' "$RUNNER_TEMP/apk-certs.txt" | tr -d '[:space:]')
+          # Newer apksigner prints "V3.0 Signer: certificate SHA-256 digest: <hex>".
+          # The hex is after the last colon. Keep only hex so either layout matches.
+          GOT=$(awk 'BEGIN{IGNORECASE=1} /certificate SHA-256 digest/{
+            line=tolower($0)
+            sub(/.*digest:[[:space:]]*/, "", line)
+            gsub(/[^0-9a-f]/, "", line)
+            print line
+            exit
+          }' "$RUNNER_TEMP/apk-certs.txt")
           WANT=$(tr 'A-F' 'a-f' < "$GITHUB_WORKSPACE/android/release-cert.sha256" | tr -d '[:space:]')
           if [ -z "$GOT" ] || [ "$GOT" != "$WANT" ]; then
             echo "The APK signer does not match the saved public fingerprint."
