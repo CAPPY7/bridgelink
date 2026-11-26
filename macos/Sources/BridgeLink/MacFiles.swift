@@ -13,10 +13,10 @@ final class MacFiles {
     private var handles: [String: FileHandle] = [:]
     private var partials: [String: URL] = [:]
 
-    func begin(id: String, name: String, size: Int, from: Int, done: @escaping (String, Int) -> Void) {
+    func begin(id: String, name: String, size: Int, from: Int, scan: Bool = false, done: @escaping (String, Int) -> Void) {
         queue.async {
             _ = from
-            let result = self.beginNow(id: id, name: name, size: size)
+            let result = self.beginNow(id: id, name: name, size: size, scan: scan)
             done(result.status, result.have)
         }
     }
@@ -156,10 +156,11 @@ final class MacFiles {
         if flush { gate.wait() }
     }
 
-    private func beginNow(id: String, name: String, size: Int) -> (status: String, have: Int) {
+    private func beginNow(id: String, name: String, size: Int, scan: Bool) -> (status: String, have: Int) {
         guard safe(id), let file = IncomingFile(id: id, name: name, size: size) else {
             return ("Refused that file.", 0)
         }
+        file.markedScan = scan
         closeHandle(id)
         do {
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-incoming", isDirectory: true)
@@ -219,9 +220,9 @@ final class MacFiles {
             }
             try FileManager.default.moveItem(at: partial, to: dest)
             markQuarantine(dest)
-            let openScans = UserDefaults.standard.object(forKey: "openScans") == nil
-                || UserDefaults.standard.bool(forKey: "openScans")
-            let opened = Features.autoOpenScan(dest.lastPathComponent, openScans)
+            let openScans = UserDefaults.standard.object(forKey: "openScans") != nil
+                && UserDefaults.standard.bool(forKey: "openScans")
+            let opened = Features.autoOpenScan(dest.lastPathComponent, openScans, file.markedScan)
             if opened { NSWorkspace.shared.open(dest) }
             return ("Saved \(dest.lastPathComponent) in Downloads/BridgeLink", dest, opened)
         } catch {

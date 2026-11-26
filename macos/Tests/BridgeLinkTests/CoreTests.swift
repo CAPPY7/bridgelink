@@ -209,6 +209,11 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Transfers.sanitizeName("..\\etc\\passwd"), "passwd")
         XCTAssertEqual(Transfers.sanitizeName(".."), "file")
         XCTAssertEqual(Transfers.sanitizeName("a\u{0}b.txt"), "a_b.txt")
+        XCTAssertEqual(Transfers.sanitizeName("report\u{202E}.pdf"), "report_.pdf")
+        let longName = String(repeating: "a", count: 200) + ".pdf"
+        let clipped = Transfers.sanitizeName(longName)
+        XCTAssertEqual(clipped.count, 120)
+        XCTAssertTrue(clipped.hasSuffix(".pdf"))
         XCTAssertNil(Transfers.acceptUrl("javascript:alert(1)"))
         XCTAssertNil(Transfers.acceptUrl("file:///etc/passwd"))
         XCTAssertNil(Transfers.acceptUrl("intent://scan/#Intent;end"))
@@ -376,11 +381,12 @@ final class CoreTests: XCTestCase {
         XCTAssertGreaterThan(Features.smsParts(String(repeating: "a", count: 161)).count, 1)
         XCTAssertEqual(Features.smsParts(String(repeating: "ह", count: 71)).count, 2)
         XCTAssertEqual(Features.scanName(1_763_150_400_000), "scan-20251114-200000.pdf")
-        XCTAssertTrue(Features.autoOpenScan("scan-20251114-200000.pdf", true))
-        XCTAssertTrue(Features.autoOpenScan("scan-20251114-200000.jpg", true))
-        XCTAssertFalse(Features.autoOpenScan("scan-20251114-200000.pdf", false))
-        XCTAssertFalse(Features.autoOpenScan("photo.jpg", true))
-        XCTAssertFalse(Features.autoOpenScan("run.command", true))
+        XCTAssertTrue(Features.autoOpenScan("scan-20251114-200000.pdf", true, true))
+        XCTAssertTrue(Features.autoOpenScan("scan-20251114-200000.jpg", true, true))
+        XCTAssertFalse(Features.autoOpenScan("scan-20251114-200000.pdf", false, true))
+        XCTAssertFalse(Features.autoOpenScan("scan-20251114-200000.pdf", true, false))
+        XCTAssertFalse(Features.autoOpenScan("photo.jpg", true, true))
+        XCTAssertFalse(Features.autoOpenScan("run.command", true, true))
         XCTAssertEqual(Features.safeRelative("photos/cat.jpg"), "photos/cat.jpg" as String?)
         XCTAssertNil(Features.safeRelative("../etc/passwd"))
         XCTAssertNil(Features.safeRelative("photos/.seen"))
@@ -601,6 +607,20 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(SignalRules.bars(9), 4)
         XCTAssertFalse(SignalRules.changed(last: 2, saw: true, next: 2))
         XCTAssertTrue(SignalRules.changed(last: 2, saw: true, next: 3))
+    }
+
+    func testASymlinkCannotLeaveTheSharedFolder() throws {
+        let parent = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let root = parent.appendingPathComponent("share", isDirectory: true)
+        let outside = parent.appendingPathComponent("outside", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        let link = root.appendingPathComponent("link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+        let escaped = link.appendingPathComponent("note.txt")
+        XCTAssertFalse(FolderGuard.staysInside(root: root, file: escaped))
+        XCTAssertTrue(FolderGuard.staysInside(root: root, file: root.appendingPathComponent("note.txt")))
+        try? FileManager.default.removeItem(at: parent)
     }
 }
 

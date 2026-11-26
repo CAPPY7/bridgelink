@@ -389,9 +389,8 @@ final class SharedBox {
     private func resolve(_ safe: String?) -> URL? {
         guard let safe else { return nil }
         let file = root().appendingPathComponent(safe)
-        let rootPath = root().path
-        if file.path != rootPath && !file.path.hasPrefix(rootPath + "/") { return nil }
-        return file
+        if !FolderGuard.staysInside(root: root(), file: file) { return nil }
+        return file.standardizedFileURL.resolvingSymlinksInPath()
     }
 
     private struct Partial {
@@ -1006,7 +1005,7 @@ extension LinkModel {
                 gate.signal()
             }
         }
-        gate.wait()
+        if gate.wait(timeout: .now() + 30) == .timedOut { return 0 }
         return value
     }
 
@@ -1021,7 +1020,7 @@ extension LinkModel {
             open = true
             self.send(type: type, payload: payload, on: self.live) { gate.signal() }
         }
-        gate.wait()
+        if gate.wait(timeout: .now() + 30) == .timedOut { return false }
         return open
     }
 

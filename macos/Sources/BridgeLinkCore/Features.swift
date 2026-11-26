@@ -181,9 +181,9 @@ public enum Features {
         return "scan-\(format.string(from: date)).pdf"
     }
 
-    /// Only a scan PDF or JPG may open by itself, and only when that setting is on.
-    public static func autoOpenScan(_ name: String, _ openScans: Bool) -> Bool {
-        if !openScans { return false }
+    /// Only a scan PDF or JPG may open by itself, and only when that setting is on and this file was marked as a scan.
+    public static func autoOpenScan(_ name: String, _ openScans: Bool, _ markedScan: Bool) -> Bool {
+        if !openScans || !markedScan { return false }
         let lower = name.lowercased()
         return lower.hasPrefix("scan-") && (lower.hasSuffix(".pdf") || lower.hasSuffix(".jpg"))
     }

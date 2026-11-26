@@ -180,7 +180,7 @@ struct DeskDetail: View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { _ in model.toggleLogin() }))
             Toggle("Open scans automatically", isOn: Binding(
-                get: { UserDefaults.standard.object(forKey: "openScans") == nil || UserDefaults.standard.bool(forKey: "openScans") },
+                get: { UserDefaults.standard.object(forKey: "openScans") != nil && UserDefaults.standard.bool(forKey: "openScans") },
                 set: { UserDefaults.standard.set($0, forKey: "openScans") }
             ))
             Text("Other files stay closed until you press Open on the notification.")

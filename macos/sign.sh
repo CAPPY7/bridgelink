@@ -28,11 +28,21 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
   echo "$MAC_SIGN_P12_BASE64" | base64 -d > "$WORK/sign.p12"
   security import "$WORK/sign.p12" -k "$KC" -P "$MAC_SIGN_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security >/dev/null
   security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$PASS" "$KC" >/dev/null
-  IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk -F '"' '/BridgeLink/{print $2; exit}')"
+  IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk -F '"' '/Developer ID Application/{print $2; exit}')"
+  if [ -z "$IDENTITY" ]; then
+    IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk -F '"' '/BridgeLink/{print $2; exit}')"
+  fi
+  if [ -z "$IDENTITY" ]; then
+    IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk -F '"' 'NF > 1 {print $2; exit}')"
+  fi
   if [ -z "$IDENTITY" ]; then
     echo "The Mac signing certificate did not import."
     exit 1
   fi
+  STAMP="--timestamp=none"
+  case "$IDENTITY" in
+    "Developer ID Application"*) STAMP="--timestamp" ;;
+  esac
   OLD_FILE="$WORK/old-keychains.txt"
   security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//' > "$OLD_FILE"
   while IFS= read -r line; do
@@ -42,10 +52,10 @@ if [ -n "${MAC_SIGN_P12_BASE64:-}" ] && [ -n "${MAC_SIGN_P12_PASSWORD:-}" ]; the
   security list-keychains -d user -s "$KC" ${OLD_ARGS[@]+"${OLD_ARGS[@]}"}
   if [ -d "$APP/Contents/PlugIns" ]; then
     find "$APP/Contents/PlugIns" -name '*.appex' -print0 | while IFS= read -r -d '' plugin; do
-      codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime --timestamp=none "$plugin"
+      codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime $STAMP "$plugin"
     done
   fi
-  codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime --timestamp=none --entitlements entitlements.plist "$APP"
+  codesign --force --sign "$IDENTITY" --keychain "$KC" --options runtime $STAMP --entitlements entitlements.plist "$APP"
   codesign --verify --verbose=2 "$APP"
   echo "Signed with the stable BridgeLink certificate."
 else
@@ -55,9 +65,9 @@ else
   fi
   if [ -d "$APP/Contents/PlugIns" ]; then
     find "$APP/Contents/PlugIns" -name '*.appex' -print0 | while IFS= read -r -d '' plugin; do
-      codesign --force --sign - "$plugin"
+      codesign --force --sign - --entitlements entitlements.plist "$plugin"
     done
   fi
-  codesign --force --sign - "$APP"
+  codesign --force --sign - --entitlements entitlements.plist "$APP"
   echo "Ad-hoc signature. Permissions can reset after an update."
 fi

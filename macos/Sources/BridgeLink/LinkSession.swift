@@ -177,7 +177,8 @@ extension LinkModel {
                 break
             }
             let from = Int(envelope.text("from")) ?? 0
-            files.begin(id: fileId, name: envelope.text("name"), size: Int(envelope.text("size")) ?? -1, from: from) { [weak self] line, have in
+            let scan = envelope.text("scan") == "1" || envelope.text("scan") == "true"
+            files.begin(id: fileId, name: envelope.text("name"), size: Int(envelope.text("size")) ?? -1, from: from, scan: scan) { [weak self] line, have in
                 Task { @MainActor in
                     self?.send(type: "file_have", payload: ["id": fileId, "offset": String(have)], on: self?.live)
                     self?.note(line)

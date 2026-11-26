@@ -13,17 +13,35 @@ public enum Transfers {
         }
         name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         var out = ""
+        var count = 0
         for scalar in name.unicodeScalars {
-            if out.count >= 120 { break }
-            if scalar.value < 32 || scalar == "/" || scalar == "\\" || scalar == ":" {
-                out.append("_")
+            if count >= 1024 { break }
+            count += 1
+            if scalar.value < 32 || scalar == "/" || scalar == "\\" || scalar == ":" || rtlOverride(scalar.value) {
+                out.unicodeScalars.append("_")
             } else {
                 out.unicodeScalars.append(scalar)
             }
         }
-        let cleaned = out.trimmingCharacters(in: .whitespacesAndNewlines)
+        return clipName(out.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    public static func rtlOverride(_ value: UInt32) -> Bool {
+        (value >= 0x202A && value <= 0x202E) || (value >= 0x2066 && value <= 0x2069)
+    }
+
+    static func clipName(_ cleaned: String) -> String {
         if cleaned.isEmpty || cleaned == "." || cleaned == ".." { return "file" }
-        return cleaned
+        if cleaned.count <= 120 { return cleaned }
+        guard let dot = cleaned.lastIndex(of: "."), dot != cleaned.startIndex else {
+            return String(cleaned.prefix(120))
+        }
+        let ext = String(cleaned[dot...])
+        if ext.count > 12 { return String(cleaned.prefix(120)) }
+        let head = String(cleaned[..<dot])
+        let keep = 120 - ext.count
+        if keep < 1 { return String(cleaned.prefix(120)) }
+        return String(head.prefix(keep)) + ext
     }
 
     public static func acceptUrl(_ raw: String) -> String? {
@@ -52,6 +70,7 @@ public final class IncomingFile {
     public let size: Int
     public private(set) var written = 0
     public private(set) var failed = false
+    public var markedScan = false
     private var digest = SHA256()
 
     public init?(id: String, name: String, size: Int) {

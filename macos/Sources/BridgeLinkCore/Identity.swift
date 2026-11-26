@@ -76,7 +76,7 @@ public enum MacIdentity {
         let pass = randomPassword()
         try writeKeychain(Data(pass.utf8), account: "p12pass")
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("bridgelink-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: dir) }
         let keyURL = dir.appendingPathComponent("key.pem")
         let certURL = dir.appendingPathComponent("cert.pem")
@@ -84,6 +84,7 @@ public enum MacIdentity {
         try runOpenSSL([
             "ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", keyURL.path,
         ])
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: keyURL.path)
         try runOpenSSL([
             "req", "-new", "-x509", "-key", keyURL.path, "-out", certURL.path,
             "-days", "3650", "-subj", "/CN=BridgeLink",
@@ -93,22 +94,41 @@ public enum MacIdentity {
             "-inkey", keyURL.path,
             "-in", certURL.path,
             "-out", p12URL.path,
-            "-passout", "pass:\(pass)",
-        ])
+            "-passout", "env:BL_P12PASS",
+        ], env: ["BL_P12PASS": pass])
         let p12 = try Data(contentsOf: p12URL)
         let imported = try importP12(p12, password: pass)
         return (p12, imported.identity, imported.fingerprint)
     }
 
-    private static func runOpenSSL(_ arguments: [String]) throws {
+    private static func runOpenSSL(_ arguments: [String], env: [String: String] = [:]) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/openssl")
         process.arguments = arguments
+        if !env.isEmpty {
+            var merged = ProcessInfo.processInfo.environment
+            for (key, value) in env { merged[key] = value }
+            process.environment = merged
+        }
         try process.run()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
             throw IdentityError.message("openssl \(arguments.first ?? "") failed (\(process.terminationStatus))")
         }
+    }
+
+    private static func requireIdentity(_ value: Any?) throws -> SecIdentity {
+        guard let value else {
+            throw IdentityError.message("The TLS identity was missing.")
+        }
+        let ref = value as CFTypeRef
+        guard CFGetTypeID(ref) == SecIdentityGetTypeID() else {
+            throw IdentityError.message("The TLS identity was the wrong type.")
+        }
+        guard let identity = value as? SecIdentity else {
+            throw IdentityError.message("The TLS identity was the wrong type.")
+        }
+        return identity
     }
 
     private static func importP12(_ data: Data, password: String) throws -> (identity: SecIdentity, fingerprint: String) {
@@ -120,7 +140,7 @@ public enum MacIdentity {
               let identity = rows.first?[kSecImportItemIdentity as String] else {
             throw IdentityError.message("Could not import the TLS identity (\(status))")
         }
-        let secIdentity = identity as! SecIdentity
+        let secIdentity = try requireIdentity(identity)
         return (secIdentity, fingerprint(of: secIdentity))
     }
 
@@ -141,7 +161,7 @@ public enum MacIdentity {
         ]
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess else { return nil }
-        return (item as! SecIdentity)
+        return try? requireIdentity(item)
     }
 
     private static func labelIdentity(_ identity: SecIdentity) {

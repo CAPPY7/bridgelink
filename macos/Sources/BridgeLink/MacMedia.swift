@@ -105,13 +105,22 @@ enum MacMedia {
 }
 
 enum MacShell {
+    private final class ReadBox: @unchecked Sendable {
+        var data = Data()
+    }
+
     static func text(_ path: String, _ args: [String]) -> String? {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: path)
         task.arguments = args
         let pipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = Pipe()
+        task.standardError = FileHandle.nullDevice
+        let box = ReadBox()
+        let reader = DispatchQueue(label: "app.bridgelink.shell")
+        reader.async {
+            box.data = pipe.fileHandleForReading.readDataToEndOfFile()
+        }
         do {
             try task.run()
             let deadline = Date().addingTimeInterval(3)
@@ -120,13 +129,17 @@ enum MacShell {
             }
             if task.isRunning {
                 task.terminate()
+                task.waitUntilExit()
+                reader.sync {}
                 return nil
             }
         } catch {
+            reader.sync {}
             return nil
         }
+        reader.sync {}
         if task.terminationStatus != 0 { return nil }
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+        return String(data: box.data, encoding: .utf8)
     }
 
     static func ok(_ path: String, _ args: [String]) -> Bool {
