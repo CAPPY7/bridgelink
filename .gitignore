@@ -23,6 +23,7 @@ macos/*.zip
 *.keystore
 *.jks
 *.p12
+!android/app/src/androidTest/assets/fake-mac.p12
 *.pem
 owner-backup/
 attachments/

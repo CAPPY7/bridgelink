@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import {
   appNameFromHost,
-  createHeadInjector,
+  createHeadInjector as createHeadInjectorOnDisk,
   grokXCreatorHeadTags,
-  injectGrokPwaHead,
+  injectGrokPwaHead as injectGrokPwaHeadOnDisk,
   isDocumentPath,
   isInstallQuery,
   publicAppHost,
@@ -20,6 +20,11 @@ import {
 import { renderInstallPage } from "./grok-pwa-plugin.mjs";
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Brand checks must not read this repo's src/lib/og/site.json or public/og.jpg.
+const BLANK_ROOT = mkdtempSync(join(tmpdir(), "grok-pwa-blank-"));
+const injectGrokPwaHead = (html, ctx = {}) =>
+  injectGrokPwaHeadOnDisk(html, { cwd: BLANK_ROOT, ...ctx });
+const createHeadInjector = (ctx = {}) => createHeadInjectorOnDisk({ cwd: BLANK_ROOT, ...ctx });
 
 test("injects before </head>", () => {
   const out = injectGrokPwaHead("<html><head><title>x</title></head><body></body></html>");

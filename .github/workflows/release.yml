@@ -23,9 +23,10 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag }}
         run: |
-          tag="${{ github.event.inputs.tag }}"
-          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" >/dev/null; then
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" >/dev/null; then
             echo "That tag does not exist. Type an existing tag, for example v1.0.2."
             exit 1
           fi
@@ -55,15 +56,20 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          EVENT_NAME: ${{ github.event_name }}
+          TAG: ${{ github.event.inputs.tag }}
         run: |
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=$SDK" > local.properties
           chmod +x gradlew
           python3 ../scripts/check-versions.py
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python3 ../scripts/check-versions.py "${{ github.event.inputs.tag }}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+            python3 ../scripts/check-versions.py "$TAG"
           else
-            python3 ../scripts/check-versions.py "${GITHUB_REF_NAME}"
+            TAG="${GITHUB_REF_NAME}"
+            [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+            python3 ../scripts/check-versions.py "$TAG"
           fi
           ./gradlew test lint --no-daemon
           if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
@@ -156,16 +162,15 @@ jobs:
       - name: Create the release if needed, then attach both apps
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.tag }}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
           else
             TAG="${GITHUB_REF_NAME}"
           fi
-          case "$TAG" in
-            v*) ;;
-            *) echo "Tag must start with v"; exit 1 ;;
-          esac
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
           SHA=$(git rev-parse HEAD)
           python3 scripts/make-appcast.py mac-app/BridgeLink.dmg appcast.xml "$TAG"
           gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
